@@ -1,0 +1,4397 @@
+.Z80
+IF1
+.PRINTX /Forth: F2<Z80-CPM>/
+.PRINTX /TASK FEHLT!!/
+ENDIF
+
+EXT		TASK,INITDP
+INCLUDE 	PUBLICF2.MAC
+
+PAGE 250
+;******************************************************************************
+;*                                                                            *
+;*      +----------------+       Mikroprozessor: Z80                          *
+;*      !                !                                                    *
+;*      !    Forth (F2)  !       CP/M Version                                 *
+;*      !                !                                                    *
+;*      +----------------+      (C)opyright Institut fuer Angewandte Physik   *
+;*                                          Wegelerstr.8                      *
+;*                                          D-5300 B o n n 1                  *
+;*                                                                            *
+;*                                                                            *
+;*      +---------------------------------------------------------------+     *
+;*      !    Beginn der Programmentwicklung:   Januar 1983              !     *
+;*      !    Programmierer:                                             !     *
+;*      !                  1.Klaus-Dieter Krause    (733108)            !     *
+;*      !                  2.                                           !     *
+;*      !                  3.                                           !     *
+;*      !                                                               !     *
+;*      !    Letzte durchgefuehrte Aenderung:  15.10.84     15.00 Uhr   !     *
+;*      !                                                               !     *
+;*      !                 von               :  K.D.Krause               !     *
+;*      !                                                               !     *
+;*      +---------------------------------------------------------------+     *
+;*                                                                            *
+;*         Weitere Informationen sind der Datei  FORTH.DOC  zu entnehmen      *
+;*                                                                            *
+;******************************************************************************
+VER1	EQU	'1'	;FORTH VERSION:      Tag
+VER2	EQU	'5'	;     "              Tag
+VER3	EQU	'1'	;     "              Monat
+VER4	EQU	'0'	;     "              Monat
+VER5	EQU	'4'	;     "              Jahr
+BENUNR1	EQU	'x'	;BENUTZERNUMMER 1                      
+BENUNR2	EQU	'x'	;BENUTZERNUMMER 2                      
+BENUNR3	EQU	'x'
+;
+;******************************************************************************
+;*                                                                            *
+;*                             DEFINITIONEN                                   *
+;*                                                                            *
+;******************************************************************************
+;
+;
+;                    ASCII-ZEICHEN        
+;
+ESC	EQU	1BH	;ESCAPE ( !! alle folgenden Befehle werden mit ESC
+			;	( eroeffnet   z.B. ESC EOL )
+POSIT	EQU	3DH	;Positioniere den Cursor
+			;Ende der ESC-Sequenzen
+
+ACLS	EQU	01H	;Laenge der Bildschirmloeschsequenz
+CLS1	EQU	15H	;4 Zeichen sind vorgesehen
+CLS2	EQU	0
+CLS3	EQU	0
+CLS4	EQU	0
+
+EOL	EQU	17H	;Loesche Rest der Zeile
+CURHO	EQU	1CH	;Cursor in die linke obere Ecke
+OFFSET	EQU	20H	;Offset der zum Spalten, und Zeilenwert addiert wird
+ABL	EQU	20H	;LEERTASTE
+ACR	EQU	0DH	;RUECKLAUF
+BELL	EQU	07H	;CRTL G
+BSIN	EQU	08H	;INPUT ZEICHEN ZURUECK
+BSOUT	EQU	08H	;OUTPUT ZEICHEN ZURUECK CRTL H
+DLE	EQU	10H	;CRTL P
+LF	EQU	0AH	;ZEILENVORSCHUB
+FF	EQU	1FH	;NEUES BLATT
+;
+;                   SPEICHERFESTLEGUNG     
+;
+HOESPE	EQU	8000H	;HOECHSTE SPEICHERSTELLE + 1
+BUFFG	EQU	100H	;PUFFERSPEICHER
+USS	EQU	100H	;GROESSE USER-BEREICH
+RTS	EQU	100H	;ABSTAND RETURNSTACK FORTHSTACK
+;
+BUFF	EQU	(HOESPE-BUFFG)		;STARTADRESSE FUER PUFFERSPEICHER
+US	EQU	(BUFF-USS)		;BEGINN USERBEREICH
+TIBE	EQU	(US-RTS)		;BEGINN TERMINAL-EINGABEPUFFER
+INITR0	EQU	(US-1)			;BEGINN RETURNSTACK
+INITS0	EQU	(TIBE-1)		;BEGINN FORTHSTACK
+;
+;_HOESPE_______________________________________________________________________
+;                   ^                                                          
+;                   ^                                                          
+;                   ^                                                          
+;                   ^                                                          
+;                 BUFFG                                                        
+;                   ^                                                          
+;                   ^                                                          
+;                   ^                                                          
+;___________________^___________________________________________________BUFF__ 
+;                   ^                                                          
+;                   ^                                                          
+;                   ^                                                          
+;                   ^                                                          
+;                   ^                                                          
+;                  USS                                                         
+;                   ^                                                          
+;                   ^                                                          
+;                   ^                                                          
+;___________________^_________________________________________________<--US___ 
+;INITRO -->         ^                                                          
+;                   ^                                                          
+;                   ^                                                          
+;                   ^                                                          
+;                   ^                                                          
+;                   ^                                                          
+;                  RTS = RETURN-STACK                                          
+;                   ^                                                          
+;                   ^                                                          
+;                   ^                                                          
+;                   ^                                                          
+;___________________^_________________________________________________<--_TIBE_
+;INITSO -->         ^                                                          
+;                   ^                                                          
+;                   ^                                                          
+;                   ^                                                          
+;                   ^                                                          
+;                   ^                                                          
+;                 FORTH-STACK                                                  
+;                   ^                                                          
+;                   ^                                                          
+;                   ^                                                          
+;                   ^                                                          
+;                   ^                                                          
+;******************************************************************************
+;*                                                                            *
+;*                   BELEGUNG DER FORTH-REGISTER                              *
+;*                                                                            *
+;******************************************************************************
+;               FORTH        Z80            Erlaeuterungen                     
+;               -----        ----           -----------------------------------
+;
+;
+;
+;
+;
+;
+;______________________________________________________________________________
+;******************************************************************************
+;*                                                                            *
+;*                              START                                         *
+;*                                                                            *
+;******************************************************************************
+ORIG:	NOP
+	JP	CLD	;KALTSTART
+	NOP
+	JP	WRM	;WARMSTART
+	DB	0	;
+	DB	0	;
+	DB	0	;
+	DB	0	;
+	DW	TASK-7	;LETZTER FORTH BEFEHL
+	DW	BSIN	;BACKSPACE
+	DW	US	;BEGINN DES USER-BEREICHES
+;
+;            FOLGENDES WIRD BEIM KALTSTART GESETZT
+	DW	INITS0	;INIT S0
+	DW	INITR0	;INIT R0
+	DW	TIBE	;INIT TIB
+	DW	001FH	;INIT WIDTH
+	DW	0000H	;INIT WARNING
+	DW	INITDP	;INIT DP
+	DW	INITDP	;INIT FENCE
+	DW	FORTH+8	;INIT VOC-LINK
+;                                                      +----------------------+
+;                                                      !  KALTSTARTPARAMETER  !
+;                                                      +----------------------+
+KAPA:	DW	0000H	;DRUCKER     EIN = 1  AUS = 0
+	DW	0001H	;laufende Zeile  Startwert Druckerab-
+			;                haengig. Bei CR +1
+	DW	0033H	;maximale Zeilenzahl
+	DW	0001H	;erste erlaubte Zeile
+	DW	0033H	;letzte erlaubte Zeile
+	DW	0001H	;linker Rand
+	DW	132	;rechter Rand
+	DW	0060H	;zubesetzendes Feld im USER-Bereich
+	DW	NOOP	;Adresse der Fehlermeldung ( WARNING =1
+;			 kann bei vorhandenem Klartext ersetzt
+;			 werden
+;                                                      +----------------------+
+;                                                      !  WARMSTARTPARAMETER  !
+;                                                      +----------------------+
+WAPA:	DW	KEYA	;Startadresse KEY
+	DW	LOADA	;      "      LOAD
+	DW	ERRORA	;      "      ERROR
+	DW	NOOP	;      "      ABORT
+	DW	EMITA	;      "      EMIT
+	DW	CRA	;      "      CR
+	DW	QTERMA	;      "      ?TERMINAL
+	DW	NOOP	;      "      COLD$
+	DW	NOOP	;      "      WARM$
+;
+SPTEX:	DB	'SL2'		;Spezifikation fuer Textdateien
+CLS:	DB	ACLS		;Anzahl der Zeichen fuer die Bildschirmloesch.
+	DB	CLS1,CLS2	;Bildschirmloeschsequenz
+	DB	CLS3,CLS4
+;                                                                              
+SERIE:	DW	0000H	;SERIENNUMMER
+	DW	0000H	;     "      
+UP:	DW	US	;Beginn des USER-Bereiches
+RPP:	DW	INITR0	;Z80  FORTH-RETURN STACK 
+;                                                                              
+;______________________________________________________________________________
+;                                                       +---------------------+
+;                                                       !       NEXT          !
+;                                                       +---------------------+
+NEXT:	LD	A,(BC)
+	INC	BC
+	LD	L,A
+	LD	A,(BC)
+	INC	BC
+	LD	H,A
+NEXT1:	LD	E,(HL)
+	INC	HL
+	LD	D,(HL)
+	EX	DE,HL
+	JP	(HL)
+;
+;                                                       +---------------------+
+;                                         -colon-       !          :          !
+;                                                       +---------------------+
+	DB	0C1H
+	DC	':'
+	DW	0000H
+COLON:	DW	NEST
+	DW	QEXEC
+	DW	SCSP
+	DW	CURR
+	DW	AT
+	DW	CONT
+	DW	STORE
+	DW	CREAT
+	DW	RBRAC
+	DW	PSCOD
+NEST:	LD	HL,(RPP)
+	DEC	HL
+	LD	(HL),B
+	DEC	HL
+	LD	(HL),C
+	LD	(RPP),HL
+	INC	DE
+	LD	C,E
+	LD	B,D
+	JP 	NEXT
+;                                                       +---------------------+
+;                                      -semicolon-      !          ;          !
+;                                                       +---------------------+
+	DB	0C1H
+	DC	';'
+	DW	COLON-4
+SEMI:	DW	NEST
+	DW	QCSP
+	DW	COMP
+	DW	SEMIS
+	DW	SMUDG
+	DW	LBRAC
+	DW	SEMIS
+;                                                       +---------------------+
+;                                       Semikolon-S     !          ;S         !
+;                                                       +---------------------+
+	DB	82H
+	DC	';S'
+	DW	SEMI-4
+SEMIS:	DW	$+2
+	LD	HL,(RPP)
+	LD	C,(HL)
+	INC	HL
+	LD	B,(HL)
+	INC	HL
+	LD	(RPP),HL
+	JP	NEXT
+;                                                       +---------------------+
+;                                                       !        LIT          !
+;                                                       +---------------------+
+	DB	83H
+	DC	'LIT'
+	DW	SEMIS-5
+LIT:	DW	$+2
+	LD	A,(BC)
+	INC	BC
+	LD	L,A
+	LD	A,(BC)
+	INC	BC
+	LD	H,A
+	PUSH	HL
+	JP	NEXT
+;                                                       +---------------------+
+;                                                       !      EXECUTE        !
+;                                                       +---------------------+
+	DB	87H
+	DC	'EXECUTE'
+	DW	LIT-6
+EXEC:	DW	$+2
+	POP	HL
+	JP	NEXT1
+;                                                       +---------------------+
+;                                                       !      BRANCH         !
+;                                                       +---------------------+
+	DB	86H
+	DC	'BRANCH'
+	DW	EXEC-0AH
+BRAN:	DW	$+2
+BRAN1:	LD	H,B
+	LD	L,C
+	LD	E,(HL)
+	INC	HL
+	LD	D,(HL)
+	DEC	HL
+	ADD	HL,DE
+	LD	C,L
+	LD	B,H
+	JP	NEXT
+;                                                       +---------------------+
+;                                                       !      0BRANCH        !
+;                                                       +---------------------+
+	DB	87H
+	DC	'0BRANCH'
+	DW	BRAN-9
+ZBRAN:	DW	$+2
+	POP	HL
+	LD	A,L
+	OR	H
+	JP	Z,BRAN1
+	INC	BC
+	INC	BC
+	JP	NEXT
+;                                                       +---------------------+
+;                                                       !       (LOOP)        !
+;                                                       +---------------------+
+	DB	86H
+	DC	'(LOOP)'
+	DW	ZBRAN-0AH
+XLOOP:	DW	$+2
+	LD	DE,1
+XLOO1:	LD	HL,(RPP)
+	LD	A,(HL)
+	ADD	A,E
+	LD	(HL),A
+	LD	E,A
+	INC	HL
+	LD	A,(HL)
+	ADC	A,D
+	LD	(HL),A
+	INC	HL
+	INC	D
+	DEC	D
+	LD	D,A
+	JP	M,XLOO2
+	LD	A,E
+	SUB	(HL)
+	LD	A,D
+	INC	HL
+	SBC	A,(HL)
+	JP	XLOO3
+XLOO2:	LD	A,(HL)
+	SUB	E
+	INC	HL
+	LD	A,(HL)
+	SBC	A,D
+XLOO3:	JP	M,BRAN1
+	INC	HL
+	LD	(RPP),HL
+	INC	BC
+	INC	BC
+	JP	NEXT
+;                                                       +---------------------+
+;                                                       !       (+LOOP)       !
+;                                                       +---------------------+
+	DB	87H
+	DC	'(+LOOP)'
+	DW	XLOOP-9
+XPLOO:	DW	$+2
+	POP	DE
+	JP	XLOO1
+;                                                       +---------------------+
+;                                                       !         (DO)        !
+;                                                       +---------------------+
+	DB	84H
+	DC	'(DO)'
+	DW	XPLOO-0AH
+XDO:	DW	$+2
+	LD	HL,(RPP)
+	DEC	HL
+	DEC	HL
+	DEC	HL
+	DEC	HL
+	LD	(RPP),HL
+	POP	DE
+	LD	(HL),E
+	INC	HL
+	LD	(HL),D
+	POP	DE
+	INC	HL
+	LD	(HL),E
+	INC	HL
+	LD	(HL),D
+	JP	NEXT
+;                                                       +---------------------+
+;                                                       !         I           !
+;                                                       +---------------------+
+	DB	81H
+	DC	'I'
+	DW	XDO-7
+IDO:	DW	$+2
+	LD	HL,(RPP)
+	LD	E,(HL)
+	INC	HL
+	LD	D,(HL)
+	PUSH	DE
+	JP	NEXT
+;                                                       +---------------------+
+;                                                       !        DIGIT        !
+;                                                       +---------------------+
+	DB	85H
+	DC	'DIGIT'
+	DW	IDO-4
+DIGIT:	DW	$+2
+	POP	HL
+	POP	DE
+	LD	A,E
+	SUB	30H
+	JP	M,DIGI2	;CHAR. > 30H
+	CP	0AH
+	JP	M,DIGI1
+	SUB	7
+	CP	0AH
+	JP	M,DIGI2
+DIGI1:	CP	L
+	JP	P,DIGI2
+	LD	E,A
+	LD	HL,1
+	PUSH	DE
+	PUSH	HL
+	JP	NEXT
+DIGI2:	LD	L,H
+	PUSH	HL
+	JP	NEXT
+;                                                       +---------------------+
+;                                                       !       (FIND)        !
+;                                                       +---------------------+
+	DB	86H
+	DC	'(FIND)'
+	DW	DIGIT-8
+PFIND:	DW	$+2
+	POP	DE
+PFIN1:	POP	HL
+	PUSH	HL
+	LD	A,(DE)
+	XOR	(HL)
+	AND	3FH
+	JP	NZ,PFIN4
+PFIN2:	INC	HL
+	INC	DE
+	LD	A,(DE)
+	XOR	(HL)
+	ADD	A,A
+	JP	NZ,PFIN3
+	JP	NC,PFIN2
+	LD	HL,5
+	ADD	HL,DE
+	EX	(SP),HL
+PFIN6:	DEC	DE
+	LD	A,(DE)
+	OR	A
+	JP	P,PFIN6
+	LD	E,A
+	LD	D,0
+	LD	HL,1
+	PUSH	DE
+	PUSH	HL
+	JP	NEXT
+PFIN3:	JP	C,PFIN5
+PFIN4:	INC	DE
+	LD	A,(DE)
+	OR	A
+	JP	P,PFIN4
+PFIN5:	INC	DE
+	EX	DE,HL
+	LD	E,(HL)
+	INC	HL
+	LD	D,(HL)
+	LD	A,D
+	OR	E
+	JP	NZ,PFIN1
+	POP	HL
+	LD	HL,0
+	PUSH	HL
+	JP	NEXT
+;                                                       +---------------------+
+;                                                       !       ENCLOSE       !
+;                                                       +---------------------+
+	DB	87H
+	DC	'ENCLOSE'
+	DW	PFIND-9
+ENCL:	DW	$+2
+	POP	DE
+	POP	HL
+	PUSH	HL
+	LD	A,E
+	LD	D,A
+	LD	E,-1
+	DEC	HL
+ENCL1:	INC	HL
+	INC	E
+	CP	(HL)
+	JP	Z,ENCL1
+	LD	D,0
+	PUSH	DE
+	LD	D,A
+	LD	A,(HL)
+	AND	A
+	JP	NZ,ENCL2
+	LD	D,0
+	INC	E
+	PUSH	DE
+	DEC	E
+	PUSH	DE
+	JP	NEXT
+ENCL2:	LD	A,D
+	INC	HL
+	INC	E
+	CP	(HL)
+	JP	Z,ENCL4
+	LD	A,(HL)
+	AND	A
+	JP	NZ,ENCL2
+ENCL3:	LD	D,0
+	PUSH	DE
+	PUSH	DE
+	JP	NEXT
+ENCL4:	LD	D,0
+	PUSH	DE
+	INC	E
+	PUSH	DE
+	JP	NEXT
+;******************************************************************************
+;*                                                                            *
+;*                                                                            *
+;*                                                                            *
+;*             SIMULATIONSROUTINEN:                                           *
+;*                                                                            *
+;*                                                                            *
+;*                                                                            *
+;******************************************************************************
+;                                                       +---------------------+
+;                        Tastatur einschalten           !        KEYBON       !
+;                                                       +---------------------+
+	DB	86H
+	DC	'KEYBON'
+	DW	ENCL-10
+KEYBON:	DW	NEST
+	DW	LIT,KEYA
+	DW	KEY$
+	DW	STORE
+	DW	SEMIS
+;                                                       +---------------------+
+;                        Tastatur abschalten            !        KEYBOFF      !
+;                                                       +---------------------+
+	DB	87H
+	DC	'KEYBOFF'
+	DW	KEYBON-9
+KEYBOF:	DW	NEST
+	DW	LIT,KEYSI
+	DW	KEY$
+	DW	STORE
+	DW	SEMIS
+;                                                       +---------------------+
+;      liest LFILE Bytes in den Zwischenspeicher DMA    !       @FILE         !
+;                                                       +---------------------+
+	DB	85H
+	DC	'@FILE'
+	DW	KEYBOF-10
+@FILE:	DW	NEST
+	DW	LOAD$
+	DW	AT
+	DW	EXEC	;Fuehre Routine in LOAD$ aus
+	DW	SNUM
+	DW	STORE	;Rueckmeldung nach S#
+	DW	DMAE
+	DW	RNUM
+	DW	STORE
+	DW	LFILE
+	DW	TNUM
+	DW	STORE
+	DW	SEMIS
+;                                                       +---------------------+
+;           Text im CP/M Format von Floppy lesen        !        GET          !
+;                                                       +---------------------+
+	DB	83H
+	DC	'GET'
+	DW	@FILE-8
+LDISK:	DW	NEST
+	DW	CR
+	DW	PDOTQ
+	DB	39
+	DB	'LW:(Option) Name  <.SL2 wird gesetzt>  '
+	DW	DANA	;Dateiname erfragen
+	DW	LIT,SPTEX	;Vorbesetzung fuer Textdateispezifikation
+	DW	FCBE,LIT,9	;hier soll es hin
+	DW	PLUS
+	DW	LIT,3		;Laenge
+	DW	CMOVE
+	DW	LIT,0
+	DW	TNUM
+	DW	STORE
+	DW	OPEN
+	DW	CLSC
+	DW	PDOTQ
+	DB	17
+	DB	'Disk = Tastatur  '
+	DW	KEYBOF	;Tastatur ausschalten
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !    END-OF-FILE      !
+;                                                       +---------------------+
+;                                                         
+	DB	8BH
+	DC	'END-OF-FILE'
+	DW	LDISK-6
+EOF:	DW	NEST
+	DW	KEYBON
+	DW	SEMIS
+;                                                       +---------------------+
+;    Simulation des Tastenfeldes ueber ??-Speicher      !     KEYSIMUL        !
+;                                                       +---------------------+
+;    angepasst auf Text-Quellen die mit Wordstar oder
+;    aehnlichen Programmen erstellt wurden ( Ende des Textes 1AH )
+;                         
+;                                                                              
+	DB	88H	;R# ist hier der Textzeiger
+	DC	'KEYSIMUL'
+	DW	EOF-14
+KEYSI:	DW	NEST
+SIMU0:	DW	TNUM	;T# enthaelt die Filelaenge und wird
+	DW	AT	;bei jedem Zeichen um eins vermindert
+	DW	ZEQU
+	DW	ZBRAN,SIMU1-$
+	DW	@FILE	;wenn T# = 0 ist wird File von der Disk gelesen
+SIMU1:	DW	RNUM	;
+	DW	AT,CAT
+	DW	LIT,0AH	;0AH = LF wird uebergangen
+	DW	EQUAL
+	DW	ZBRAN,SIMU2-$
+	DW	RNUM
+	DW	AT
+	DW	ONEP
+	DW	RNUM
+	DW	STORE
+	DW	TNUM,AT
+	DW	LIT,1
+	DW	SUBB
+	DW	TNUM
+	DW	STORE
+	DW	PAUSE	;bei Bedarf verzoegern
+	DW	BRAN,SIMU0-$	;erneute Pruefung
+SIMU2:	DW	RNUM
+	DW	AT,CAT
+	DW	LIT,1AH	;1AH ist das Ende der Textdatei
+	DW	EQUAL
+	DW	ZBRAN,SIMU3-$
+	DW	CR
+	DW	PDOTQ
+	DB	6H
+	DB	'EOF!!'
+	DB	07H
+	DW	KEYBON
+	DW	LIT,0DH	;CR am Ende auf den Stack
+	DW	BRAN,SIMU4-$
+SIMU3:	DW	RNUM
+	DW	AT
+	DW	DUP
+	DW	CAT
+	DW	SWAP
+	DW	ONEP
+	DW	RNUM
+	DW	STORE
+	DW	TNUM
+	DW	AT
+	DW	LIT,1
+	DW	SUBB
+	DW	TNUM
+	DW	STORE
+SIMU4:	DW	DUP
+	DW	LIT,09H
+	DW	EQUAL
+	DW	ZBRAN,SIMU5-$
+	DW	DROP
+	DW	PDOTQ
+	DB	2
+	DB	'  '
+	DW	LIT,20H
+SIMU5:	DW	SEMIS
+
+
+;******************************************************************************
+;*                                                                            *
+;*                                                                            *
+;*                                                                            *
+;*             MASSENSPEICHER: Parameter und Routinen fuer CP/M               *
+;*                                                                            *
+;*                                                                            *
+;*                                                                            *
+;******************************************************************************
+;                                                       +---------------------+
+;                              Dateiname eingeben       !       ?DATNAM       !
+;                                                       +---------------------+
+	DB	87H
+	DC	'?DATNAM'
+	DW	KEYSI-11
+DANA:	DW	NEST
+	DW	FCBE,ONEP
+	DW	LIT,11
+	DW	BLANK	;FUELLE FN UND FT MIT 20H
+	DW	QUERY	;Dateiname eingeben
+	DW	TIB,AT
+	DW	ONEP,CAT	;zweites eingegebenes Zeichen holen
+	DW	LIT,3AH		;vergleiche mit :
+	DW	EQUAL
+	DW	ZBRAN,DANA1-$	;keine Laufwerkangabe
+	DW	LIT,3AH	;Ende bei " : " 
+	DW	WORD
+	DW	HERE,COUNT
+	DW	DROP
+	DW	CAT
+	DW	LIT,03H
+	DW	ANDD	;Sperre
+	DW	FCBE
+	DW	CSTOR
+DANA1:			;wenn keine Laufwerkangabe Einsprung hier
+	DW	LIT,2EH	;Ende bei " . "   
+	DW	WORD,HERE
+	DW	COUNT
+	DW	LIT,8	;nur 8 Zeichen erlaubt
+	DW	MIN
+	DW	FCBE,ONEP
+	DW	SWAP
+	DW	CMOVE
+	DW	BL	;Ende bei Leerzeichen
+	DW	WORD,HERE
+	DW	COUNT
+	DW	LIT,3	;nur 3 Zeichen erlaubt
+	DW	MIN
+	DW	FCBE,LIT,9
+	DW	PLUS
+	DW	SWAP
+	DW	CMOVE
+	DW	LIT,0
+	DW	FCBE,LIT,12
+	DW	PLUS,CSTOR		;im FCB Feld "ex" auf Null setzen
+	DW	SEMIS
+;                                                       +---------------------+
+;                                 EROEFFNE DATEI        !        OPEN         !
+;                                                       +---------------------+
+	DB	84H
+	DC	'OPEN'
+	DW	DANA-10
+OPEN:	DW	NEST
+	DW	LIT,0
+	DW	LIT,(DFCBE+32)
+	DW	CSTOR	;LOESCHE RELATIVE NUMMER DER AUFZEICHN.
+	DW	LIT,OPENF
+	DW	FCBE
+	DW	DOSCALL
+	DW	LIT,0FFH
+	DW	EQUAL
+	DW	LIT,6
+	DW	QERR
+OPEN1:	DW	SEMIS
+;                                                       +---------------------+
+;             LESE VOM MASSENSPEICHER SEQENTIELL        !        READS        !
+;                                                       +---------------------+
+	DB	85H
+	DC	'READS'
+	DW	OPEN-7
+READS:	DW	NEST
+	DW	LIT,READF
+	DW	FCBE
+	DW	DOSCALL
+	DW	SEMIS
+;******************************************************************************
+;*                                                                            *
+;*                      CP/M -- BDOS -- AUFRUFE                               *
+;*                                                                            *
+;******************************************************************************
+BOOT	EQU	0000H
+BDOS	EQU	BOOT+5
+DFCBE	EQU	BOOT+5CH
+DDMAE	EQU	BOOT+80H
+DLFILE	EQU	80H		;Laenge eines Files
+DCIO	EQU	06H		;Direkter Konsolenzugriff
+GCST	EQU	0BH		;Konsolenstatus
+CTPR	EQU	05H		;Zeichen zum Drucker
+OPENF	EQU	15		;OEFFNE FILE
+READF	EQU	20		;LESEFUNKTION
+SEDMA	EQU	26		;SETZE DMA-ADRESSE
+;
+;                                                       +---------------------+
+;                                       Sprung -> BDOS  !       DOSCALL       !
+;                                                       +---------------------+
+	DB	87H
+	DC	'DOSCALL'
+	DW	READS-8
+DOSCALL:DW	$+2
+	POP	DE	;vom Stack = FCB
+	POP	HL	;vorlezter Eintrag = BDOS-Routine
+	PUSH	BC
+	LD	C,L	;C = BDOS-Routine
+	CALL	BDOS
+	POP	BC
+	LD	H,0
+	LD	L,A	;A enthaelt BDOS Rueckmeldung
+	PUSH	HL
+	JP	NEXT	;Rueckmeldung zum Stack
+;                                                       +---------------------+
+;                                                       !        LOAD         !
+;                                                       +---------------------+
+	DB	84H
+	DC	'LOAD'
+	DW	DOSCALL-10
+LOAD:	DW	NEST
+	DW	LOAD$
+	DW	AT
+	DW	EXEC
+	DW	SEMIS
+;                                                       +---------------------+
+;                    wird beim Start gesetzt            !        LOADA        !
+;                                                       +---------------------+
+	DB	85H
+	DC	'LOADA'
+	DW	LOAD-7
+LOADA:	DW	NEST
+	DW	READS
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !        EMIT         !
+;                                                       +---------------------+
+	DB	84H
+	DC	'EMIT'
+	DW	LOADA-8
+EMIT:	DW	NEST
+	DW	ONE
+	DW	OUTT
+	DW	PSTOR
+	DW	EMIT$
+	DW	AT
+	DW	EXEC
+	DW	SEMIS
+;                                                       +---------------------+
+;     diese Adresse wird beim Start nach EMIT$ geladen  !        EMITA        !
+;                                                       +---------------------+
+EMITA:	DW	$+2
+	POP	HL
+	PUSH	BC
+	LD	A,L
+MAEMIT:	AND	07FH
+	LD	E,A
+	CALL	EMI
+	POP	BC
+	JP	NEXT
+;                                             +-------------------------------+
+;                                             !  (EMIT) mit Druckerbedienung  !
+;                                             +-------------------------------+
+
+EMI:	LD	C,DCIO		;Zeichen in E wird ausgegeben
+	CALL	BDOS
+	LD	HL,US+36H
+	LD	A,(HL)
+	OR	A
+	JP	Z,EMI1
+	LD	C,CTPR
+	CALL	BDOS
+EMI1:	RET	
+;                                                       +---------------------+
+;                                                       !          CR         !
+;                                                       +---------------------+
+	DB	82H
+	DC	'CR'
+	DW	EMIT-7
+CR:	DW	NEST
+	DW	CR$
+	DW	AT
+	DW	EXEC
+	DW	SEMIS
+;                                                       +---------------------+
+;    diese Adresse wird beim Start nach CR$ geladen     !         CRA         !
+;                                                       +---------------------+
+CRA:	DW	$+2
+	PUSH	BC
+	LD	E,ACR
+	CALL	EMI
+	LD	E,LF
+	CALL	EMI
+	POP	BC
+	JP	NEXT
+;                                                       +---------------------+
+;   Die Adresse die im Feld KEY$ steht wird ausgefuehrt !         KEY         !
+;                                                       +---------------------+
+	DB	83H
+	DC	'KEY'
+	DW	CR-5
+KEY:	DW	NEST
+	DW	KEY$
+	DW	AT
+	DW	EXEC
+	DW	SEMIS
+;                                                       +---------------------+
+;     diese Adresse wird beim Start nach KEY$ geladen   !         KEYA        !
+;                                                       +---------------------+
+	DB	84H
+	DC	'KEYA'
+	DW	KEY-6
+KEYA:	DW	NEST
+	DW	KEY0
+	DW	SEMIS
+KEY0:	DW	$+2
+PKEY:	PUSH	BC
+
+PKEY0:	LD	C,DCIO
+	LD	E,0FFH		;bei FF Auslesen der Tastatur
+	CALL	BDOS
+	CP	0
+	JP	Z,PKEY0		;Noch kein Zeichen eingegeben
+
+PKEY1:	POP	BC
+	CP	DLE		;mit CRTL-P Drucker EIN/AUS
+	LD	E,A
+	JP	NZ,PKEY2
+	LD	HL,US+36H	;USERFELD 36H 1=DRUCKER EIN  0= AUS
+	LD	E,ABL
+	LD	A,(HL)
+	XOR	1
+	LD	(HL),A
+PKEY2:	LD	L,E
+	LD	H,0
+	PUSH	HL
+	JP	NEXT
+;                                                       +---------------------+
+;                                                       !        ?KEY         !
+;                                                       +---------------------+
+	DB	84H
+	DC	'?KEY'
+	DW	KEYA-7
+FKEYA:	DW	NEST
+	DW	FKEY0
+	DW	SEMIS
+FKEY0:	DW	$+2
+FPKEY:	PUSH	BC
+	LD	C,DCIO
+	LD	E,0FFH		;bei FF Auslesen der Tastatur
+	CALL	BDOS
+	JP	PKEY1		;bei Null in A kein Zeichen eingegeben
+;                                                       +---------------------+
+;                                                       !      ?TERMINAL      !
+;                                                       +---------------------+
+	DB	89H
+	DC	'?TERMINAL'
+	DW	FKEYA-7
+QTERM:	DW	NEST
+	DW	QTERM$
+	DW	AT
+	DW	EXEC
+	DW	SEMIS
+;                                                       +---------------------+
+; diese Adresse wird beim Start nach ?TERMINAL$ geladen !      ?TERMINALA     !
+;                                                       +---------------------+
+QTERMA:	DW	$+2
+	PUSH	BC
+	LD	C,GCST
+	CALL	BDOS
+	POP	BC	; wenn Taste gedrueckt A = FFH
+	LD	HL,0	; wenn nicht gedrueckt A = 00H
+	OR	A
+	JP	Z,QTER1
+	INC	L
+QTER1:	PUSH	HL
+	JP	NEXT
+;                                                       +---------------------+
+;   Teste Tastatur ob eine Eingabe vorliegt.Liegt eine  !                     !
+;   Eingabe vor,warte in Stop-Schleife auf erneute      !        PAUSE        !
+;                                          Eingabe .    !                     !
+;                                                       +---------------------+
+	DB	85H
+	DC	'PAUSE'
+	DW	QTERM-12
+PAUSE:	DW	NEST
+	DW	QTERM
+	DW	ZBRAN,PAU4-$
+	DW	KEYA,DROP
+	DW	LIT,1000
+	DW	LIT,0
+	DW	XDO
+PAU1:	DW	XLOOP,PAU1-$
+PAU2:	DW	QTERM
+	DW	ZBRAN,PAU2-$
+	DW	KEYA,DROP
+	DW	LIT,3000
+	DW	LIT,0
+	DW	XDO
+PAU3:	DW	XLOOP,PAU3-$
+PAU4:	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !       CMOVE         !
+;                                                       +---------------------+
+	DB	85H
+	DC	'CMOVE'
+	DW	PAUSE-8
+CMOVE:	DW	$+2
+	LD	L,C
+	LD	H,B
+	POP	BC
+	POP	DE
+	EX	(SP),HL	
+	JP	CMOV2
+CMOV1:	LD	A,(HL)
+	INC	HL
+	LD	(DE),A
+	INC	DE
+	DEC	BC
+CMOV2:	LD	A,B
+	OR	C
+	JP	NZ,CMOV1
+	POP	BC
+	JP	NEXT
+;                                                       +---------------------+
+;                                                       !         U*          !
+;                                                       +--                 --+
+;                                                       +--                 --+
+;        IM DURCHSCHNITT 994 ZYKLEN                     !        16*16        !
+;                                                       +---------------------+
+	DB	82H
+	DC	'U*'
+	DW	CMOVE-8
+USTAR:	DW	$+2
+	POP	DE
+	POP	HL
+	PUSH	BC
+	LD	B,H
+	LD	A,L
+	CALL	MPYX
+	PUSH	HL
+	LD	H,A
+	LD	A,B
+	LD	B,H
+	CALL	MPYX
+	POP	DE
+	LD	C,D
+	ADD	HL,BC
+	ADC	A,0
+	LD	D,L
+	LD	L,H
+	LD	H,A
+	POP	BC
+	PUSH	DE
+	PUSH	HL
+	JP	NEXT
+;                                                       +---------------------+
+;                                                       !   UNTERPROGRAMM "*" !
+;                                                       +---------------------+
+MPYX:	LD	HL,0
+	LD	C,8
+MPYX1:	ADD	HL,HL
+	RLA
+	JP	NC,MPYX2
+	ADD	HL,DE
+	ADC	A,0
+MPYX2:	DEC	C
+	JP	NZ,MPYX1
+	RET
+;                                                       +---------------------+
+;                                                       !         U/          !
+;                                                       +---------------------+
+	DB	82H
+	DC	'U/'
+	DW	USTAR-5
+USLAS:	DW	$+2
+	LD	HL,4
+	ADD	HL,SP
+	LD	E,(HL)
+	LD	(HL),C
+	INC	HL
+	LD	D,(HL)
+	LD	(HL),B
+	POP	BC
+	POP	HL
+	LD	A,L
+	SUB	C
+	LD	A,H
+	SBC	A,B
+	JP	C,USLA1
+	LD	HL,0FFFFH
+	LD	DE,0FFFFH
+	JP	USLA7
+USLA1:	LD	A,16
+USLA2:	ADD	HL,HL
+	RLA
+	EX	DE,HL
+	ADD	HL,HL
+	JP	NC,USLA3
+	INC	DE
+	AND	A
+USLA3:	EX	DE,HL	
+	RRA
+	PUSH	PSW
+	JP	NC,USLA4
+	LD	A,L
+	SUB	C
+	LD	L,A
+	LD	A,H
+	SBC	A,B
+	LD	H,A
+	JP	USLA5
+USLA4:	LD	A,L
+	SUB	C
+	LD	L,A
+	LD	A,H
+	SBC	A,B
+	LD	H,A
+	JP	NC,USLA5
+	ADD	HL,BC
+	DEC	DE
+USLA5:	INC	DE
+USLA6:	POP	PSW
+	DEC	A
+	JP	NZ,USLA2
+USLA7:	POP	BC
+	PUSH	HL
+	PUSH	DE
+	JP	NEXT
+;                                                       +---------------------+
+;                                                       !        AND          !
+;                                                       +---------------------+
+	DB	83H
+	DC	'AND'
+	DW	USLAS-5
+ANDD:	DW	$+2
+	POP	DE
+	POP	HL
+	LD	A,E
+	AND	L
+	LD	L,A
+	LD	A,D
+	AND	H
+	LD	H,A
+	PUSH	HL
+	JP	NEXT
+;                                                       +---------------------+
+;                                                       !         OR          !
+;                                                       +---------------------+
+	DB	82H
+	DC	'OR'
+	DW	ANDD-6
+ORR:	DW	$+2
+	POP	DE
+	POP	HL
+	LD	A,E
+	OR	L
+	LD	L,A
+	LD	A,D
+	OR	H
+	LD	H,A
+	PUSH	HL
+	JP	NEXT
+;                                                       +---------------------+
+;                                                       !         XOR         !
+;                                                       +---------------------+
+	DB	83H
+	DC	'XOR'
+	DW	ORR-5
+XORR:	DW	$+2
+	POP	DE
+	POP	HL
+	LD	A,E
+	XOR	L
+	LD	L,A
+	LD	A,D
+	XOR	H
+	LD	H,A
+	PUSH	HL
+	JP	NEXT
+;                                                       +---------------------+
+;                                                       !          SP@        !
+;                                                       +---------------------+
+	DB	83H
+	DC	'SP@'
+	DW	XORR-6
+SPAT:	DW	$+2
+	LD	HL,0
+	ADD	HL,SP
+	PUSH	HL
+	JP	NEXT
+;                                                       +---------------------+
+;                                                       !         SP!         !
+;                                                       +---------------------+
+	DB	83H
+	DC	'SP!'
+	DW	SPAT-6
+SPSTO:	DW	$+2
+	LD	HL,(UP)
+	LD	DE,6
+	ADD	HL,DE
+	LD	E,(HL)
+	INC	HL
+	LD	D,(HL)
+	EX	DE,HL	
+	LD	SP,HL	
+	JP	NEXT
+;                                                       +---------------------+
+;                                                       !         RP@         !
+;                                                       +---------------------+
+	DB	83H
+	DC	'RP@'
+	DW	SPSTO-6
+RPAT:	DW	$+2
+	LD	HL,(RPP)
+	PUSH	HL
+	JP	NEXT
+;                                                       +---------------------+
+;                                       R-P-store       !         RP!         !
+;                                                       +---------------------+
+	DB	83H
+	DC	'RP!'
+	DW	RPAT-6
+RPSTO:	DW	$+2
+	LD	HL,(UP)
+	LD	DE,8
+	ADD	HL,DE
+	LD	E,(HL)
+	INC	HL
+	LD	D,(HL)
+	EX	DE,HL	
+	LD	(RPP),HL
+	JP	NEXT
+;                                                       +---------------------+
+;                                                       !        LEAVE        !
+;                                                       +---------------------+
+	DB	85H
+	DC	'LEAVE'
+	DW	RPSTO-6
+LEAVE:	DW	$+2
+	LD	HL,(RPP)
+	LD	E,(HL)
+	INC	HL
+	LD	D,(HL)
+	INC	HL
+	LD	(HL),E
+	INC	HL
+	LD	(HL),D
+	JP	NEXT
+;                                                       +---------------------+
+;                                       to-R            !         >R          !
+;                                                       +---------------------+
+	DB	82H
+	DC	'>R'
+	DW	LEAVE-8
+TOR:	DW	$+2
+	POP	DE
+	LD	HL,(RPP)
+	DEC	HL
+	DEC	HL
+	LD	(RPP),HL
+	LD	(HL),E
+	INC	HL
+	LD	(HL),D
+	JP	NEXT
+;                                                       +---------------------+
+;                                        R-from         !         R>          !
+;                                                       +---------------------+
+	DB	82H
+	DC	'R>'
+	DW	TOR-5
+FROMR:	DW	$+2
+	LD	HL,(RPP)
+	LD	E,(HL)
+	INC	HL
+	LD	D,(HL)
+	INC	HL
+	LD	(RPP),HL
+	PUSH	DE
+	JP	NEXT
+;                                                       +---------------------+
+;                                                       !          R          !
+;                                                       +---------------------+
+	DB	81H
+	DC	'R'
+	DW	FROMR-5
+RR:	DW	IDO+2	; -> I
+;                                                       +---------------------+
+;                                       zero-equal      !         0=          !
+;                                                       +---------------------+
+	DB	82H
+	DC	'0='
+	DW	RR-4
+ZEQU:	DW	$+2
+	POP	HL
+	LD	A,L
+	OR	H
+	LD	HL,0
+	JP	NZ,ZEQU1
+	INC	HL
+ZEQU1:	PUSH	HL
+	JP	NEXT
+;                                                       +---------------------+
+;                                       zero-less-than  !         0<          !
+;                                                       +---------------------+
+	DB	82H
+	DC	'0<'
+	DW	ZEQU-5
+ZLESS:	DW	$+2
+	POP	HL
+	ADD	HL,HL
+	LD	HL,0
+	JP	NC,ZLES1
+	INC	HL
+ZLES1:	PUSH	HL
+	JP	NEXT
+;                                                       +---------------------+
+;                                                       !          +          !
+;                                                       +---------------------+
+	DB	81H
+	DC	'+'
+	DW	ZLESS-5
+PLUS:	DW	$+2
+	POP	DE
+	POP	HL
+	ADD	HL,DE
+	PUSH	HL
+	JP	NEXT
+;                                                       +---------------------+
+;                                                       !         D+          !
+;                                                       +---------------------+
+	DB	82H
+	DC	'D+'
+	DW	PLUS-4
+DPLUS:	DW	$+2
+	LD	HL,6
+	ADD	HL,SP
+	LD	E,(HL)
+	LD	(HL),C
+	INC	HL
+	LD	D,(HL)
+	LD	(HL),B
+	POP	BC
+	POP	HL
+	ADD	HL,DE
+	EX	DE,HL	
+	POP	HL
+	LD	A,L
+	ADC	A,C
+	LD	L,A
+	LD	A,H
+	ADC	A,B
+	LD	H,A
+	POP	BC
+	PUSH	DE
+	PUSH	HL
+	JP	NEXT
+;                                                       +---------------------+
+;                                                       !       MINUS         !
+;                                                       +---------------------+
+	DB	85H
+	DC	'MINUS'
+	DW	DPLUS-5
+MINUS:	DW	$+2
+	POP	HL
+	LD	A,L
+	CPL	
+	LD	L,A
+	LD	A,H
+	CPL	
+	LD	H,A
+	INC	HL
+	PUSH	HL
+	JP	NEXT
+;                                                       +---------------------+
+;                                                       !       DMINUS        !
+;                                                       +---------------------+
+	DB	86H
+	DC	'DMINUS'
+	DW	MINUS-8
+DMINU:	DW	$+2
+	POP	HL
+	POP	DE
+	SUB	A
+	SUB	E
+	LD	E,A
+	LD	A,0
+	SBC	A,D
+	LD	D,A
+	LD	A,0
+	SBC	A,L
+	LD	L,A
+	LD	A,0
+	SBC	A,H
+	LD	H,A
+	PUSH	DE
+	PUSH	HL
+	JP	NEXT
+;                                                       +---------------------+
+;                                                       !         OVER        !
+;                                                       +---------------------+
+	DB	84H
+	DC	'OVER'
+	DW	DMINU-9
+OVER:	DW	$+2
+	POP	DE
+	POP	HL
+	PUSH	HL
+	PUSH	DE
+	PUSH	HL
+	JP	NEXT
+;                                                       +---------------------+
+;                                                       !         DROP        !
+;                                                       +---------------------+
+	DB	84H
+	DC	'DROP'
+	DW	OVER-7
+DROP:	DW	$+2
+	POP	HL
+	JP	NEXT
+;                                                       +---------------------+
+;                                                       !         SWAP        !
+;                                                       +---------------------+
+	DB	84H
+	DC	'SWAP'
+	DW	DROP-7
+SWAP:	DW	$+2
+	POP	HL
+	EX	(SP),HL	
+	PUSH	HL
+	JP	NEXT
+;                                                       +---------------------+
+;                                                       !        BSWAP        !
+;                                                       +---------------------+
+	DEFB	85H
+	DC	'BSWAP'
+	DEFW	SWAP-7
+BSWAP:	DW	$+2
+ 	DEFW	$+2
+	POP  	DE
+	LD 	L,D
+	LD	H,E
+	PUSH	HL
+	JP	NEXT
+
+;                                                       +---------------------+
+;                                                       !          DUP        !
+;                                                       +---------------------+
+	DB	83H
+	DC	'DUP'
+	DW	BSWAP-8
+DUP:	DW	$+2
+	POP	HL
+	PUSH	HL
+	PUSH	HL
+	JP	NEXT
+;                                                       +---------------------+
+;                                                       !         2DUP        !
+;                                                       +---------------------+
+	DB	84H
+	DC	'2DUP'
+	DW	DUP-6
+TDUP:	DW	$+2
+	POP	HL
+	POP	DE
+	PUSH	DE
+	PUSH	HL
+	PUSH	DE
+	PUSH	HL
+	JP	NEXT
+;                                                       +---------------------+
+;                                        -plus-store    !         +!          !
+;                                                       +---------------------+
+	DB	82H
+	DC	'+!'
+	DW	TDUP-7
+PSTOR:	DW	$+2
+	POP	HL
+	POP	DE
+	LD	A,(HL)
+	ADD	A,E
+	LD	(HL),A
+	INC	HL
+	LD	A,(HL)
+	ADC	A,D
+	LD	(HL),A
+	JP	NEXT
+;                                                       +---------------------+
+;                                                       !       TOGGLE        !
+;                                                       +---------------------+
+	DB	86H
+	DC	'TOGGLE'
+	DW	PSTOR-5
+TOGGL:	DW	$+2
+	POP	DE
+	POP	HL
+	LD	A,(HL)
+	XOR	E
+	LD	(HL),A
+	JP	NEXT
+;                                                       +---------------------+
+;                                        -fetch-        !          @          !
+;                                                       +---------------------+
+	DB	81H
+	DC	'@'
+	DW	TOGGL-9
+AT:	DW	$+2
+	POP	HL
+	LD	E,(HL)
+	INC	HL
+	LD	D,(HL)
+	PUSH	DE
+	JP	NEXT
+;                                                       +---------------------+
+;                                         -C-fetch-     !         C@          !
+;                                                       +---------------------+
+	DB	82H
+	DC	'C@'
+	DW	AT-4
+CAT:	DW	$+2
+	POP	HL
+	LD	L,(HL)
+	LD	H,0
+	PUSH	HL
+	JP	NEXT
+;                                                       +---------------------+
+;                                        32 bit fetch   !         2@          !
+;                                                       +---------------------+
+	DB	82H
+	DC	'2@'
+	DW	CAT-5
+TAT:	DW	$+2
+	POP	HL
+	LD	DE,2
+	ADD	HL,DE
+	LD	E,(HL)
+	INC	HL
+	LD	D,(HL)
+	PUSH	DE
+	LD	DE,-3
+	ADD	HL,DE
+	LD	E,(HL)
+	INC	HL
+	LD	D,(HL)
+	PUSH	DE
+	JP	NEXT
+;                                                       +---------------------+
+;                                         -store-       !          !          !
+;                                                       +---------------------+
+	DB	81H
+	DC	'!'
+	DW	TAT-5
+STORE:	DW	$+2
+	POP	HL
+	POP	DE
+	LD	(HL),E
+	INC	HL
+	LD	(HL),D
+	JP	NEXT
+;                                                       +---------------------+
+;                                          C-store-     !         C!          !
+;                                                       +---------------------+
+	DB	82H
+	DC	'C!'
+	DW	STORE-4
+CSTOR:	DW	$+2
+	POP	HL
+	POP	DE
+	LD	(HL),E
+	JP	NEXT
+;                                                       +---------------------+
+;                                       32 bit-store-   !         2!          !
+;                                                       +---------------------+
+	DB	82H
+	DC	'2!'
+	DW	CSTOR-5
+TSTOR:	DW	$+2
+	POP	HL
+	POP	DE
+	LD	(HL),E
+	INC	HL
+	LD	(HL),D
+	INC	HL
+	POP	DE
+	LD	(HL),E
+	INC	HL
+	LD	(HL),D
+	JP	NEXT
+;                                                       +---------------------+
+;                                      no-operation     !         NOOP        !
+;                                                       +---------------------+
+	DB	84H
+	DC	'NOOP'
+	DW	TSTOR-5
+NOOP:	DW	NEST
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !      CONSTANT       !
+;                                                       +---------------------+
+	DB	88H
+	DC	'CONSTANT'
+	DW	NOOP-7
+CON:	DW	NEST
+	DW	CREAT
+	DW	SMUDG
+	DW	COMMA
+	DW	PSCOD
+DOCON:	INC	DE
+	EX	DE,HL	
+	LD	E,(HL)
+	INC	HL
+	LD	D,(HL)
+	PUSH	DE
+	JP	NEXT
+;                                                       +---------------------+
+;                                                       !     BCONSTANT       !
+;                                                       +---------------------+
+	DB	89H
+	DC	'BCONSTANT'
+	DW	CON-0BH
+BCON:	DW	NEST
+	DW	CREAT
+	DW	SMUDG
+	DW	CCOM
+	DW	PSCOD
+BDOCON:	INC	DE
+	EX	DE,HL	
+	LD	E,(HL)
+	LD	D,0
+	PUSH	DE
+	JP	NEXT
+;                                                       +---------------------+
+;                                                       !       VARIABLE      !
+;                                                       +---------------------+
+	DB	88H
+	DC	'VARIABLE'
+	DW	BCON-0CH
+VAR:	DW	NEST
+	DW	CON
+	DW	PSCOD
+DOVAR:	INC	DE
+	PUSH	DE
+	JP	NEXT
+;                                                       +---------------------+
+;                                                       !         USER        !
+;                                                       +---------------------+
+	DB	84H
+	DC	'USER'
+	DW	VAR-0BH
+USER:	DW	NEST
+	DW	CON
+	DW	PSCOD
+DOUSE:	INC	DE
+	EX	DE,HL	
+	LD	E,(HL)
+	LD	D,0
+	LD	HL,(UP)
+	ADD	HL,DE
+	PUSH	HL
+	JP	NEXT
+;******************************************************************************
+;*                                                                            *
+;*                                KONSTANTEN                                  *
+;*                                                                            *
+;******************************************************************************
+;                                                       +---------------------+
+;                                                       !          0          !
+;                                                       +---------------------+
+	DB	81H
+	DC	'0'
+	DW	USER-7
+ZERO:	DW	DOCON
+	DW	0
+;                                                       +---------------------+
+;                                                       !          1          !
+;                                                       +---------------------+
+	DB	81H
+	DC	'1'
+	DW	ZERO-4
+ONE:	DW	DOCON
+	DW	1
+;                                                       +---------------------+
+;                                                       !          2          !
+;                                                       +---------------------+
+	DB	81H
+	DC	'2'
+	DW	ONE-4
+TWO:	DW	DOCON
+	DW	2
+;                                                       +---------------------+
+;                                                       !          3          !
+;                                                       +---------------------+
+	DB	81H
+	DC	'3'
+	DW	TWO-4
+THREE:	DW	DOCON
+	DW	3
+;                                                       +---------------------+
+;                                                       !         BL          !
+;                                                       +---------------------+
+	DB	82H
+	DC	'BL'
+	DW	THREE-4
+BL:	DW	DOCON
+	DW	20H
+;                                                       +---------------------+
+;                                    Characters/Line    !         C/L         !
+;                                                       +---------------------+
+	DB	83H
+	DC	'C/L'
+	DW	BL-5
+CSLL:	DW	DOCON
+	DW	64
+;                                                       +---------------------+
+;         Beginn des Steuerspeichers fuer CP/M          !        FCB          !
+;                                                       +---------------------+
+	DB	83H
+	DC	'FCB'
+	DW	CSLL-6
+FCBE:	DW	DOCON
+	DW	DFCBE
+;                                                       +---------------------+
+;                     DMA = ZWISCHENSPEICHERADRESSE     !        DMA          !
+;                                                       +---------------------+
+	DB	83H
+	DC	'DMA'
+	DW	FCBE-6
+DMAE:	DW	DOCON
+	DW	DDMAE
+;                                                       +---------------------+
+;                     Maske fuer Emit                   !      MASKEMIT       !
+;                                                       +---------------------+
+	DB	88H
+	DC	'MASKEMIT'
+	DW	DMAE-06H
+MAEM:	DW	DOCON
+	DW	MAEMIT + 1
+;                                                       +---------------------+
+;                         Laenge eines Files            !       LFILE         !
+;                                                       +---------------------+
+	DB	85H
+	DC	'LFILE'
+	DW	MAEM-11
+LFILE:	DW	DOCON
+	DW	DLFILE
+;                                                       +---------------------+
+;                  Adresse der Benutzerversion          !       VERSION       !
+;                                                       +---------------------+
+	DB	87H
+	DC	'VERSION'
+	DW	LFILE-8
+VERS:	DW	DOCON
+	DW	BENU
+;                                                       +---------------------+
+;                                                       !       +ORIGIN       !
+;                                                       +---------------------+
+	DB	87H
+	DC	'+ORIGIN'
+	DW	VERS-10
+PORIG:	DW	NEST
+	DW	LIT
+	DW	ORIG
+	DW	PLUS
+	DW	SEMIS
+;******************************************************************************
+;*                                                                            *
+;*                                VARIABLEN                                   *
+;*                                                                            *
+;******************************************************************************
+;                                                       +---------------------+
+;                                                       !         S0          !
+;                                                       +---------------------+
+	DB	82H
+	DC	'S0'
+	DW	PORIG-10
+SZERO:	DW	DOUSE
+	DW	6
+;                                                       +---------------------+
+;                                                       !         R0          !
+;                                                       +---------------------+
+	DB	82H
+	DC	'R0'
+	DW	SZERO-5
+RZERO:	DW	DOUSE
+	DW	8
+;                                                       +---------------------+
+;                                                       !         TIB         !
+;                                                       +---------------------+
+	DB	83H
+	DC	'TIB'
+	DW	RZERO-5
+TIB:	DW	DOUSE
+	DB	0AH
+;                                                       +---------------------+
+;                                                       !        WIDTH        !
+;                                                       +---------------------+
+	DB	85H
+	DC	'WIDTH'
+	DW	TIB-6
+WIDTH:	DW	DOUSE
+	DB	0CH
+;                                                       +---------------------+
+;                                                       !       WARNING       !
+;                                                       +---------------------+
+	DB	87H
+	DC	'WARNING'
+	DW	WIDTH-8
+WARN:	DW	DOUSE
+	DB	0EH
+;                                                       +---------------------+
+;                                                       !        FENCE        !
+;                                                       +---------------------+
+	DB	85H
+	DC	'FENCE'
+	DW	WARN-0AH
+FENCE:	DW	DOUSE
+	DB	10H
+;                                                       +---------------------+
+;                                                       !          DP         !
+;                                                       +---------------------+
+	DB	82H
+	DC	'DP'
+	DW	FENCE-8
+DP:	DW	DOUSE
+	DB	12H
+;                                                       +---------------------+
+;                                                       !       VOC-LINK      !
+;                                                       +---------------------+
+	DB	88H
+	DC	'VOC-LINK'
+	DW	DP-5
+VOCL:	DW	DOUSE
+	DW	14H
+;                                                       +---------------------+
+;                                                       !         BLK         !
+;                                                       +---------------------+
+	DB	83H
+	DC	'BLK'
+	DW	VOCL-0BH
+BLK:	DW	DOUSE
+	DB	16H
+;                                                       +---------------------+
+;                                                       !          IN         !
+;                                                       +---------------------+
+	DB	82H
+	DC	'IN'
+	DW	BLK-6
+INN:	DW	DOUSE
+	DB	18H
+;                                                       +---------------------+
+;                                                       !         OUT         !
+;                                                       +---------------------+
+	DB	83H
+	DC	'OUT'
+	DW	INN-5
+OUTT:	DW	DOUSE
+	DB	1AH
+;                                                       +---------------------+
+;                                                       !         SCR         !
+;                                                       +---------------------+
+	DB	83H
+	DC	'SCR'
+	DW	OUTT-6
+SCR:	DW	DOUSE
+	DB	1CH
+;                                                       +---------------------+
+;                                                       !       OFFSET        !
+;                                                       +---------------------+
+	DB	86H
+	DC	'OFFSET'
+	DW	SCR-6
+OFSET:	DW	DOUSE
+	DB	1EH
+;                                                       +---------------------+
+;                                                       !       CONTEXT       !
+;                                                       +---------------------+
+	DB	87H
+	DC	'CONTEXT'
+	DW	OFSET-9
+CONT:	DW	DOUSE
+	DB	20H
+;                                                       +---------------------+
+;                                                       !       CURRENT       !
+;                                                       +---------------------+
+	DB	87H
+	DC	'CURRENT'
+	DW	CONT-0AH
+CURR:	DW	DOUSE
+	DB	22H
+;                                                       +---------------------+
+;                                                       !       STATE         !
+;                                                       +---------------------+
+	DB	85H
+	DC	'STATE'
+	DW	CURR-0AH
+STATE:	DW	DOUSE
+	DB	24H
+;                                                       +---------------------+
+;                                                       !        BASE         !
+;                                                       +---------------------+
+	DB	84H
+	DC	'BASE'
+	DW	STATE-8
+BASE:	DW	DOUSE
+	DB	26H
+;                                                       +---------------------+
+;                                                       !         DPL         !
+;                                                       +---------------------+
+	DB	83H
+	DC	'DPL'
+	DW	BASE-7
+DPL:	DW	DOUSE
+	DB	28H
+;                                                       +---------------------+
+;                                                       !         FLD         !
+;                                                       +---------------------+
+	DB	83H
+	DC	'FLD'
+	DW	DPL-6
+FLD:	DW	DOUSE
+	DB	2AH
+;                                                       +---------------------+
+;                                                       !         CSP         !
+;                                                       +---------------------+
+	DB	83H
+	DC	'CSP'
+	DW	FLD-6
+CSPP:	DW	DOUSE
+	DB	2CH
+;                                                       +---------------------+
+;                                                       !         R#          !
+;                                                       +---------------------+
+	DB	82H
+	DC	'R#'
+	DW	CSPP-6
+RNUM:	DW	DOUSE
+	DB	2EH
+;                                                       +---------------------+
+;                                                       !         HLD         !
+;                                                       +---------------------+
+	DB	83H
+	DC	'HLD'
+	DW	RNUM-5
+HLD:	DW	DOUSE
+	DW	30H
+;                                                       +---------------------+
+;                                                       !         S#          !
+;                                                       +---------------------+
+	DB	82H
+	DC	'S#'
+	DW	HLD-6
+SNUM:	DW	DOUSE
+	DB	32H
+;                                                       +---------------------+
+;                                                       !         T#          !
+;                                                       +---------------------+
+	DB	82H
+	DC	'T#'
+	DW	SNUM-5
+TNUM:	DW	DOUSE
+	DB	34H
+;                                                       +---------------------+
+;                     steuert Bedienung des Druckers    !         DR          !
+;                                                       +---------------------+
+	DB	82H
+	DC	'DR'
+	DW	TNUM-5
+DR:	DW	DOUSE
+	DB	36H
+;                                                       +---------------------+
+;    laufende Zeilennummer,wird bei CR um eins erhoeht  !         ZEI         !
+;                                                       +---------------------+
+	DB	83H
+	DC	'ZEI'
+	DW	DR-5
+ZEI:	DW	DOUSE
+	DB	38H
+;                                                       +---------------------+
+;       maximale Zeilenanzahl = Groesse des Blattes     !         MZEI        !
+;                                                       +---------------------+
+	DB	84H
+	DC	'MZEI'
+	DW	ZEI-6
+MZEI:	DW	DOUSE
+	DB	3AH
+;                                                       +---------------------+
+;                     erste erlaubte Zeile              !         EZEI        !
+;                                                       +---------------------+
+	DB	84H
+	DC	'EZEI'
+	DW	MZEI-7
+EZEI:	DW	DOUSE
+	DB	3CH
+;                                                       +---------------------+
+;                     letzte erlaubte Zeile             !         LZEI        !
+;                                                       +---------------------+
+	DB	84H
+	DC	'LZEI'
+	DW	EZEI-7
+LZEI:	DW	DOUSE
+	DB	3EH
+;                                                       +---------------------+
+;                              linker Rand              !         LRA         !
+;                                                       +---------------------+
+	DB	83H
+	DC	'LRA'
+	DW	LZEI-7
+LRA:	DW	DOUSE
+	DB	40H
+;                                                       +---------------------+
+;                              rechter Rand             !         RRA         !
+;                                                       +---------------------+
+	DB	83H
+	DC	'RRA'
+	DW	LRA-6
+RRA:	DW	DOUSE
+	DB	42H
+;                                                       +---------------------+
+; naechste Adresse die im USER-Feld belegt werden kann  !         VAZ         !
+;                                                       +---------------------+
+	DB	83H
+	DC	'VAZ'
+	DW	RRA-6
+VAZ:	DW	DOUSE
+	DB	44H
+;                                                       +---------------------+
+;     bestimt welche Fehlermeldung ausgefuehrt wird     !        MIST         !
+;        ( bei positivem Inhalt von WARNING )           +---------------------+
+	DB	84H
+	DC	'MIST'
+	DW	VAZ-6
+MIST:	DW	DOUSE
+	DB	46H
+;                                                       +---------------------+
+;    bestimmt welche KEY-Routine ausgefuehrt wird       !         KEY$        !
+;                                                       +---------------------+
+	DB	84H
+	DC	'KEY$'
+	DW	MIST-7
+KEY$:	DW	DOUSE
+	DB	48H
+;                                                       +---------------------+
+;    bestimmt welche LOAD-Routine ausgefuehrt wird      !        LOAD$        !
+;                                                       +---------------------+
+	DB	85H
+	DC	'LOAD$'
+	DW	KEY$-7
+LOAD$:	DW	DOUSE
+	DB	4AH
+;                                                       +---------------------+
+;    bestimmt welche ERROR-Routine ausgefuehrt wird     !        ERROR$       !
+;                                                       +---------------------+
+	DB	86H
+	DC	'ERROR$'
+	DW	LOAD$-8
+ERROR$:	DW	DOUSE
+	DB	4CH
+;                                                       +---------------------+
+;    bestimmt welche ABORT-Routine ausgefuehrt wird     !        ABORT$       !
+;                                                       +---------------------+
+	DB	86H
+	DC	'ABORT$'
+	DW	ERROR$-9
+ABORT$:	DW	DOUSE
+	DB	4EH
+;                                                       +---------------------+
+;    bestimmt welche EMIT-Routine ausgefuehrt wird      !        EMIT$        !
+;                                                       +---------------------+
+	DB	85H
+	DC	'EMIT$'
+	DW	ABORT$-9
+EMIT$:	DW	DOUSE
+	DB	50H
+;                                                       +---------------------+
+;    bestimmt welche CR-Routine ausgefuehrt wird        !         CR$         !
+;                                                       +---------------------+
+	DB	83H
+	DC	'CR$'
+	DW	EMIT$-8
+CR$:	DW	DOUSE
+	DB	52H
+;                                                       +---------------------+
+;    bestimmt welche ?TERMINAL-Routine ausgefuehrt wird !      ?TERMINAL$     !
+;                                                       +---------------------+
+	DB	8AH
+	DC	'?TERMINAL$'
+	DW	CR$-6
+QTERM$:	DW	DOUSE
+	DB	54H
+;                                                       +---------------------+
+; Vom Benutzer festzulegende Routine,die beim Kaltstart !        KALT$$       !
+; zusaetzlich ausgefuehrt wird. Mit NOOP vorbesetzt.    +---------------------+
+	DB	85H
+	DC	'COLD$'
+	DW	QTERM$-13
+COLD$:	DW	DOUSE
+	DB	56H
+;                                                       +---------------------+
+; Vom Benutzer festzulegende Routine,die beim Warmstart !        WARM$$       !
+; zusaetzlich ausgefuehrt wird. Mit NOOP vorbesetzt.    +---------------------+
+
+	DB	85H
+	DC	'WARM$'
+	DW	COLD$-8
+WARM$:	DW	DOUSE
+	DB	58H
+;********                                                            **********
+;*                                                                            *
+;*                            ENDE DER VARIABLEN                              *
+;*                                                                            *
+;******************************************************************************
+;                                                       +---------------------+
+;                                                       !          1+         !
+;                                                       +---------------------+
+	DB	82H
+	DC	'1+'
+	DW	WARM$-8
+ONEP:	DW	$+2
+	POP	HL
+	INC	HL
+	PUSH	HL
+	JP	NEXT
+;                                                       +---------------------+
+;                                                       !          2+         !
+;                                                       +---------------------+
+	DB	82H
+	DC	'2+'
+	DW	ONEP-5
+TWOP:	DW	NEST
+	DW	TWO
+	DW	PLUS
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !        HERE         !
+;                                                       +---------------------+
+	DB	84H
+	DC	'HERE'
+	DW	TWOP-5
+HERE:	DW	NEST
+	DW	DP
+	DW	AT
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !         ALLOT       !
+;                                                       +---------------------+
+	DB	85H
+	DC	'ALLOT'
+	DW	HERE-7
+ALLOT:	DW	NEST
+	DW	DP
+	DW	PSTOR
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !          ,          !
+;                                                       +---------------------+
+	DB	81H
+	DC	','
+	DW	ALLOT-8
+COMMA:	DW	NEST
+	DW	HERE
+	DW	STORE
+	DW	TWO
+	DW	ALLOT
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !         C,          !
+;                                                       +---------------------+
+	DB	82H
+	DC	'C,'
+	DW	COMMA-4
+CCOM:	DW	NEST
+	DW	HERE
+	DW	CSTOR
+	DW	ONE
+	DW	ALLOT
+	DW	SEMIS
+;                                                       +---------------------+
+;                                      Unterprogramm    !       - AND <       !
+;                                                       +---------------------+
+SSUB:	LD	A,L
+	SUB	E
+	LD	L,A
+	LD	A,H
+	SBC	A,D
+	LD	H,A
+	RET	
+;                                                       +---------------------+
+;                                                       !          -          !
+;                                                       +---------------------+
+	DB	81H
+	DC	'-'
+	DW	CCOM-5
+SUBB:	DW	$+2
+	POP	DE
+	POP	HL
+	CALL	SSUB
+	PUSH	HL
+	JP	NEXT
+;                                                       +---------------------+
+;                                                       !          =          !
+;                                                       +---------------------+
+	DB	81H
+	DC	'='
+	DW	SUBB-4
+EQUAL:	DW	NEST
+	DW	SUBB
+	DW	ZEQU
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !          <          !
+;                                                       +---------------------+
+	DB	81H
+	DC	'<'
+	DW	EQUAL-4
+LESS:	DW	$+2
+	POP	DE
+	POP	HL
+	LD	A,D
+	XOR	H
+	JP	M,LES1
+	CALL	SSUB
+LES1:	INC	H
+	DEC	H
+	JP	M,LES2
+	LD	HL,0
+	PUSH	HL
+	JP	NEXT
+LES2:	LD	HL,1
+	PUSH	HL
+	JP	NEXT
+;                                                       +---------------------+
+;                                                       !         U<          !
+;                                                       +---------------------+
+	DB	82H
+	DC	'U<'
+	DW	LESS-4
+ULESS:	DW	NEST
+	DW	TDUP
+	DW	XORR
+	DW	ZLESS
+	DW	ZBRAN
+	DW	ULES1-$
+	DW	DROP
+	DW	ZLESS
+	DW	ZEQU
+	DW	BRAN
+	DW	ULES2-$
+ULES1:	DW	SUBB
+	DW	ZLESS
+ULES2:	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !          >          !
+;                                                       +---------------------+
+	DB	81H
+	DC	'>'
+	DW	ULESS-5
+GREAT:	DW	NEST
+	DW	SWAP
+	DW	LESS
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !         ROT         !
+;                                                       +---------------------+
+	DB	83H
+	DC	'ROT'
+	DW	GREAT-4
+ROT:	DW	$+2
+	POP	DE
+	POP	HL
+	EX	(SP),HL	
+	PUSH	DE
+	PUSH	HL
+	JP	NEXT
+;                                                       +---------------------+
+;                                                       !        SPACE        !
+;                                                       +---------------------+
+	DB	85H
+	DC	'SPACE'
+	DW	ROT-6
+SPACE:	DW	NEST
+	DW	BL
+	DW	EMIT
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !        -DUP         !
+;                                                       +---------------------+
+	DB	84H
+	DC	'-DUP'
+	DW	SPACE-8
+DDUP:	DW	NEST
+	DW	DUP
+	DW	ZBRAN
+	DW	DDUP1-$
+	DW	DUP
+DDUP1:	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !       TRAVERSE      !
+;                                                       +---------------------+
+	DB	88H
+	DC	'TRAVERSE'
+	DW	DDUP-7
+TRAV:	DW	NEST
+	DW	SWAP
+TRAV1:	DW	OVER
+	DW	PLUS
+	DW	LIT
+	DW	7FH
+	DW	OVER
+	DW	CAT
+	DW	LESS
+	DW	ZBRAN
+	DW	TRAV1-$
+	DW	SWAP
+	DW	DROP
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !       LATEST        !
+;                                                       +---------------------+
+	DB	86H
+	DC	'LATEST'
+	DW	TRAV-0BH
+LATES:	DW	NEST
+	DW	CURR
+	DW	AT
+	DW	AT
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !        LFA          !
+;                                                       +---------------------+
+	DB	83H
+	DC	'LFA'
+	DW	LATES-9
+LFA:	DW	NEST
+	DW	LIT
+	DW	4
+	DW	SUBB
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !        CFA          !
+;                                                       +---------------------+
+	DB	83H
+	DC	'CFA'
+	DW	LFA-6
+CFA:	DW	NEST
+	DW	TWO
+	DW	SUBB
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !        NFA          !
+;                                                       +---------------------+
+	DB	83H
+	DC	'NFA'
+	DW	CFA-6
+NFA:	DW	NEST
+	DW	LIT
+	DW	5
+	DW	SUBB
+	DW	LIT
+	DW	-1
+	DW	TRAV
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !        PFA          !
+;                                                       +---------------------+
+	DB	83H
+	DC	'PFA'
+	DW	NFA-6
+PFA:	DW	NEST
+	DW	ONE
+	DW	TRAV
+	DW	LIT
+	DW	5
+	DW	PLUS
+	DW	SEMIS
+;                                                       +---------------------+
+;                                        store-C-S-P    !        !CSP         !
+;                                                       +---------------------+
+	DB	84H
+	DC	'!CSP'
+	DW	PFA-6
+SCSP:	DW	NEST
+	DW	SPAT
+	DW	CSPP
+	DW	STORE
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !       ?ERROR        !
+;                                                       +---------------------+
+	DB	86H
+	DC	'?ERROR'
+	DW	SCSP-7
+QERR:	DW	NEST
+	DW	SWAP
+	DW	ZBRAN
+	DW	QERR1-$
+	DW	ERROR
+	DW	BRAN
+	DW	QERR2-$
+QERR1:	DW	DROP
+QERR2:	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !        ?COMP        !
+;                                                       +---------------------+
+	DB	85H
+	DC	'?COMP'
+	DW	QERR-9
+QCOMP:	DW	NEST
+	DW	STATE
+	DW	AT
+	DW	ZEQU
+	DW	LIT
+	DW	11H
+	DW	QERR
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !       ?EXXC         !
+;                                                       +---------------------+
+	DB	85H
+	DC	'?EXEC'
+	DW	QCOMP-8
+QEXEC:	DW	NEST
+	DW	STATE
+	DW	AT
+	DW	LIT
+	DW	12H
+	DW	QERR
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !       ?PAIRS        !
+;                                                       +---------------------+
+	DB	86H
+	DC	'?PAIRS'
+	DW	QEXEC-8
+QPAIR:	DW	NEST
+	DW	SUBB
+	DW	LIT
+	DW	13H
+	DW	QERR
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !        ?CSP         !
+;                                                       +---------------------+
+	DB	84H
+	DC	'?CSP'
+	DW	QPAIR-9
+QCSP:	DW	NEST
+	DW	SPAT
+	DW	CSPP
+	DW	AT
+	DW	SUBB
+	DW	LIT
+	DW	14H
+	DW	QERR
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !      ?LOADING       !
+;                                                       +---------------------+
+	DB	88H
+	DC	'?LOADING'
+	DW	QCSP-7
+QLOAD:	DW	NEST
+	DW	BLK
+	DW	AT
+	DW	ZEQU
+	DW	LIT
+	DW	16H
+	DW	QERR
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !       COMPILE       !
+;                                                       +---------------------+
+	DB	87H
+	DC	'COMPILE'
+	DW	QLOAD-0BH
+COMP:	DW	NEST
+	DW	QCOMP
+	DW	FROMR
+	DW	DUP
+	DW	TWOP
+	DW	TOR
+	DW	AT
+	DW	COMMA
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !         [           !
+;                                                       +---------------------+
+	DB	0C1H
+	DC	'['
+	DW	COMP-0AH
+LBRAC:	DW	NEST
+	DW	ZERO
+	DW	STATE
+	DW	STORE
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !          ]          !
+;                                                       +---------------------+
+	DB	81H
+	DC	']'
+	DW	LBRAC-4
+RBRAC:	DW	NEST
+	DW	LIT
+	DW	0C0H
+	DW	STATE
+	DW	STORE
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !       SMUDGE        !
+;                                                       +---------------------+
+	DB	86H
+	DC	'SMUDGE'
+	DW	RBRAC-4
+SMUDG:	DW	NEST
+	DW	LATES
+	DW	LIT
+	DW	20H
+	DW	TOGGL
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !        HEX          !
+;                                                       +---------------------+
+	DB	83H
+	DC	'HEX'
+	DW	SMUDG-9
+HEX:	DW	NEST
+	DW	LIT
+	DW	10H
+	DW	BASE
+	DW	STORE
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !       DECIMAL       !
+;                                                       +---------------------+
+	DB	87H
+	DC	'DECIMAL'
+	DW	HEX-6
+DEC:	DW	NEST
+	DW	LIT
+	DW	0AH
+	DW	BASE
+	DW	STORE
+	DW	SEMIS
+;                                                       +---------------------+
+;                                        Basis = 2      !        BINAER       !
+;                                                       +---------------------+
+	DB	86H
+	DC	'BINAER'
+	DW	DEC-0AH
+BIN:	DW	NEST
+	DW	LIT
+	DW	2H
+	DW	BASE
+	DW	STORE
+	DW	SEMIS
+;                                                       +---------------------+
+;                                        Basis = 8      !         OCT         !
+;                                                       +---------------------+
+	DB	83H
+	DC	'OCT'
+	DW	BIN-9
+OCT:	DW	NEST
+	DW	LIT,8H
+	DW	BASE
+	DW	STORE
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !       (;CODE)       !
+;                                                       +---------------------+
+	DB	87H
+	DC	'(;CODE)'
+	DW	OCT-6
+PSCOD:	DW	NEST
+	DW	FROMR
+	DW	LATES
+	DW	PFA
+	DW	CFA
+	DW	STORE
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !        ;CODE        !
+;                                                       +---------------------+
+	DB	0C5H
+	DC	';CODE'
+	DW	PSCOD-0AH
+SEMIC:	DW	NEST
+	DW	QCSP
+	DW	COMP
+	DW	PSCOD
+	DW	LBRAC
+	DW	NOOP	;wird bei Assembleraufruf besetzt
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !       <BUILDS       !
+;                                                       +---------------------+
+	DB	87H
+	DC	'<BUILDS'
+	DW	SEMIC-8
+BUILD:	DW	NEST
+	DW	ZERO
+	DW	CON
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !        DOES>        !
+;                                                       +---------------------+
+	DB	85H
+	DC	'DOES>'
+	DW	BUILD-0AH
+DOES:	DW	NEST
+	DW	FROMR
+	DW	LATES
+	DW	PFA
+	DW	STORE
+	DW	PSCOD
+DODOE:	LD	HL,(RPP)
+	DEC	HL
+	LD	(HL),B
+	DEC	HL
+	LD	(HL),C
+	LD	(RPP),HL
+	INC	DE
+	EX	DE,HL	
+	LD	C,(HL)
+	INC	HL
+	LD	B,(HL)
+	INC	HL
+	PUSH	HL
+	JP	NEXT
+;                                                       +---------------------+
+;                                                       !        COUNT        !
+;                                                       +---------------------+
+	DB	85H
+	DC	'COUNT'
+	DW	DOES-8
+COUNT:	DW	NEST
+	DW	DUP
+	DW	ONEP
+	DW	SWAP
+	DW	CAT
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !        TYPE         !
+;                                                       +---------------------+
+	DB	84H
+	DC	'TYPE'
+	DW	COUNT-8
+TYPE:	DW	NEST
+	DW	DDUP
+	DW	ZBRAN
+	DW	TYPE1-$
+	DW	OVER
+	DW	PLUS
+	DW	SWAP
+	DW	XDO
+TYPE2:	DW	IDO
+	DW	CAT
+	DW	EMIT
+	DW	XLOOP
+	DW	TYPE2-$
+	DW	BRAN
+	DW	TYPE3-$
+TYPE1:	DW	DROP
+TYPE3:	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !      -TRAILING      !
+;                                                       +---------------------+
+	DB	89H
+	DC	'-TRAILING'
+	DW	TYPE-7
+DTRAI:	DW	NEST
+	DW	DUP
+	DW	ZERO
+	DW	XDO
+DTRA1:	DW	OVER
+	DW	OVER
+	DW	PLUS
+	DW	ONE
+	DW	SUBB
+	DW	CAT
+	DW	BL
+	DW	SUBB
+	DW	ZBRAN
+	DW	DTRA2-$
+	DW	LEAVE
+	DW	BRAN
+	DW	DTRA3-$
+DTRA2:	DW	ONE
+	DW	SUBB
+DTRA3:	DW	XLOOP
+	DW	DTRA1-$
+	DW	SEMIS
+;                                                       +---------------------+
+;                                     paren-dot-quote-  !        (.")         !
+;                                                       +---------------------+
+	DB	84H
+	DC	'(.")'
+	DW	DTRAI-0CH
+PDOTQ:	DW	NEST
+	DW	RR
+	DW	COUNT
+	DW	DUP
+	DW	ONEP
+	DW	FROMR
+	DW	PLUS
+	DW	TOR
+	DW	TYPE
+	DW	SEMIS
+;                                                       +---------------------+
+;                                       -dot-quote-     !         ."          !
+;                                                       +---------------------+
+	DB	0C2H
+	DC	'."'
+	DW	PDOTQ-7
+DOTQ:	DW	NEST
+	DW	LIT
+	DW	22H
+	DW	STATE
+	DW	AT
+	DW	ZBRAN
+	DW	DOTQ1-$
+	DW	COMP
+	DW	PDOTQ
+	DW	WORD
+	DW	HERE
+	DW	CAT
+	DW	ONEP
+	DW	ALLOT
+	DW	BRAN
+	DW	DOTQ2-$
+DOTQ1:	DW	WORD
+	DW	HERE
+	DW	COUNT
+	DW	TYPE
+DOTQ2:	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !       EXPECT        !
+;                                                       +---------------------+
+	DB	86H
+	DC	'EXPECT'
+	DW	DOTQ-5
+EXPEC:	DW	NEST
+	DW	OVER
+	DW	PLUS
+	DW	OVER
+	DW	XDO
+EXPE1:	DW	KEY
+	DW	DUP
+	DW	LIT
+	DW	0EH
+	DW	PORIG
+	DW	AT
+	DW	EQUAL
+	DW	ZBRAN
+	DW	EXPE2-$
+	DW	DROP
+	DW	DUP
+	DW	IDO
+	DW	EQUAL
+	DW	DUP
+	DW	FROMR
+	DW	TWO
+	DW	SUBB
+	DW	PLUS
+	DW	TOR
+	DW	ZBRAN
+	DW	EXPE6-$
+	DW	LIT
+	DW	BELL
+	DW	BRAN
+	DW	EXPE7-$
+EXPE6:	DW	PDOTQ
+	DB	2
+	DB	BSOUT,EOL	;BEI BS auch Rest der Zeile loeschen
+	DW	BRAN,EXPE8-$
+EXPE7:	DW	BRAN
+	DW	EXPE3-$
+EXPE2:	DW	DUP
+	DW	LIT
+	DW	0DH
+	DW	EQUAL
+	DW	ZBRAN
+	DW	EXPE4-$
+	DW	LEAVE
+	DW	DROP
+	DW	BL
+	DW	ZERO
+	DW	BRAN
+	DW	EXPE5-$
+EXPE4:	DW	DUP
+EXPE5:	DW	IDO
+	DW	CSTOR
+	DW	ZERO
+	DW	IDO
+	DW	ONEP
+	DW	STORE
+EXPE3:	DW	EMIT
+EXPE8:	DW	XLOOP
+	DW	EXPE1-$
+	DW	DROP
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !        QUERY        !
+;                                                       +---------------------+
+	DB	85H
+	DC	'QUERY'
+	DW	EXPEC-9
+QUERY:	DW	NEST
+	DW	TIB
+	DW	AT
+	DW	LIT
+	DW	50H
+	DW	EXPEC
+	DW	ZERO
+	DW	INN
+	DW	STORE
+	DW	SEMIS
+;                                                       +---------------------+
+;                                           NULL        !          0          !
+;                                                       +---------------------+
+	DB	0C1H
+	DB	80H
+	DW	QUERY-8
+NULL:	DW	NEST
+	DW	FROMR
+	DW	DROP
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !        FILL         !
+;                                                       +---------------------+
+	DB	84H
+	DC	'FILL'
+	DW	NULL-4
+FILL:	DW	$+2
+	LD	L,C
+	LD	H,B
+	POP	DE
+	POP	BC
+	EX	(SP),HL	
+	EX	DE,HL	
+FILL1:	LD	A,B
+	OR	C
+	JP	Z,FILL2
+	LD	A,L
+	LD	(DE),A
+	INC	DE
+	DEC	BC
+	JP	FILL1
+FILL2:	POP	BC
+	JP	NEXT
+;                                                       +---------------------+
+;                                                       !        ERASE        !
+;                                                       +---------------------+
+	DB	85H
+	DC	'ERASE'
+	DW	FILL-7
+ERASEE:	DW	NEST
+	DW	ZERO
+	DW	FILL
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !       BLANKS        !
+;                                                       +---------------------+
+	DB	86H
+	DC	'BLANKS'
+	DW	ERASEE-8
+BLANK:	DW	NEST
+	DW	BL
+	DW	FILL
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !        HOLD         !
+;                                                       +---------------------+
+	DB	84H
+	DC	'HOLD'
+	DW	BLANK-9
+HOLD:	DW	NEST
+	DW	LIT
+	DW	-1
+	DW	HLD
+	DW	PSTOR
+	DW	HLD
+	DW	AT
+	DW	CSTOR
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !         PAD         !
+;                                                       +---------------------+
+	DB	83H
+	DC	'PAD'
+	DW	HOLD-7
+PAD:	DW	NEST
+	DW	HERE
+	DW	LIT
+	DW	44H
+	DW	PLUS
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !        WORD         !
+;                                                       +---------------------+
+	DB	84H
+	DC	'WORD'
+	DW	PAD-6
+WORD:	DW	NEST
+	DW	BLK
+	DW	AT
+	DW	ZBRAN
+	DW	WORD1-$
+	DW	BLK
+	DW	AT
+	DW	NOOP
+	DW	BRAN
+	DW	WORD2-$
+WORD1:	DW	TIB
+	DW	AT
+WORD2:	DW	INN
+	DW	AT
+	DW	PLUS
+	DW	SWAP
+	DW	ENCL
+	DW	HERE
+	DW	LIT
+	DW	22H
+	DW	BLANK
+	DW	INN
+	DW	PSTOR
+	DW	OVER
+	DW	SUBB
+	DW	TOR
+	DW	RR
+	DW	HERE
+	DW	CSTOR
+	DW	PLUS
+	DW	HERE
+	DW	ONEP
+	DW	FROMR
+	DW	CMOVE
+	DW	HERE,ONEP	;Anfang der Zeichenkette
+	DW	HERE,CAT	;Anzahl der Zeichen
+	DW	UPLO		;Wandle Zeichen im Bereich 61H bis 7EH
+				;um.Es wird der Wert 20H bei UPPER oder
+				;0 bei Lower abgezogen
+	DW	SEMIS
+;                                                       +---------------------+
+;       Korrektur von kleinen in grosse Buchstaben      !       UP/LO         !
+;                                                       +---------------------+
+UPLO:	DW	$+2
+	POP	HL
+	POP	DE	;Beginn des Textes vom Stack
+UPLO1:	LD	A,(DE)	;Zeichen holen
+	CP	'a'	;untere Grenze
+	JP	C,UPLO3	;keine Korrektur bei diesem Buchstaben
+	CP	'z'+1	;obere Grenze
+	JP	NC,UPLO3	;nicht korrigieren
+UPLO2:	SUB	20H	;diese Stelle merken.Faktor 20H wird bei Zulassung
+			;von kleinen Buchstaben auf 0h gesezt
+	LD	(DE),A	;korrigiertes Zeichen zurueck
+UPLO3:	INC	DE	;ein Zeichen weiter
+	DEC	HL	;Zaehler - 1
+	LD	A,L
+	OR 	H	;wenn Zaehler = 0  Ende
+	JP	NZ,UPLO1
+	JP	NEXT
+;                                                       +---------------------+
+;      wandelt alle Kleinbuchstaben in grosse um        !        UPPER        !
+;                                                       +---------------------+
+	DB	85H
+	DC	'UPPER'
+	DW	WORD-7
+UPP:	DW	NEST
+	DW	LIT,20H
+	DW	LIT,UPLO2+1
+	DW	CSTOR
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !        LOWER        !
+;                                                       +---------------------+
+	DB	85H
+	DC	'LOWER'
+	DW	UPP-8
+LOW:	DW	NEST
+	DW	LIT,0H
+	DW	LIT,UPLO2+1
+	DW	CSTOR
+	DW	SEMIS
+
+
+;                                                       +---------------------+
+;                                                       !       (NUMBER)      !
+;                                                       +---------------------+
+	DB	88H
+	DC	'(NUMBER)'
+	DW	LOW-8 
+PNUMB:	DW	NEST
+PNUM1:	DW	ONEP
+	DW	DUP
+	DW	TOR
+	DW	CAT
+	DW	BASE
+	DW	AT
+	DW	DIGIT
+	DW	ZBRAN
+	DW	PNUM2-$
+	DW	SWAP
+	DW	BASE
+	DW	AT
+	DW	USTAR
+	DW	DROP
+	DW	ROT
+	DW	BASE
+	DW	AT
+	DW	USTAR
+	DW	DPLUS
+	DW	DPL
+	DW	AT
+	DW	ONEP
+	DW	ZBRAN
+	DW	PNUM3-$
+	DW	ONE
+	DW	DPL
+	DW	PSTOR
+PNUM3:	DW	FROMR
+	DW	BRAN
+	DW	PNUM1-$
+PNUM2:	DW	FROMR
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !       NUMBER        !
+;                                                       +---------------------+
+	DB	86H
+	DC	'NUMBER'
+	DW	PNUMB-0BH
+NUMB:	DW	NEST
+	DW	ZERO
+	DW	ZERO
+	DW	ROT
+	DW	DUP
+	DW	ONEP
+	DW	CAT
+	DW	LIT
+	DW	2DH
+	DW	EQUAL
+	DW	DUP
+	DW	TOR
+	DW	PLUS
+	DW	LIT
+	DW	-1
+NUMB1:	DW	DPL
+	DW	STORE
+	DW	PNUMB
+	DW	DUP
+	DW	CAT
+	DW	BL
+	DW	SUBB
+	DW	ZBRAN
+	DW	NUMB2-$
+	DW	DUP
+	DW	CAT
+	DW	LIT
+	DW	2EH
+	DW	SUBB
+	DW	ZERO
+	DW	QERR
+	DW	ZERO
+	DW	BRAN
+	DW	NUMB1-$
+NUMB2:	DW	DROP
+	DW	FROMR
+	DW	ZBRAN
+	DW	NUMB3-$
+	DW	DMINU
+NUMB3:	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !       -FIND         !
+;                                                       +---------------------+
+	DB	85H
+	DC	'-FIND'
+	DW	NUMB-9
+DFIND:	DW	NEST
+	DW	BL
+	DW	WORD
+	DW	HERE
+	DW	CONT
+	DW	AT
+	DW	AT
+	DW	PFIND
+	DW	DUP
+	DW	ZEQU
+	DW	ZBRAN
+	DW	DFIN1-$
+	DW	DROP
+	DW	HERE
+	DW	LATES
+	DW	PFIND
+DFIN1:	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !       ERROR         !
+;                                                       +---------------------+
+	DB	85H
+	DC	'ERROR'
+	DW	DFIND-8
+ERROR:	DW	NEST
+	DW	ERROR$
+	DW	AT
+	DW	EXEC
+	DW	SEMIS
+;                                                       +---------------------+
+;                      wird beim Start gesetzt          !       ERRORA        !
+;                                                       +---------------------+
+	DB	86H
+	DC	'ERRORA'
+	DW	ERROR-8
+ERRORA:	DW	NEST
+	DW	HERE
+	DW	COUNT
+	DW	TYPE
+	DW	PDOTQ
+	DB	3
+	DB	'?? '
+	DW	DUP
+	DW	MESS	;Fehlermeldung ausgeben
+	DW	LIT,4	;
+	DW	EQUAL	;bei Fehlerart 4 ( Doppeldefinition ) kein SETADR
+	DW	ZBRAN,KERR-$
+	DW	BRAN,KERR1-$
+KERR:	DW	SETADR	;setze Adressen im USER-Bereich
+KERR1:	DW	SPSTO
+	DW	QUIT
+;                                                       +---------------------+
+;                                                       !         ID.         !
+;                                                       +---------------------+
+	DB	83H
+	DC	'ID.'
+	DW	ERRORA-9
+IDDOT:	DW	NEST
+	DW	PAD
+	DW	LIT
+	DW	20H
+	DW	LIT
+	DW	5FH
+	DW	FILL
+	DW	DUP
+	DW	PFA
+	DW	LFA
+	DW	OVER
+	DW	SUBB
+	DW	PAD
+	DW	SWAP
+	DW	CMOVE
+	DW	PAD
+	DW	COUNT
+	DW	LIT
+	DW	1FH
+	DW	ANDD
+	DW	TYPE
+	DW	SPACE
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !       CREATE        !
+;                                                       +---------------------+
+	DB	86H
+	DC	'CREATE'
+	DW	IDDOT-6
+CREAT:	DW	NEST
+	DW	DFIND
+	DW	ZBRAN
+	DW	CREA1-$
+	DW	DROP
+	DW	NFA
+	DW	IDDOT
+	DW	LIT
+	DW	4
+	DW	MESS
+	DW	SPACE
+CREA1:	DW	HERE
+	DW	DUP
+	DW	CAT
+	DW	WIDTH
+	DW	AT
+	DW	MIN
+	DW	ONEP
+	DW	ALLOT
+	DW	DUP
+	DW	LIT
+	DW	0A0H
+	DW	TOGGL
+	DW	HERE
+	DW	ONE
+	DW	SUBB
+	DW	LIT
+	DW	80H
+	DW	TOGGL
+	DW	LATES
+	DW	COMMA
+	DW	CURR
+	DW	AT
+	DW	STORE
+	DW	HERE
+	DW	TWOP
+	DW	COMMA
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !      [COMPILE]      !
+;                                                       +---------------------+
+	DB	0C9H
+	DC	'[COMPILE]'
+	DW	CREAT-9
+BCOMP:	DW	NEST
+	DW	DFIND
+	DW	ZEQU
+	DW	ZERO
+	DW	QERR
+	DW	DROP
+	DW	CFA
+	DW	COMMA
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !       LITERAL       !
+;                                                       +---------------------+
+	DB	0C7H
+	DC	'LITERAL'
+	DW	BCOMP-0CH
+LITER:	DW	NEST
+	DW	STATE
+	DW	AT
+	DW	ZBRAN
+	DW	LITE1-$
+	DW	COMP
+	DW	LIT
+	DW	COMMA
+LITE1:	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !      DLITERAL       !
+;                                                       +---------------------+
+	DB	0C8H
+	DC	'DLITERAL'
+	DW	LITER-0AH
+DLITE:	DW	NEST
+	DW	STATE
+	DW	AT
+	DW	ZBRAN
+	DW	DLIT1-$
+	DW	SWAP
+	DW	LITER
+	DW	LITER
+DLIT1:	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !       ?STACK        !
+;                                                       +---------------------+
+	DB	86H
+	DC	'?STACK'
+	DW	DLITE-0BH
+QSTAC:	DW	NEST
+	DW	SPAT
+	DW	SZERO
+	DW	AT
+	DW	SWAP
+	DW	ULESS
+	DW	ONE
+	DW	QERR
+	DW	SPAT
+	DW	HERE
+	DW	LIT
+	DW	80H
+	DW	PLUS
+	DW	ULESS
+	DW	LIT
+	DW	7
+	DW	QERR
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !      INTERPRET      !
+;                                                       +---------------------+
+	DB	89H
+	DC	'INTERPRET'
+	DW	QSTAC-9
+INTER:	DW	NEST
+INTE1:	DW	DFIND
+	DW	ZBRAN
+	DW	INTE2-$
+	DW	STATE
+	DW	AT
+	DW	LESS
+	DW	ZBRAN
+	DW	INTE3-$
+	DW	CFA
+	DW	COMMA
+	DW	BRAN
+	DW	INTE4-$
+INTE3:	DW	CFA
+	DW	EXEC
+INTE4:	DW	QSTAC
+	DW	BRAN
+	DW	INTE5-$
+INTE2:	DW	HERE
+	DW	NUMB
+	DW	DPL
+	DW	AT
+	DW	ONEP
+	DW	ZBRAN
+	DW	INTE6-$
+	DW	DLITE
+	DW	BRAN
+	DW	INTE7-$
+INTE6:	DW	DROP
+	DW	LITER
+INTE7:	DW	QSTAC
+INTE5:	DW	BRAN
+	DW	INTE1-$
+;                                                       +---------------------+
+;                                                       !       IMMEDIATE     !
+;                                                       +---------------------+
+	DB	89H
+	DC	'IMMEDIATE'
+	DW	INTER-0CH
+IMMED:	DW	NEST
+	DW	LATES
+	DW	LIT
+	DW	40H
+	DW	TOGGL
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !      VOCABULARY     !
+;                                                       +---------------------+
+	DB	8AH
+	DC	'VOCABULARY'
+	DW	IMMED-0CH
+VOCAB:	DW	NEST
+	DW	BUILD
+	DW	LIT
+	DW	0A081H
+	DW	COMMA
+	DW	CURR
+	DW	AT
+	DW	CFA
+	DW	COMMA
+	DW	HERE
+	DW	VOCL
+	DW	AT
+	DW	COMMA
+	DW	VOCL
+	DW	STORE
+	DW	DOES
+DOVOC:	DW	TWOP
+	DW	CONT
+	DW	STORE
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !      DEFINITIONS    !
+;                                                       +---------------------+
+	DB	8BH
+	DC	'DEFINITIONS'
+	DW	VOCAB-0DH
+DEFIN:	DW	NEST
+	DW	CONT
+	DW	AT
+	DW	CURR
+	DW	STORE
+	DW	SEMIS
+;                                                       +---------------------+
+;                                       left paren      !         (           !
+;                                                       +---------------------+
+	DB	0C1H
+	DC	'('
+	DW	DEFIN-0EH
+PAREN:	DW	NEST
+	DW	LIT
+	DW	29H
+	DW	WORD
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !        QUIT         !
+;                                                       +---------------------+
+	DB	84H
+	DC	'QUIT'
+	DW	PAREN-4
+QUIT:	DW	NEST
+	DW	ZERO
+	DW	BLK
+	DW	STORE
+	DW	LBRAC
+QUIT1:	DW	RPSTO
+	DW	CR
+	DW	QUERY
+	DW	INTER
+	DW	STATE
+	DW	AT
+	DW	ZEQU
+	DW	ZBRAN
+	DW	QUIT2-$
+	DW	PDOTQ
+	DB	2
+	DB	'ok'
+QUIT2:	DW	BRAN
+	DW	QUIT1-$
+;                                                       +---------------------+
+;                                                       !        ABORT        !
+;                                                       +---------------------+
+	DB	85H
+	DC	'ABORT'
+	DW	QUIT-7
+ABORT:	DW	NEST
+	DW	FORTH
+	DW	DEFIN
+	DW	SPSTO
+	DW	HEX	;BASIS = 16
+	DW	UPP	;alles grosse Buchstaben
+	DW	QSTAC
+	DW	ABORT$
+	DW	AT
+	DW	EXEC
+	DW	CR
+	DW	PDOTQ
+	DB	3
+	DC	'.OK'
+	DW	QUIT
+;                                                       +---------------------+
+;                                                       !        WARM         !
+;                                                       +---------------------+
+WRM:	LD	BC,WRM1
+	JP	NEXT
+                                        ;
+	DB	84H
+	DC	'WARM'
+	DW	ABORT-8
+WARM:	DW	NEST
+WRM1:	DW	SETADR
+	DW	WARM$
+	DW	AT
+	DW	EXEC		;Die Routine deren Adresse bei WARM$ steht
+	DW	ABORT		;wird ausgefuehrt
+;                                                       +---------------------+
+;  Setze Adressen in Felder KEY$,LOAD$,......,WARM$     !        SETADR       !
+;                     ( beim Warmstart benutzt )        +---------------------+
+	DB	86H
+	DC	'SETADR'
+	DW	WARM-7
+SETADR:	DW	NEST
+	DW	LIT,WAPA
+	DW	LIT,UP,AT
+	DW	LIT,48H,PLUS
+	DW	LIT,18
+	DW	CMOVE	; KEY$ bis TRACE$
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !         COLD        !
+;                                                       +---------------------+
+CLD::	LD	BC,COLD1
+	LD	SP,INITS0		;Lade Forth-Stack-Zeiger
+	JP	NEXT
+
+
+	DB	84H
+	DC	'COLD'
+	DW	SETADR-9
+COLD:	DW	NEST
+COLD1:	DW	LIT,ORIG+12H
+	DW	LIT,UP,AT
+	DW	LIT,6
+	DW	PLUS
+	DW	LIT,10H
+	DW	CMOVE	; S0 bis VOC-LINK
+	DW	LIT,KAPA
+	DW	LIT,UP,AT
+	DW	LIT,36H,PLUS
+	DW	LIT,18
+	DW	CMOVE	; DR bis MIST
+	DW	SETADR
+	DW	LIT,ORIG+0CH
+	DW	AT
+	DW	LIT,FORTH+6
+	DW	STORE
+	DW	COLD$
+	DW	AT		;Die Routine deren Adresse bei COLD$ steht
+	DW	EXEC		;wird ausgefuehrt.
+	DW	CLSC
+	DW	LIT,6
+	DW	LIT,2
+	DW	CURPOS
+	DW	PDOTQ
+	DB	57+10
+	DC	'F o r t h - 2  < CP/M,Z80,MCPU I,ELSA XZET 3000 > Vers.:('
+	DB	VER1
+	DB	VER2
+	DB	VER3
+	DB	VER4
+	DB	VER5
+	DB	'.'
+BENU:	DB	BENUNR1	;Benutzerversion
+	DB	BENUNR2	;       "       
+	DB	BENUNR3	;       "
+	DB	')'
+	DW	SIALK
+	DW	KEY
+	DW	DROP
+	DW	CLSC
+	DW	ABORT	
+;                                                       +---------------------+
+;                               CURSOR POSITIONIEREN    !        CURPOS       !
+;                                                       +---------------------+
+	DB	86H
+	DC	'CURPOS'
+	DW	COLD-7
+CURPOS:	DW	NEST
+	DW	LIT,ESC
+	DW	EMIT
+	DW	LIT,POSIT
+	DW	EMIT
+	DW	LIT,OFFSET
+	DW	PLUS
+	DW	EMIT
+	DW	LIT,OFFSET
+	DW	PLUS
+	DW	EMIT
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !        SIALK        !
+;                                                       +---------------------+
+	DB	85H
+	DC	'SIALK'
+	DW	CURPOS-9
+SIALK:	DW	NEST
+	DW	LIT,10
+	DW	LIT,23
+	DW	CURPOS
+	DW	LIT,(SIAL3+1)
+	DW	LIT,(SIAL2)
+	DW	XDO
+SIAL1:	DW	IDO
+	DW	CAT
+	DW	LIT
+	DW	3FH
+	DW	PLUS
+	DW	EMIT
+	DW	XLOOP
+	DW	SIAL1-$
+	DW	SEMIS
+SIAL2:	DB	('('-3FH)
+	DB	('C'-3FH)
+	DB	(')'-3FH)
+	DB	('o'-3FH)
+	DB	('p'-3FH)
+	DB	('y'-3FH)
+	DB	('r'-3FH)
+	DB	('i'-3FH)
+	DB	('g'-3FH)
+	DB	('h'-3FH)
+	DB	('t'-3FH)
+	DB	(20H-3FH)
+	DB	('1'-3FH)
+	DB	('9'-3FH)
+	DB	('8'-3FH)
+	DB	('4'-3FH)
+	DB	(20H-3FH)
+	DB	('b'-3FH)
+	DB	('y'-3FH)
+	DB	(20H-3FH)
+	DB	('I'-3FH)
+	DB	('n'-3FH)
+	DB	('s'-3FH)
+	DB	('t'-3FH)
+	DB	('i'-3FH)
+	DB	('t'-3FH)
+	DB	('u'-3FH)
+	DB	('t'-3FH)
+	DB	(20H-3FH)
+	DB	('f'-3FH)
+	DB	('u'-3FH)
+	DB	('e'-3FH)
+	DB	('r'-3FH)
+	DB	(20H-3FH)
+	DB	('A'-3FH)
+	DB	('n'-3FH)
+	DB	('g'-3FH)
+	DB	('e'-3FH)
+	DB	('w'-3FH)
+	DB	('a'-3FH)
+	DB	('n'-3FH)
+	DB	('d'-3FH)
+	DB	('t'-3FH)
+	DB	('e'-3FH)
+	DB	(20H-3FH)
+	DB	('P'-3FH)
+	DB	('h'-3FH)
+	DB	('y'-3FH)
+	DB	('s'-3FH)
+	DB	('i'-3FH)
+	DB	('k'-3FH)
+	DB	(20H-3FH)
+	DB	('B'-3FH)
+	DB	('o'-3FH)
+	DB	('n'-3FH)
+	DB	('n'-3FH)
+	DB	(20H-3FH)
+SIAL3:	DB	(20H-3FH)
+;                                                       +---------------------+
+;                                         S-to-D        !        S->D         !
+;                                                       +---------------------+
+	DB	84H
+	DC	'S->D'
+	DW	CURPOS-9
+STOD:	DW	$+2
+	POP	DE
+	LD	HL,0
+	LD	A,D
+	AND	80H
+	JP	Z,STOD1
+	DEC	HL
+STOD1:	PUSH	DE
+	PUSH	HL
+	JP	NEXT
+;                                                       +---------------------+
+;                                                       !         +-          !
+;                                                       +---------------------+
+	DB	82H
+	DC	'+-'
+	DW	STOD-7
+PM:	DW	NEST
+	DW	ZLESS
+	DW	ZBRAN
+	DW	PM1-$
+	DW	MINUS
+PM1:	DW	SEMIS
+;                                                       +---------------------+
+;                                      D-plus-minus     !         D+-         !
+;                                                       +---------------------+
+	DB	83H
+	DC	'D+-'
+	DW	PM-5
+DPM:	DW	NEST
+	DW	ZLESS
+	DW	ZBRAN
+	DW	DPM1-$
+	DW	DMINU
+DPM1:	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !         ABS         !
+;                                                       +---------------------+
+	DB	83H
+	DC	'ABS'
+	DW	DPM-6
+ABS:	DW	NEST
+	DW	DUP
+	DW	PM
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !        DABS         !
+;                                                       +---------------------+
+	DB	84H
+	DC	'DABS'
+	DW	ABS-6
+DABS:	DW	NEST
+	DW	DUP
+	DW	DPM
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !         MIN         !
+;                                                       +---------------------+
+	DB	83H
+	DC	'MIN'
+	DW	DABS-7
+MIN:	DW	NEST
+	DW	TDUP
+	DW	GREAT
+	DW	ZBRAN
+	DW	MIN1-$
+	DW	SWAP
+MIN1:	DW	DROP
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !         MAX         !
+;                                                       +---------------------+
+	DB	83H
+	DC	'MAX'
+	DW	MIN-6
+MAX:	DW	NEST
+	DW	TDUP
+	DW	LESS
+	DW	ZBRAN
+	DW	MAX1-$
+	DW	SWAP
+MAX1:	DW	DROP
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !         M*          !
+;                                                       +---------------------+
+	DB	82H
+	DC	'M*'
+	DW	MAX-6
+MSTAR:	DW	NEST
+	DW	TDUP
+	DW	XORR
+	DW	TOR
+	DW	ABS
+	DW	SWAP
+	DW	ABS
+	DW	USTAR
+	DW	FROMR
+	DW	DPM
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !         M/          !
+;                                                       +---------------------+
+	DB	82H
+	DC	'M/'
+	DW	MSTAR-5
+MSLAS:	DW	NEST
+	DW	OVER
+	DW	TOR
+	DW	TOR
+	DW	DABS
+	DW	RR
+	DW	ABS
+	DW	USLAS
+	DW	FROMR
+	DW	RR
+	DW	XORR
+	DW	PM
+	DW	SWAP
+	DW	FROMR
+	DW	PM
+	DW	SWAP
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !          *          !
+;                                                       +---------------------+
+	DB	81H
+	DC	'*'
+	DW	MSLAS-5
+STAR:	DW	NEST
+	DW	MSTAR
+	DW	DROP
+	DW	SEMIS
+;                                                       +---------------------+
+;                                       divide-mod      !         /MOD        !
+;                                                       +---------------------+
+	DB	84H
+	DC	'/MOD'
+	DW	STAR-4
+SLMOD:	DW	NEST
+	DW	TOR
+	DW	STOD
+	DW	FROMR
+	DW	MSLAS
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !         /           !
+;                                                       +---------------------+
+	DB	81H
+	DC	'/'
+	DW	SLMOD-7
+SLASH:	DW	NEST
+	DW	SLMOD
+	DW	SWAP
+	DW	DROP
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !        MOD          !
+;                                                       +---------------------+
+	DB	83H
+	DC	'MOD'
+	DW	SLASH-4
+MODD:	DW	NEST
+	DW	SLMOD
+	DW	DROP
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !       */MOD         !
+;                                                       +---------------------+
+	DB	85H
+	DC	'*/MOD'
+	DW	MODD-6
+SSMOD:	DW	NEST
+	DW	TOR
+	DW	MSTAR
+	DW	FROMR
+	DW	MSLAS
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !         */          !
+;                                                       +---------------------+
+	DB	82H
+	DC	'*/'
+	DW	SSMOD-8
+SSLA:	DW	NEST
+	DW	SSMOD
+	DW	SWAP
+	DW	DROP
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !       M/MOD         !
+;                                                       +---------------------+
+	DB	85H
+	DC	'M/MOD'
+	DW	SSLA-5
+MSMOD:	DW	NEST
+	DW	TOR
+	DW	ZERO
+	DW	RR
+	DW	USLAS
+	DW	FROMR
+	DW	SWAP
+	DW	TOR
+	DW	USLAS
+	DW	FROMR
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !       MESSAGE       !
+;                                                       +---------------------+
+	DB	87H
+	DC	'MESSAGE'
+	DW	MSMOD-8
+MESS:	DW	NEST
+	DW	WARN
+	DW	AT
+	DW	DDUP
+	DW	ZBRAN
+	DW	MESS1-$	;bei Warning = 0 Fehlerart als Zahl
+	DW	ZLESS
+	DW	ZBRAN,MESS2-$
+	DW	NOOP	;bei Warning = -1 diese Routinen       
+	DW	NOOP	;zur freien Verfuegung                 
+	DW	ABORT	;                                      
+	DW	BRAN,MESS3-$
+MESS2:	DW	MIST
+	DW	AT	;bei positiver Zahl Klartext.Es muss
+	DW	EXEC	;aber Wort FMELDUNG vorhanden sein
+	DW	NOOP	;Bibliothek: LIBFE.F                   
+	DW	BRAN,MESS3-$
+MESS1:	DW	PDOTQ
+	DB	6
+	DB	'MSG # '
+	DW	DOT
+MESS3:	DW	SEMIS
+;******************************************************************************
+;*                                                                            *
+;*                     PARALLELES EIN- und AUSLESEN                           *
+;*                                                                            *
+;******************************************************************************
+;                                                       +---------------------+
+;                                       port-fetch      !         P@          !
+;                                                       +---------------------+
+	DB	82H
+	DC	'P@'
+	DW	MESS-0AH
+PTAT:	DW	$+2
+	EXX
+	POP	BC
+	IN	L,(C)
+	LD	H,0
+	PUSH	HL
+	EXX
+	JP	NEXT
+;                                                       +---------------------+
+;                                       port-store      !         P!          !
+;                                                       +---------------------+
+	DB	82H
+	DC	'P!'
+	DW	PTAT-5
+PTSTO:	DW	$+2
+	EXX
+	POP	BC
+	POP	HL
+	OUT	(C),L
+	EXX
+	JP	NEXT
+;                                                       +---------------------+
+;                                         -tick-        !         `           !
+;                                                       +---------------------+
+	DB	0C1H
+	DC	'`'
+	DW	PTSTO-5
+TICK:	DW	NEST
+	DW	DFIND
+	DW	ZEQU
+	DW	ZERO
+	DW	QERR
+	DW	DROP
+	DW	LITER
+	DW	SEMIS
+;                                                       +---------------------+
+;      nach FORTH-DIMENSIONS Vol.II  No.6               !       FORGET        !
+;                                                       +---------------------+
+	DB	86H
+	DC	'FORGET'
+	DW	TICK-4
+FORG:	DW	NEST
+	DW	CURR
+	DW	AT
+	DW	CONT
+	DW	AT
+	DW	SUBB
+	DW	LIT,18H
+	DW	QERR
+	DW	TICK
+	DW	NFA
+	DW	DUP
+	DW	FENCE
+	DW	AT
+	DW	LESS
+	DW	LIT,15H
+	DW	QERR
+	DW	TOR
+	DW	VOCL
+	DW	AT
+FORG1:	DW	RR
+	DW	OVER
+	DW	LESS
+	DW	ZBRAN,FORG2-$
+	DW	FORTH
+	DW	DEFIN
+	DW	AT
+	DW	DUP
+	DW	VOCL
+	DW	STORE
+	DW	BRAN,FORG1-$
+FORG2:	DW	DUP
+	DW	LIT,04H
+	DW	SUBB
+FORG3:	DW	PFA
+	DW	LFA
+	DW	AT
+	DW	DUP
+	DW	RR
+	DW	LESS
+	DW	ZBRAN,FORG3-$
+	DW	OVER
+	DW	TWO
+	DW	SUBB
+	DW	STORE
+	DW	AT
+	DW	DDUP
+	DW	ZEQU
+	DW	ZBRAN,FORG2-$
+	DW	FROMR
+	DW	DP
+	DW	STORE
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !        BACK         !
+;                                                       +---------------------+
+	DB	84H
+	DC	'BACK'
+	DW	FORG-9
+BACK:	DW	NEST
+	DW	HERE
+	DW	SUBB
+	DW	COMMA
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !        BEGIN        !
+;                                                       +---------------------+
+	DB	0C5H
+	DC	'BEGIN'
+	DW	BACK-7
+BEGIN:	DW	NEST
+	DW	QCOMP
+	DW	HERE
+	DW	ONE
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !        ENDIF        !
+;                                                       +---------------------+
+	DB	0C5H
+	DC	'ENDIF'
+	DW	BEGIN-8
+ENDIFF:	DW	NEST
+	DW	QCOMP
+	DW	TWO
+	DW	QPAIR
+	DW	HERE
+	DW	OVER
+	DW	SUBB
+	DW	SWAP
+	DW	STORE
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !        THEN         !
+;                                                       +---------------------+
+	DB	0C4H
+	DC	'THEN'
+	DW	ENDIFF-8
+THEN:	DW	NEST
+	DW	ENDIFF
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !         DO          !
+;                                                       +---------------------+
+	DB	0C2H
+	DC	'DO'
+	DW	THEN-7
+DO:	DW	NEST
+	DW	COMP
+	DW	XDO
+	DW	HERE
+	DW	THREE
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !        LOOP         !
+;                                                       +---------------------+
+	DB	0C4H
+	DC	'LOOP'
+	DW	DO-5
+LOOP:	DW	NEST
+	DW	THREE
+	DW	QPAIR
+	DW	COMP
+	DW	XLOOP
+	DW	BACK
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !       +LOOP         !
+;                                                       +---------------------+
+	DB	0C5H
+	DC	'+LOOP'
+	DW	LOOP-7
+PLOOP:	DW	NEST
+	DW	THREE
+	DW	QPAIR
+	DW	COMP
+	DW	XPLOO
+	DW	BACK
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !       UNTIL         !
+;                                                       +---------------------+
+	DB	0C5H
+	DC	'UNTIL'
+	DW	PLOOP-8
+UNTIL:	DW	NEST
+	DW	ONE
+	DW	QPAIR
+	DW	COMP
+	DW	ZBRAN
+	DW	BACK
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !         END         !
+;                                                       +---------------------+
+	DB	0C3H
+	DC	'END'
+	DW	UNTIL-8
+ENDD:	DW	NEST
+	DW	UNTIL
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !        AGAIN        !
+;                                                       +---------------------+
+	DB	0C5H
+	DC	'AGAIN'
+	DW	ENDD-6
+AGAIN:	DW	NEST
+	DW	ONE
+	DW	QPAIR
+	DW	COMP
+	DW	BRAN
+	DW	BACK
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !        REPEAT       !
+;                                                       +---------------------+
+	DB	0C6H
+	DC	'REPEAT'
+	DW	AGAIN-8
+REPEA:	DW	NEST
+	DW	TOR
+	DW	TOR
+	DW	AGAIN
+	DW	FROMR
+	DW	FROMR
+	DW	TWO
+	DW	SUBB
+	DW	ENDIFF
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !          IF         !
+;                                                       +---------------------+
+	DB	0C2H
+	DC	'IF'
+	DW	REPEA-9
+IFF:	DW	NEST
+	DW	COMP
+	DW	ZBRAN
+	DW	HERE
+	DW	ZERO
+	DW	COMMA
+	DW	TWO
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !        ELSE         !
+;                                                       +---------------------+
+	DB	0C4H
+	DC	'ELSE'
+	DW	IFF-5
+ELSEE:	DW	NEST
+	DW	TWO
+	DW	QPAIR
+	DW	COMP
+	DW	BRAN
+	DW	HERE
+	DW	ZERO
+	DW	COMMA
+	DW	SWAP
+	DW	TWO
+	DW	ENDIFF
+	DW	TWO
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !       WHILE         !
+;                                                       +---------------------+
+	DB	0C5H
+	DC	'WHILE'
+	DW	ELSEE-7
+WHILE:	DW	NEST
+	DW	IFF
+	DW	TWOP
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !       SPACES        !
+;                                                       +---------------------+
+	DB	86H
+	DC	'SPACES'
+	DW	WHILE-8
+SPACS:	DW	NEST
+	DW	ZERO
+	DW	MAX
+	DW	DDUP
+	DW	ZBRAN
+	DW	SPAX1-$
+	DW	ZERO
+	DW	XDO
+SPAX2:	DW	SPACE
+	DW	XLOOP
+	DW	SPAX2-$
+SPAX1:	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !         <#          !
+;                                                       +---------------------+
+	DB	82H
+	DC	'<#'
+	DW	SPACS-9
+BDIGS:	DW	NEST
+	DW	PAD
+	DW	HLD
+	DW	STORE
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !         #>          !
+;                                                       +---------------------+
+	DB	82H
+	DC	'#>'
+	DW	BDIGS-5
+EDIGS:	DW	NEST
+	DW	DROP
+	DW	DROP
+	DW	HLD
+	DW	AT
+	DW	PAD
+	DW	OVER
+	DW	SUBB
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !        SIGN         !
+;                                                       +---------------------+
+	DB	84H
+	DC	'SIGN'
+	DW	EDIGS-5
+SIGN:	DW	NEST
+	DW	ROT
+	DW	ZLESS
+	DW	ZBRAN
+	DW	SIGN1-$
+	DW	LIT,2DH
+	DW	HOLD
+SIGN1:	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !          #          !
+;                                                       +---------------------+
+	DB	81H
+	DC	'#'
+	DW	SIGN-7
+DIG:	DW	NEST
+	DW	BASE
+	DW	AT
+	DW	MSMOD
+	DW	ROT
+	DW	LIT,9
+	DW	OVER
+	DW	LESS
+	DW	ZBRAN
+	DW	DIG1-$
+	DW	LIT,7
+	DW	PLUS
+DIG1:	DW	LIT,30H
+	DW	PLUS
+	DW	HOLD
+	DW	SEMIS
+;                                                       +---------------------+
+;                                       -sharp-S        !         #S          !
+;                                                       +---------------------+
+	DB	82H
+	DC	'#S'
+	DW	DIG-4
+DIGS:	DW	NEST
+DIGS1:	DW	DIG
+	DW	OVER
+	DW	OVER
+	DW	ORR
+	DW	ZEQU
+	DW	ZBRAN
+	DW	DIGS1-$
+	DW	SEMIS
+;                                                       +---------------------+
+;                                        D-dot-R        !         D.R         !
+;                                                       +---------------------+
+	DB	83H
+	DC	'D.R'
+	DW	DIGS-5
+DDOTR:	DW	NEST
+	DW	TOR
+	DW	SWAP
+	DW	OVER
+	DW	DABS
+	DW	BDIGS
+	DW	DIGS
+	DW	SIGN
+	DW	EDIGS
+	DW	FROMR
+	DW	OVER
+	DW	SUBB
+	DW	SPACS
+	DW	TYPE
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !         .R          !
+;                                                       +---------------------+
+	DB	82H
+	DC	'.R'
+	DW	DDOTR-6
+DOTR:	DW	NEST
+	DW	TOR
+	DW	STOD
+	DW	FROMR
+	DW	DDOTR
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !         D.          !
+;                                                       +---------------------+
+	DB	82H
+	DC	'D.'
+	DW	DOTR-5
+DDOT:	DW	NEST
+	DW	ZERO
+	DW	DDOTR
+	DW	SPACE
+	DW	SEMIS
+;                                                       +---------------------+
+;                                          -dot-        !          .          !
+;                                                       +---------------------+
+	DB	81H
+	DC'.'
+	DW	DDOT-5
+DOT:	DW	NEST
+	DW	STOD
+	DW	DDOT
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !          ?          !
+;                                                       +---------------------+
+	DB	81H
+	DC	'?'
+	DW	DOT-4
+QUES:	DW	NEST
+	DW	AT
+	DW	DOT
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !         U.          !
+;                                                       +---------------------+
+	DB	82H
+	DC	'U.'
+	DW	QUES-4
+UDOT:	DW	NEST
+	DW	ZERO
+	DW	DDOT
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !        VLIST        !
+;                                                       +---------------------+
+	DB	85H
+	DC	'VLIST'
+	DW	UDOT-5
+VLIST:	DW	NEST
+	DW	CLSC
+	DW	LIT,80H
+	DW	OUTT
+	DW	STORE
+	DW	CONT
+	DW	AT,AT
+VLIS1:	DW	OUTT
+	DW	AT
+	DW	CSLL
+	DW	GREAT
+	DW	ZBRAN
+	DW	VLIS2-$
+	DW	CR
+	DW	ZERO
+	DW	OUTT
+	DW	STORE
+VLIS2:	DW	DUP
+	DW	IDDOT
+	DW	SPACE
+	DW	SPACE
+	DW	PFA
+	DW	LFA
+	DW	AT
+	DW	DUP
+	DW	ZEQU
+	DW	PAUSE
+	DW	QTERM
+	DW	ORR
+	DW	ZBRAN
+	DW	VLIS1-$
+	DW	DROP
+	DW	SEMIS
+;                                                       +---------------------+
+;                             Neustart CP/M             !         BYE         !
+;                                                       +---------------------+
+	DB	83H
+	DC	'BYE'
+	DW	VLIST-8
+BYE:	DW	NEST
+	DW	CLSC
+	DW	BYEC
+BYEC:	DW	$+2
+	JP	0	;Start bei 0000H
+;                                                       +---------------------+
+;                          loesche Schirm               !         CLS         !
+;                                                       +---------------------+
+	DB	83H
+	DC	'CLS'
+	DW	BYE-6
+CLSC:	DW	NEST
+	DW	LIT,CLS+1	;hier beginnt die Zeichenkette
+	DW	LIT,CLS,CAT	;Anzahl der Zeichen
+	DW	TYPE
+	DW	SEMIS
+
+;                                                       +---------------------+
+;  neues Vokabular in Kaltstartparameter aufnehmen      !       FREEZE        !
+;                                                       +---------------------+
+	DB	86H
+	DC	'FREEZE'
+	DW	CLSC-6 
+FREE:	DW	NEST
+	DW	HERE,DUP
+	DW	LIT,(ORIG+1CH),STORE	;DP
+	DW	LIT,(ORIG+1EH),STORE	;FENCE
+	DW	LIT,(FORTH+6),AT
+	DW	LIT,(ORIG+0CH),STORE	;letzter Befehl
+	DW	LIT,(US+44H),AT
+	DW	LIT,(KAPA+14),STORE	;maximale Anzahl der Uservariablen
+	DW	LIT,(US+46H),AT
+	DW	LIT,(KAPA+16),STORE	;Art der Fehlermeldung
+	DW	LIT,(US+4EH),AT
+	DW	LIT,(WAPA+6),STORE	;ABORT-Routine
+	DW	LIT,(US+56H),AT
+	DW	LIT,(WAPA+14),STORE	;COLD-Zusatzroutine
+	DW	LIT,(US+58H),AT
+	DW	LIT,(WAPA+16),STORE	;WARM-Zusatzroutine
+	DW	WARN,AT
+	DW	LIT,(ORIG+1AH),STORE	;Inhalt WARNING retten
+	DW	HERE,FENCE,STORE
+	DW	SEMIS
+;                                                       +---------------------+
+;                                                       !   **** FORTH ****   !
+;                                                       +---------------------+
+LINKK:	DB	0C5H	;Dieser Label wird fuer das Zusammenbinden verschie-
+	DC	'FORTH'	;dener Forthteile benoetigt.  (Linkkern)
+	DW	FREE-9
+FORTH:	DW	DODOE
+	DW	DOVOC
+	DW	0A081H
+	DW	TASK-7	;KALTSTARTWERT
+	DW	0	;ENDE DES VOKABULARS
+
+
+END
+
