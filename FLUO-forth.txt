@@ -1,0 +1,532 @@
+( FLUO-Messprogramm                         TF 13:34 07/21/87)
+
+( Last changed screen # 0414                TF 15:56 07/21/87)
+( Durchchecken der I/O-Platinen des Z80-Subsystems:          )
+( =================================================          )
+( - CPU-Karte  : CTC, PIO1,PIO2                              )
+( - PIO-Karte  : PIO1...PIO4                                 )
+( - FIFO-Karte : FIO1...FIO3                                 )
+( - Timerkarte : CTC1...CTC4                                 )
+
+( Testmessprogramm:                                          )
+( ================                                           )
+( NMI-Puls erzeugt Interrupts für Laser-MOPS -> Laserscan    )
+( EICHGATE steuert den EICHMARKEN-Zähler                     )
+( FLUOGATE steuert den Fluoreszenz-Zähler                    )
+
+( Adressen-Belegungen                       TF 13:34 07/21/87)
+(                                                            )
+( Die Adressen der :                                         )
+(                                                            )
+(                   PIO-Karte  - 060H                        )
+(                   Timerkarte - 030H                        )
+(                                                            )
+( entsprechen der CP/M-Maschine von W.Kress & U.Urmoneit     )
+( und sind somit gegeneinander direkt austauschbar.          )
+( Screen 2, 3 und 4 sind Kommandoscreens für PC vom SLAVE    )
+( Laden der Screens 11 -> xx )
+( 11 50 THRU )
+
+( DUMMY-Definitionen                        TF 15:02 07/21/87)
+( Können später bei der richtigen Version entfallen  	     )
+( : EQU CONSTANT      ;                                      )
+( : ALLOT-RAM  ALLOT  ;                                      )
+
+( IO-Adressen FIFO's                        TF 15:51 07/04/87)
+( FIFO-karte  FIO1, FIO2, FIO3  -  Base Address: 040H        )
+HEX                                                           
+040            EQU     FIO1   ( Basisadresse FIO - DATA-IN   )
+1 FIO1      +  EQU     FIO2   (        "     FIO - DATCTRL   ) 
+2 FIO1      +  EQU     FIO3   (        "     FIO - DATA-OUT  )
+
+( IO-Adressen: CPU4-Karte von j&k, CTC  Base Address: 0E0H   )
+0E0           EQU    HCTC_0      ( Basisadresse CTC ) 
+1 HCTC_0   +  EQU    HCTC_1      (     Channel   1  )
+2 HCTC_0   +  EQU    HCTC_2      (        "      2  ) 
+3 HCTC_0   +  EQU    HCTC_3      (        "      3  )
+
+( IO-Adressen :  CPU4-Karte  PIO1, PIO2     TF 15:51 07/04/87) 
+HEX
+4 HCTC_0   +  EQU     PIO1A_D    ( PIO1: Port-A Data  )         
+5 HCTC_0   +  EQU     PIO1A_C    (       Port-A Ctrl  )         
+6 HCTC_0   +  EQU     PIO1B_D    (       Port-B Data  )         
+7 HCTC_0   +  EQU     PIO1B_C    (       Port-B Ctrl  )
+8 HCTC_0   +  EQU     PIO2A_D    ( PIO2: Port-A Data  )         
+9 HCTC_0   +  EQU     PIO2A_C    (       Port-A Ctrl  )         
+A HCTC_0   +  EQU     PIO2B_D    (       Port-B Data  )         
+B HCTC_0   +  EQU     PIO2B_C    (       Port-B Ctrl  )
+
+( 0E0 - 0EFH : Reserved                                        )
+( IO-Adressen: PIO-Karte                      TF 15:51 07/04/87)
+(              PIO1, PIO2  -  Base Address : 060H              )
+HEX
+060          EQU     IOB1A_D     ( PIO1: Port-A Data  )          
+1 IOB1A_D +  EQU     IOB1A_C     (       Port-A Ctrl  )          
+2 IOB1A_D +  EQU     IOB1B_D     (       Port-B Data  )          
+3 IOB1A_D +  EQU     IOB1B_C     (       Port-B Ctrl  )                                            
+4 IOB1A_D +  EQU     IOB2A_D     ( PIO2: Port-A Data  )          
+5 IOB1A_D +  EQU     IOB2A_C     (       Port-A Ctrl  )          
+6 IOB1A_D +  EQU     IOB2B_D     (       Port-B Data  )          
+7 IOB1A_D +  EQU     IOB2B_C     (       Port-B Ctrl  )                                                                                                                                                              
+( IO-Adressen: PIO-Karte   PIO3, PIO    TF 15:51 07/04/87)                                               
+HEX                                                                                                
+8 IOB1A_D +  EQU     IOB3A_D    ( PIO3: Port-A Data  )          
+9 IOB1A_D +  EQU     IOB3A_C    (       Port-A Ctrl  )          
+A IOB1A_D +  EQU     IOB3B_D    (       Port-B Data  )          
+B IOB1A_D +  EQU     IOB3B_C    (       Port-B Ctrl  )    
+C IOB1A_D +  EQU     IOB4A_D    ( PIO4: Port-A Data  )          
+D IOB1A_D +  EQU     IOB4A_C    (       Port-A Ctrl  )          
+E IOB1A_D +  EQU     IOB4B_D    (       Port-B Data  )          
+F IOB1A_D +  EQU     IOB4B_C    (       Port-B Ctrl  ) 
+
+( FIO-Control-Register-Adressen            TF 15:51 07/04/87)
+0   EQU  CTRL_REG0     ( Control-Register 0,          R/W )     
+1   EQU  CTRL_REG1     ( Control-Register 1,          R/W ) 
+2   EQU  INT_ST_REG0   ( Interrupt-Status-Register 0, R/W)      
+3   EQU  INT_ST_REG1   ( Interrupt-Status-Register 1, R/W)      
+4   EQU  INT_ST_REG2   ( Interrupt-Status-Register 2, R/W)      
+5   EQU  INT_ST_REG3   ( Interrupt-Status-Register 3, R/W) 
+6   EQU  INT_VECT_REG  ( Interrupt-Vector-Register ,  R/W) 
+
+( FIO-Control-Adressen                      TF 15:51 07/04/87)
+HEX         
+7   EQU  BYTE_COUNT     ( Byte-Count-Register,    R/O)
+8   EQU  BYTE_COUNT_CMP ( Byte-Count-Comparison-Register, R/W)
+9   EQU  CTRL_REG2      ( Control-Register 2,     R/W ) 
+A   EQU  CTRL_REG3      ( Control-Register 3,     R/W )
+B   EQU  MESS_OUT       ( Message-Out-Register,   R/W )
+C   EQU  MESS_IN        ( Message-In-Register,    R/O )
+D   EQU  PATT_MATCH     ( Pattern-Match-Register, R/W )         
+E   EQU  PATT_MASK      ( Pattern-Mask-Register,  R/W )         
+F   EQU  DATA_BUFFER    ( Data-Buffer-Register,   R/W )      
+
+( Init CTC'S auf der Timerkarte            KD 15:46 07/10/87)
+BINARY
+: INIT_TIMER            (Testversion OHNE Interrupt )                                  
+  00000011 CT1_0 P!   
+  00000011 CT1_1 P!  ( Reset CTC1 )           
+  00000011 CT1_2 P!   
+  00000011 CT1_3 P!                           
+  00000011 CT2_0 P!   
+  00000011 CT2_1 P!  ( Reset CTC2 )           
+  00000011 CT2_2 P!   
+  00000011 CT2_3 P!                                                                    
+  00000011 CT3_0 P!   
+  00000011 CT3_1 P!  ( Reset CTC3 )           
+  00000011 CT3_2 P!   
+  00000011 CT3_3 P!                           
+  00000011 CT4_0 P!   
+  00000011 CT4_1 P!  ( Reset CTC4 )           
+  00000011 CT4_2 P!   
+  00000011 CT4_3 P! ;
+
+( START-Timer      KD 15:54 07/10/87)                         
+: ST_TIM   	    ( Testversion )                         
+  ( PRSC= 16, TC=256)                                            
+  00000101 CT1_0 P!  
+  00000000 CT1_0 P! ( Starte CTC0 )    
+  ( PRSC=256, TC=1  )                                            
+  00100101 CT1_0 P!  
+  00000001 CT1_0 P! ( Starte CTC1);
+
+
+( PIO1 - Belegung    mode 3                 TF 14:52 07/04/87) 
+( ------------------  Port A   ----------------------------- ) 
+( Port-A :  0 - FULL1  - 00000001 : in                       )
+( Port-A :  1 - FULL2  - 00000010 : in                       )
+( Port-A :  4 - CLEAR1 - 11101111 : out [active low]         )
+( Port-A :  5 - CLEAR2 - 11011111 : out [active low]         )
+( Port-A :  6 - C/D1   - 01000000 : out                      )
+( Port-A :  7 - C/D2   - 10000000 : out                      )
+( ------------------  Port B   ----------------------------- )
+( Port-B :  0 - EMPTY3 - 00000001 : in                       )
+( Port-B :  4 - C/D3   - 00010000 : out                      )
+
+( Init PIO1 auf CPU-IV  : INIT_PIO1         TF 15:46 07/04/87)
+( Steuer-PIO für die FIFO's                                  )
+BINARY 
+: INIT_PIO1              ( PIO1 in mode 3 betreiben )             
+  11001111 PIO1A_C P!    ( Port-A )                               
+  00000011 PIO1A_C P!    ( Interrupt disable )                    
+  00001111 PIO1A_C P!    ( Bit 0..3 : in, Bit 4..7 : out ) 
+  11001111 PIO1B_C P!    ( Port-B )                               
+  00000011 PIO1B_C P!    ( Interrupt disable )                    
+  00001111 PIO1B_C P!    ( Bit 0..3 : in, Bit 4..7 : out )
+  00110000 PIO1A_D P!    ( CLEAR-Bits auf HIGH setzen    ) ; 
+
+( C/Dn-DATA, C/Dn-CTRL , REG!                 TF 14:52 07/04/87) 
+: C/D1_C    PIO1A_D  P@  01000000  OR   PIO1A_D P!  ; 
+: C/D1_D    PIO1A_D  P@  01000000  XOR  PIO1A_D P!  ; 
+: C/D2_C    PIO1A_D  P@  10000000  OR   PIO1A_D P!  ; 
+: C/D2_D    PIO1A_D  P@  10000000  XOR  PIO1A_D P!  ; 
+: C/D3_C    PIO1B_D  P@  00010000  OR   PIO1B_D P!  ; 
+: C/D3_D    PIO1B_D  P@  00010000  XOR  PIO1B_D P!  ; 
+( C/D : HIGH = Ctrl ,  LOW = Data                        )  
+: REG!   DUP ROT P! P! ;    ( Data CtrlReg Adr ---       )  
+
+( Init FIO1                                   TF 14:47 05/04/87)   
+: INIT_FIO1 C/D1_C                 ( Controlwort              )   
+  00001101 CTRL_REG0 FIO1 REG!     ( RESET = High, Port-2: HS )   
+  00001100 CTRL_REG0 FIO1 REG!     ( RESET = Low              )   
+  00000000 CTRL_REG1 FIO1 REG!       
+  00000011 CTRL_REG2 FIO1 REG!     ( Port-2 side enabled  &   )  
+                                   ( Port-2 enable handshake  )   
+  10100000 CTRL_REG3 FIO1 REG!     ( Port-2 control: - CLEAR  ) 
+				   (               - DATADIR  )   
+  00000000 INT_ST_REG0 FIO1 REG!   ( Interrupt-Register       )   
+  00000000 INT_ST_REG1 FIO1 REG!   ( Interrupt-Register       )   
+  00000000 INT_ST_REG2 FIO1 REG!   ( Interrupt-Register       )   
+  00000000 INT_ST_REG3 FIO1 REG!   ( Interrupt-Register       )   
+  C/D1_D ;  
+
+( Init FIO2                                   TF 14:48 05/04/87) 
+: INIT_FIO2 C/D2_C                 ( Controlwort              )   
+  00001101 CTRL_REG0 FIO2 REG!     ( RESET = High, Port-2: HS )   
+  00001100 CTRL_REG0 FIO2 REG!     ( RESET = Low              )   
+  00000000 CTRL_REG1 FIO2 REG!                                    
+  00000011 CTRL_REG2 FIO2 REG!     ( Port-2 side enabled  &   )   
+				   ( Port-2 enable handshake  )   
+  10100000 CTRL_REG3 FIO2 REG!     ( Port-2 control: - CLEAR  )                                    
+				   (               - DATADIR  )   
+  00000000 INT_ST_REG0 FIO2 REG!   ( Interrupt-Register       )   
+  00000000 INT_ST_REG1 FIO2 REG!   ( Interrupt-Register       )   
+  00000000 INT_ST_REG2 FIO2 REG!   ( Interrupt-Register       )   
+  00000000 INT_ST_REG3 FIO2 REG!   ( Interrupt-Register       )  
+  C/D2_D ;  
+
+( Init FIO3                                   TF 14:52 07/04/87)  
+: INIT_FIO3 C/D3_C              ( Controlwort              )   
+  00001101 CTRL_REG0 FIO3 REG!     ( RESET = High, Port-2: HS )   
+  00001100 CTRL_REG0 FIO3 REG!     ( RESET = Low              )   
+  00000000 CTRL_REG1 FIO3 REG!                                    
+  00000011 CTRL_REG2 FIO3 REG!     ( Port-2 side enabled  &   ) 
+		 	 	   ( Port-2 enable handshake  )   
+  10110000 CTRL_REG3 FIO3 REG!     ( Port-2 control: - CLEAR  ) 
+				   (  input        - DATADIR  )   
+  00000000 INT_ST_REG0 FIO3 REG!   ( Interrupt-Register       )   
+  00000000 INT_ST_REG1 FIO3 REG!   ( Interrupt-Register       )   
+  00000000 INT_ST_REG2 FIO3 REG!   ( Interrupt-Register       )   
+  00000000 INT_ST_REG3 FIO3 REG!   ( Interrupt-Register       )   
+  C/D3_D  ;
+
+( IOB - Belegung                              TF 15:37 07/04/87) 
+( -----------------------------------------------------------  )
+( PIO1 :  Port-A  ->  DATA-IN   DI0...DI7                      )
+(         Port-B  ->  DATA-IN   DI8...DI15                     )
+( -----------------------------------------------------------  )
+( PIO2 :  Port-A  ->  DATA-OUT  DO0...DO7,  gepuffert : 244/1  )
+(         Port-B  ->  DATA-OUT  DO8...DO15, gepuffert : 244/2  )
+( -----------------------------------------------------------  )
+( PIO3 :  Port-A  ->  ADDRESS   ADR0...ADR7,   gepuff.: 244/3  )
+(         Port-B  ->  CONTROL   CTRL0...CTRL7, gepuff.: 244/4  )
+( -----------------------------------------------------------  )
+( PIO4 :  Port-A  ->         frei                              )
+(         Port-B  ->         frei                              )
+( -----------------------------------------------------------  )
+
+( Init I/O-Bus :   INIT_IOB1                  TF 15:44 07/04/87)
+( DATA_IN, DATA_OUT                                            )
+BINARY                                                       
+: INIT_IOB1   
+  11001111 IOB1A_C P!    ( PIO1 in mode 3 betreiben )             
+  11111111 IOB1A_C P!    ( Alle Bits INPUT )                      
+  11001111 IOB1B_C P!                                             
+  11111111 IOB1B_C P!                                             
+  11001111 IOB2A_C P!    ( PIO2 in mode 3 betreiben )             
+  00000000 IOB2A_C P!    ( Alle Bits OUTPUT )                     
+  11001111 IOB2B_C P!                                             
+  00000000 IOB2B_C P! ;   
+
+( Init I/O-Bus  :  INIT_IOB2                  TF 15:44 07/04/87)
+( ADDRESS, CONTROL                                             )
+: INIT_IOB2                                                     
+  11001111 IOB3A_C P!    ( PIO3 in mode 3 betreiben )             
+  00000000 IOB3A_C P!    ( Alle Bits OUTPUT )                     
+  11001111 IOB3B_C P!                                             
+  00000000 IOB3B_C P!                                             
+  11001111 IOB3A_C P!    ( PIO4 in mode 3 betreiben )             
+  00000000 IOB3A_C P!    ( Alle Bits OUTPUT )                     
+  11001111 IOB3B_C P!                                             
+  00000000 IOB3B_C P! ;      
+
+( CLR1, CLR2                                  TF 15:03 07/21/87)
+HEX                                                             
+IOB3B_D  EQU  CTRL     ( CONTROL-Port des IOB-Busses ) 
+( CTRL0 <->  CLR1   :  Lösche Zähler Fluoreszenz             )  
+( CTRL1 <->  CLR2   :  Lösche Zähler Eichmarken              )  
+                                                               
+CODE CLR1                                                            
+ A, # 01    LD       CTRL  A   OUT                              
+ A, # 00    LD       CTRL  A   OUT    
+ NEXT  JP              
+END-CODE                                                       
+
+CODE CLR2                                                            
+ A, # 02    LD       CTRL  A   OUT                               
+ A, # 00    LD       CTRL  A   OUT    
+ NEXT  JP              
+END-CODE                                                        
+
+( LATCH1, LATCH2                              TF 13:42 07/21/87)
+( CTRL2 <->  LATCH1   :  übernehme Zähler Fluoreszenz          )
+( CTRL3 <->  LATCH2   :  übernehme Zähler Eichmarken           )
+CODE LATCH1                                                          
+ A, # 04    LD       CTRL  A   OUT                               
+ A, # 00    LD       CTRL  A   OUT    
+ NEXT  JP              
+END-CODE            
+
+CODE LATCH2                                                         
+ A, # 08    LD       CTRL  A   OUT                              
+ A, # 00    LD       CTRL  A   OUT    
+ NEXT  JP             
+END-CODE  
+
+( DISABLE, DATA_IN                            TF 15:15 07/21/87)  
+IOB3A_D  EQU  ADR        ( ADDRESS-Port des IOB-Busses )  
+CODE DISABLE                                                        
+ A, # 0    LD      
+ ADR  A   OUT   
+ NEXT  JP               
+END-CODE  
+
+( Datenbus einlesen : 16 Bit )                                  
+(  -  n ) 
+CODE DATA_IN                                                        
+ A, IOB1A_D IN       
+ L, A  LD  ( Port-A einlesen : LOW  )        
+ A, IOB1B_D IN       
+ H, A  LD  ( Port-B einlesen : HIGH )        
+ HL    PUSH     
+ NEXT  JP                               
+END-CODE                                                   
+
+( IOB-Kartendekodierung                       TF 15:17 07/21/87) 
+(  Zählerkarte 1 : [TTL]  --> Baseaddress = 10h                )
+(  A7  A6  A5  A4  A3  A2  A1  A0   Base  Device               )
+( -----------------------------------------------------------  )
+(   0   0   0   1   0   0   0   0    10   Channel 1  -  LOW    )
+(   0   0   0   1   0   0   0   1    11   Channel 1  -  HIGH   )
+(   0   0   0   1   0   0   1   0    12   Channel 2  -  LOW    )
+(   0   0   0   1   0   0   1   1    13   Channel 2  -  HIGH   )
+(  Zählerkarte 2 : [ECL]  --> Baseaddress = 20h                )
+(  A7  A6  A5  A4  A3  A2  A1  A0   Base  Device               )
+( -----------------------------------------------------------  )
+(   0   0   1   0   0   0   0   0    20   Channel 1  -  LOW    )
+(   0   0   1   0   0   0   0   1    21   Channel 1  -  HIGH   )
+(   0   0   1   0   0   0   1   0    22   Channel 2  -  LOW    )
+(   0   0   1   0   0   0   1   1    23   Channel 2  -  HIGH   )
+
+( Enable                                      TF 15:16 07/21/87)
+CODE EN_LOW1   ( enable FLUO-Zähler : Low 16 Bit )                   
+ A, # 10 LD  ADR A OUT  A, # 0 LD  ADR A OUT  NEXT JP            
+END-CODE
+                                                                   
+CODE EN_HIGH1  ( enable FLUO-Zähler : High 16 Bit )                  
+ A, # 11 LD  ADR A OUT  A, # 0 LD  ADR A OUT  NEXT JP            
+END-CODE  
+                                                                  
+CODE EN_LOW2   ( enable EICH-Zähler : Low 16 Bit )                   
+ A, # 12 LD  ADR A OUT  A, # 0 LD  ADR A OUT  NEXT JP            
+END-CODE                                                           
+
+CODE EN_HIGH2  ( enable EICH-Zähler : High 16 Bit )                  
+ A, # 13 LD  ADR A OUT  A, # 0 LD  ADR A OUT  NEXT JP            
+END-CODE                                                   
+
+( Zähler-Auslesen   COUNTER                   TF 15:47 07/04/87) 
+( Auslesen des FLUORESZENZ-Zählers : 32 Bit )                   
+( --  high  low )                                               
+: FCOUNTER  LATCH1                                                          
+  EN_LOW1  DATA_IN                                               
+  EN_HIGH1 DATA_IN                                               
+  CLR1 ; 
+
+( Auslesen des EICHMARKEN-Zählers : 32 Bit )                    
+( --  high  low )                                               
+: ECOUNTER  LATCH2                                              
+  EN_LOW2  DATA_IN                                                
+  EN_HIGH2 DATA_IN                                                
+  CLR2 ;                                                          
+
+( INIT der ECB-Karten                      TF  13:51 07/10/87 ) 
+HEX                                                             
+: INIT_IOB                                                       
+  FF ADR     P!  0 ADR     P!  ( Adressbus Nullen  )             
+  FF CTRL    P!  0 CTRL    P!  ( Controlbus Nullen )             
+  FF IOB2A_D P!  0 IOB2A_D P!  ( DATA-OUT Bus  "   )             
+  FF IOB2B_D P!  0 IOB2B_D P!                                     
+  CLR1 CLR2 ;                  ( Zähler löschen    )              
+
+: INIT                   ( INIT_FIO1  INIT_FIO2  INIT_FIO3  )                             
+  INIT_PIO1              ( PIO auf CPU-IV initialisieren )       
+  INIT_IOB1  INIT_IOB2   ( Interface-Bus initialisieren  )        
+  INIT_IOB ;             
+
+( IOB feste Werte zuordnen      )                                
+( ZÄHLER-Testroutinen                      TF KD 16:01 07/15/87)
+( n - )                                                         
+: TC 0 DO FF CTRL P! 0 CTRL P! LOOP ;                           
+: TA 0 DO FF ADR  P! 0 ADR  P! LOOP ;                           
+: TI DATA_IN CR . . ;                                           
+: TL 0 DO TI LOOP ;                                             
+: TE ECOUNTER . . . . ;                                         
+: TF FCOUNTER . . . . ;                                         
+: TEE 0 DO TE CR LOOP ;                                         
+: TFF 0 DO TF CR LOOP ;                                         
+: TFE 0 DO ." F: " TF ." E: " TE CR LOOP ;                      
+: 0G  0  PIO1A_D P! ;      ( Zählergate öffnen CPU-PIO Port-A)  
+: 1G  FF PIO1A_D P! ;      ( Zählergate schliessen )            
+
+( VAR,CONST                                TF  16:37 07/16/87 ) 
+HEX                                                             
+9000  CONSTANT  KOMMBUF  ( Screen-Buffer für Kommentar )        
+9400  CONSTANT  TEMPBUF  ( Temporärer Arbeitsbuffer    )        
+9800  CONSTANT  FLUOBUF  ( Screen-Buffer für Zählraten )        
+A000  CONSTANT  EICHBUF  ( Screen-Buffer für Eichmarken)        
+0     VARIABLE  ZFLUO    ( Zählvariable FLUO )                   
+0     VARIABLE  EFLUO    ( Zählvariable EICH)
+
+
+( Erklärungen                                  15:39 07/20/87 )   
+( Messung der Eichmarken und Fluoreszenzzählraten          )          
+( NMI      : erzeugt einen ca. 77 us Impuls für MOPS       )    
+( EICHGATE : öffnet das GATE für die Eichmarken ca.  10 ms )    
+( FLUOGATE : öffnet das GATE für die Fluopunkte ca. 100 ms )    
+( Steuerung der Signale über den Controlport.              )  
+
+( E>ASC, F>ASC                             TF KD 16:02 07/15/87) 
+( 16 Bit -> 5 stellige ASCII-Umwandlung EICH )                  
+( n  ---   )                                                    
+: E>ASC  0 <# # # # # # #> ;                                   
+( 24 Bit -> 9 stellige ASCII-Umwandlung FLUO )                  
+( n n  ---   )                                                  
+: F>ASC <# # # # # # # # # # #> ;                              
+: E> E>ASC TYPE SPACE ;                                         
+: F> F>ASC TYPE SPACE ;                                         
+
+( KOM, LS_*                                TF  16:53 07/16/87 ) 
+HEX                                                             
+( zeile - )                                                     
+: KOM  40 * 9000 + 40 EXPECT ;                                  
+: BUFK KOMMBUF 400 DUMP ;   ( Kommentar Dumpen )                
+: BUFM FLUOBUF 400 DUMP ;   ( Messdaten DUMPen )                
+: KOMMBUF.CLEAR  KOMMBUF 400 20 FILL ;  ( Löschen )             
+: TEMPBUF.CLEAR  TEMPBUF 400 20 FILL ;  ( Löschen )             
+: FLUOBUF.CLEAR  FLUOBUF 400 20 FILL ;  ( Löschen )             
+: EICHBUF.CLEAR  EICHBUF 400 20 FILL ;  ( Löschen )             
+DECIMAL                                                         
+: KOMMENTAR  ." Kommentar zur Messung bitte eingeben:" CR       
+  6 0 DO CR I DUP . ." Zeile: " KOM LOOP ;                        
+
+( FSAVE, ESAVE                             TF TF 13:58 07/21/87)
+DECIMAL                                                         
+( FLUO-Zählraten -> Screenbuffer )                              
+: FSAVE  FCOUNTER F>ASC ZFLUO @ SWAP CMOVE ;                    
+: ESAVE  ECOUNTER EFLUO @ SWAP CMOVE ;                          
+: ZF  ZFLUO @ 10 + ZFLUO ! ; ( Fluozähler incrementieren )      
+: EF  EFLUO @ 6  + EFLUO ! ; ( Eichzähler incrementieren )      
+: GETF FSAVE ZF ;                                               
+: GETE ESAVE EF ;                                               
+
+( MASSENSPEICHER                           TF KD 18:14 07/16/87)
+HEX                                                             
+: UPFL    UPDATE FLUSH ;                                        
+: LS_KOM  9 BLOCK KOMMBUF SWAP 400 CMOVE UPFL ; ( KOMM -> # 9  )
+: LS_DAT  A BLOCK FLUOBUF SWAP 400 CMOVE UPFL ; ( FLUO -> # 10 )
+
+( PC-Kommandoscreens: bei Aufruf dieser Worte auf dem SLAVE   ) 
+( reagiert der PC entsprechend und führt die Befehle aus, die ) 
+( in den Screens der durch USING angemeldeten Datei stehen.   ) 
+( MESSDATF.SCR laden )                                          
+: MM  CR ." Fluo-Zähler = 11" CR ." FLUO-Datei:" 4  MS_R_LOAD ;                         
+( screen# - )                                                   
+: DO.PC  MS_R_LOAD ;  ( Bezieht sich auf MESSDATF.SCR )    
+
+( MESSE                                       KD 12:02 07/21/87)
+DECIMAL                                                         
+: TRANSFERM  ."    Messdaten -> PC"  LS_DAT  CR ;               
+: TRANSFERK  ."    Kommentar -> PC"  LS_KOM  CR ;               
+: CLEARBUF FLUOBUF.CLEAR KOMMBUF.CLEAR TEMPBUF.CLEAR ;          
+: MESSE CR ." Messung läuft..."                                 
+  CLEARBUF                                                       
+  FLUOBUF ZFLUO !                                                
+  100 0 DO GETF LOOP                                              
+  ." beendet" 
+  CR KOMMENTAR  
+  TRANSFERM TRANSFERK CR ; 
+                                                                
+( TESTMESS kont. MESSUNG                      KD 12:03 07/21/87)
+( anzahl - )                                                    
+: TESTMESS MM         ( MESSDATF benutzen )             
+1G                    ( Gate öffnen )             
+CR DUP . ." 
+FLUO-Messzyklen:" CR                                 
+0 DO                                                              
+I 1+  . ." Zyklus : "                                           
+100 MESSE TRANSFERM   ( Messung 100 x ausführen )               
+1 DO.PC               ( Kopieren der Screens    )             
+LOOP                                                            
+." Messung beendet." CR   
+0G KOMMENTAR TRANSFERK CR ;
+
+( Testmessung: mit Oszi & Frequenzzähler, Buffer anschauen )    
+: TS  10 MESSE  BUFM ;                                          
+
+( NMI, GATE-Steuerung                         TF 13:59 07/21/87)
+HEX                                                             
+( CTRL4 <->  NMI      :  NMI-Impuls für MOPS                   )
+( CTRL5 <->  EICHGATE :  Zählergate für Eichmarken             )
+( CTRL6 <->  FLUOGATE :  Zählergate für Fluoreszenz            )
+( CTRL7 <->  frei                                              )
+: NMI      10 CTRL P! 0 CTRL P! ;       ( ca. 77 us-Puls )      
+: EICHGATE 20 CTRL P!                                           
+  FF 0 DO LOOP       ( ca. 10 ms )                               
+  0 CTRL P! ;                                                   
+: FLUOGATE 40 CTRL P!                                           
+  A8C 0 DO LOOP      ( ca. 100 ms , A8Ch = 2700 )                
+  0 CTRL P! ;                                        
+
+( FLUOLESE, EICHLESE               KD 12:03 07/21/87)           
+: EICHLESE ;                                                   
+: FLUOLESE GETF ; 
+                                             
+( IMPULSE                                   TF 10:58 07/21/87 ) 
+( Prüfung des Impulsmusters NMI, EICHGATE, FLUOGATE           )
+                                                                
+: IMPULSE                                                       
+  25 0 DO      ( 25 Zyklen   100 Fluopunkte  )          
+  100 0 DO     ( 100 Fluopunkte für 1 Screen )                  
+  4 0 DO                                                          
+  NMI EICHGATE ( 4x Eichmarken ) LOOP                                                           
+  FLUOGATE     ( 1x Fluopunkte ) LOOP                                                        
+  LOOP  ;                                                      
+
+( MESSUNG                                     KD 12:01 07/21/87)
+DECIMAL  
+( Zyklen - )                                           
+: MESSUNG CLEARBUF MM                                             
+  ( 25 )  
+  0 DO               ( 25 Zyklen   100 Fluopunkte  )              
+  FLUOBUF ZFLUO !    ( Fluoscreenzähler initialisieren )          
+  100 0 DO           ( 100 Fluopunkte für 1 Screen )                  
+  4 0 DO                                                          
+  NMI EICHGATE EICHLESE  ( 4x Eichmarken )                 
+  LOOP                                                          
+  FLUOGATE FLUOLESE      ( 1x Fluopunkte )               
+  LOOP                                                            
+  TRANSFERM              ( Messdatentransfer -> PC )              
+  1 DO.PC                ( Kopieren der Screens   )               
+  FLUOBUF.CLEAR          ( Fluo-Puffer löschen    )           
+  LOOP  ;       
+
+( Starte MESSUNG                              KD 12:02 07/21/87) 
+: TM ." 5 Zyklen: Anfang " 5 MESSUNG ." Ende" CR ;               
+
+( Ende FLUO                                   KD 15:56 07/21/87) 
+FORTH                                                            
+: ENDFLUO ;                                                     
+LATEST INIT-FORTH !             ( set nfa top word in dict. )
+THERE  INIT-DP !                ( set dictionary pointer to ) 
+				( first free byte of RAM)
+
