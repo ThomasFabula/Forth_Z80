@@ -6,8 +6,7 @@ comz2 check
 copy messdatf.scr mess.tmp
 disp
 copy mess.tmp %1.scr
-echo FLUO-Datens„tze
+echo FLUO-Datensâ€žtze
 dir zr*.scr
 echo FLUO-Lauf beendet
 echo
-
