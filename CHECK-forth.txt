@@ -10,9 +10,9 @@
                                                                
 ( Testmessprogramm:                                            )
 ( =================                                            )
-( NMI-Puls erzeugt Interrupts fÅ¸r Laser-MOPS -> Laserscan      )
-( EICHGATE steuert den EICHMARKEN-Z‰hler                       )
-( FLUOGATE steuert den FluoreszenZ-Z‰hler                      )
+( NMI-Puls erzeugt Interrupts f¬Å√ºr Laser-MOPS -> Laserscan      )
+( EICHGATE steuert den EICHMARKEN-Z√§hler                       )
+( FLUOGATE steuert den FluoreszenZ-Z√§hler                      )
                                                                 
 ( Adressen-Belegungen                      TF  12:52 07/24/87  ) 
 (                                                              )
@@ -23,14 +23,14 @@
 (                                                              )
 ( entsprechen der CP/M-Maschine von W.Kress & U.Urmoneit       )
 ( und sind somit gegeneinander direkt austauschbar.            )                                                               
-( Screen 2, 3 und 4 sind Kommandoscreens fÅ¸r PC vom SLAVE      )                                                                   
+( Screen 2, 3 und 4 sind Kommandoscreens f¬Å√ºr PC vom SLAVE     )                                                                   
 3 20 THRU                                                                                                                                          
 ( MM : PC-Kommandoscreen                      KD 15:54 07/20/87)
 ( ACHTUNG:  Dieser Screen kann  n u r  auf dem PC auf          )
-( ========  Veranlassung des SLAVE ausgefÅ¸hrt werden !!!       )                                                               
-( Initialisiere Screenz‰hler )                                  
+( ========  Veranlassung des SLAVE ausgef√ºhrt werden !!!       )                                                               
+( Initialisiere Screenz√§hler )                                  
 1.SCR                                                                                                                           
-( Benutze Messdatei MESSDATF.SCR f¸År Fluoreszenzmessungen      )
+( Benutze Messdatei MESSDATF.SCR f√º¬År Fluoreszenzmessungen      )
 USING MESSDATF                                                         
                                       
 ( IO-Adressen: PIO-Karte                      TF 12:43 07/24/87)
@@ -86,15 +86,15 @@ BINARY
 ;     
                                                                    
                                                        
-( Z‰hlerroutinen  CLR, LATCH                  KD 11:47 07/21/87)
+( Z√§hlerroutinen  CLR, LATCH                  KD 11:47 07/21/87)
 HEX                                                              
                                                                
 IOB3B_D  EQU  CTRL       ( CONTROL-Port des IOB-Busses )          
                                                               
-( CTRL0 <->  CLEAR1   :  Lˆsche Z‰hler Fluoreszenz             )
-( CTRL1 <->  CLEAR2   :  Lˆsche Z‰hler Eichmarken              )
-( CTRL2 <->  LATCH1   :  ¸bernehme Z‰hler Fluoreszenz          )
-( CTRL3 <->  LATCH2   :  ¸bernehme Z‰hler Eichmarken           ) 
+( CTRL0 <->  CLEAR1   :  L√∂sche Z√§hler Fluoreszenz             )
+( CTRL1 <->  CLEAR2   :  L√∂sche Z√§hler Eichmarken              )
+( CTRL2 <->  LATCH1   :  √ºbernehme Z√§hler Fluoreszenz          )
+( CTRL3 <->  LATCH2   :  √ºbernehme Z√§hler Eichmarken           ) 
                                                                
 : CLR1    01 CTRL P! 0 CTRL P! ;                                
 : CLR2    02 CTRL P! 0 CTRL P! ;                                 
@@ -102,13 +102,13 @@ IOB3B_D  EQU  CTRL       ( CONTROL-Port des IOB-Busses )
 : LATCH1  04 CTRL P! 0 CTRL P! ;                                
 : LATCH2  08 CTRL P! 0 CTRL P! ;                                                                
                                 
-( Z‰hler-Adressierung                      TF TF 08:47 07/23/87)
+( Z√§hler-Adressierung                      TF TF 08:47 07/23/87)
                                                                 
 IOB3A_D     EQU    ADR           ( ADDRESS-Port des IOB-Bus )                                                                   
 : DISABLE   0 ADR P! ;                                           
-: EN_LOW1  10 ADR P! DISABLE ;       ( FLUO-Z‰hler auslesen )   
+: EN_LOW1  10 ADR P! DISABLE ;       ( FLUO-Z√§hler auslesen )   
 : EN_HIGH1 11 ADR P! DISABLE ;       (       "         "    )   
-: EN_LOW2  12 ADR P! DISABLE ;       ( EICH-Z‰hler     "    )   
+: EN_LOW2  12 ADR P! DISABLE ;       ( EICH-Z√§hler     "    )   
 : EN_HIGH2 13 ADR P! DISABLE ;       (       "         "    )                                                                   
 ( --  n  )                                                      
 : DATA_IN  
@@ -117,15 +117,15 @@ IOB3A_D     EQU    ADR           ( ADDRESS-Port des IOB-Bus )
   100 * + ;      ( 16 Bit-Wert  n       )
                                                      
                                                                               
-( Z‰hler-Auslesen   COUNTER                TF TF 12:45 07/24/87)
+( Z√§hler-Auslesen   COUNTER                TF TF 12:45 07/24/87)
                                                                 
-( Auslesen des FLUORESZENZ-Z‰hlers : 16 Bit )                   
+( Auslesen des FLUORESZENZ-Z√§hlers : 16 Bit )                   
 ( --  n  )                                                      
 : FCOUNTER LATCH1                                             
   EN_LOW1  DATA_IN                                                
   CLR1 ;                                                           
                                                    
-( Auslesen des EICHMARKEN-Z‰hlers : 16 Bit )                    
+( Auslesen des EICHMARKEN-Z√§hlers : 16 Bit )                    
 ( --  n )                                                       
 : ECOUNTER  LATCH2                                                            
   EN_LOW2  DATA_IN                                                
@@ -140,7 +140,7 @@ HEX
   FF CTRL    P!  0 CTRL    P!  ( Controlbus Nullen )             
   FF IOB2A_D P!  0 IOB2A_D P!  ( DATA-OUT Bus  "   )             
   FF IOB2B_D P!  0 IOB2B_D P!                                     
-  CLR1 CLR2 ;                  ( Z‰hler lˆschen    )            
+  CLR1 CLR2 ;                  ( Z√§hler l√∂schen    )            
                                                           
 : INIT_SUB                                                              
   INIT_IOB1  INIT_IOB2   ( Interface-Bus initialisieren  )        
@@ -152,11 +152,11 @@ DECIMAL
 1024 10 *  CONSTANT  EI     ( EICHBUF = 10 kB )                   
                                            
                    
-( CREATE KOMMBUF 1024 ALLOT  1 kB Screenbuffer fÅ¸r Kommentar   ) 
-( CREATE FLUOBUF 1024 ALLOT  1 kB Screenbuffer f¸År Fluowerte   )
-( CREATE EICHBUF EI   ALLOT  10 kB Array fÅ¸r Eichmarken        )                                                                
-0     VARIABLE  ZFLUO    ( Z‰hlvariable FLUO )                  
-0     VARIABLE  ZEICH    ( Z‰hlvariable EICH )           
+( CREATE KOMMBUF 1024 ALLOT  1 kB Screenbuffer f√ºr Kommentar   ) 
+( CREATE FLUOBUF 1024 ALLOT  1 kB Screenbuffer f√ºr Fluowerte   )
+( CREATE EICHBUF EI   ALLOT  10 kB Array f√ºr Eichmarken        )                                                                
+0     VARIABLE  ZFLUO    ( Z√§hlvariable FLUO )                  
+0     VARIABLE  ZEICH    ( Z√§hlvariable EICH )           
                                                                       
 HEX                                                             
 9000 CONSTANT KOMMBUF                                           
@@ -181,9 +181,9 @@ HEX
 : BUFK  KOMMBUF 400 DUMP ;     ( Kommentar Dumpen )             
 : BUFM  FLUOBUF 400 DUMP ;     ( Messdaten DUMPen )             
 : BUFE  EICHBUF 400 DUMP ;     ( Eichdaten DUMPen )             
-: KCLR  KOMMBUF 400 20 FILL ;  ( Lˆschen )                      
-: FCLR  FLUOBUF 400 20 FILL ;  ( Lˆschen )                      
-: ECLR  EICHBUF EI  20 FILL ;  ( Lˆschen )                                       
+: KCLR  KOMMBUF 400 20 FILL ;  ( L√∂schen )                      
+: FCLR  FLUOBUF 400 20 FILL ;  ( L√∂schen )                      
+: ECLR  EICHBUF EI  20 FILL ;  ( L√∂schen )                                       
                                               
 DECIMAL                                                        
 : KOMMENTAR  ." Kommentar zur Messung bitte eingeben:" CR                    
@@ -191,18 +191,18 @@ DECIMAL
                                                    
 ( FSAVE, ESAVE                             TF  08:59 07/23/87 ) 
 DECIMAL                                                         
-( FLUO-Z‰hlraten -> Screenbuffer 24 Bit )                      
+( FLUO-Z√§hlraten -> Screenbuffer 24 Bit )                      
 : FSAVE  FCOUNTER F>ASC ZFLUO @ SWAP CMOVE ;                                                                                    
-( EICH-Z‰hlraten -> Array EICHBUF 16 Bit )                      
+( EICH-Z√§hlraten -> Array EICHBUF 16 Bit )                      
 : ESAVE  ECOUNTER DROP ZEICH @ ! ;   ( High-16 Bit weglassen )                                  
-: ZF  ZFLUO @ 10 + ZFLUO ! ; ( Fluoz‰hler incrementieren )      
-: ZE  ZEICH @ 1+   ZEICH ! ; ( Eichz‰hler incrementieren )                                
+: ZF  ZFLUO @ 10 + ZFLUO ! ; ( Fluoz√§hler incrementieren )      
+: ZE  ZEICH @ 1+   ZEICH ! ; ( Eichz√§hler incrementieren )                                
                                       
-: GETF FSAVE ZF ;  ( FLUO-Z‰hlrate holen, speichern, Var incr. )
-: GETE ESAVE ZE ;  ( EICH-Z‰hlrate holen, speichern, Var incr. )
+: GETF FSAVE ZF ;  ( FLUO-Z√§hlrate holen, speichern, Var incr. )
+: GETE ESAVE ZE ;  ( EICH-Z√§hlrate holen, speichern, Var incr. )
                                                                 
-: MAKEF FLUOBUF ZFLUO ! ;  ( Fluo‰hler-Zuweisung )             
-: MAKEE EICHBUF ZEICH ! ;  ( Eichz‰hler-Zuweisung )             
+: MAKEF FLUOBUF ZFLUO ! ;  ( Fluo√§hler-Zuweisung )             
+: MAKEE EICHBUF ZEICH ! ;  ( Eichz√§hler-Zuweisung )             
 
 ( MASSENSPEICHER                           TF TF 12:47 07/24/87)
 HEX                                                             
@@ -211,7 +211,7 @@ HEX
 : LS_DAT  A BLOCK FLUOBUF SWAP 400 CMOVE UPFL ; ( FLUO -> # 10 )   
                                                              
 ( PC-Kommandoscreens: bei Aufruf dieser Worte auf dem SLAVE   ) 
-( reagiert der PC entsprechend und fÅ¸hrt die Befehle aus, die ) 
+( reagiert der PC entsprechend und f¬Å√ºhrt die Befehle aus, die ) 
 ( in den Screens der durch USING angemeldeten Datei stehen.   )                                           
 
 ( MESSDATF.SCR laden )                                          
@@ -226,9 +226,9 @@ DECIMAL
 : CLEARBUF FCLR KCLR ;                                                                                                                                                                                                                                                                  
 ( NMI, GATE-Steuerung                      TF  11:01 07/23/87  ) 
 HEX                                                             
-( CTRL4 <->  NMI      :  NMI-Impuls f¸År MOPS                   )
-( CTRL5 <->  EICHGATE :  Z‰hlergate fÅ¸r Eichmarken             )
-( CTRL6 <->  FLUOGATE :  Z‰hlergate fÅ¸r Fluoreszenz            )
+( CTRL4 <->  NMI      :  NMI-Impuls f√º¬År MOPS                   )
+( CTRL5 <->  EICHGATE :  Z√§hlergate f¬Å√ºr Eichmarken             )
+( CTRL6 <->  FLUOGATE :  Z√§hlergate f¬Å√ºr Fluoreszenz            )
 ( CTRL7 <->  frei                                              )
 : NMI1    10 CTRL P! ;                 ( NMI auf 1 setzen )     
 : NMI      0 CTRL P! 10 CTRL P! ;      ( ca. 77 us-Puls )                                                         
@@ -241,11 +241,11 @@ HEX
   0 CTRL P! ;                                         
 
 ( IMPULSE                                     TF 12:49 07/24/87)
-( Pr¸Åfung des Impulsmusters NMI, EICHGATE, FLUOGATE            )
+( Pr√º¬Åfung des Impulsmusters NMI, EICHGATE, FLUOGATE            )
                                                                 
 : IMPULSE                                                             
-  25 0 DO        ( 25 Zyklen † 100 Fluopunkte  )              
-  100 0 DO       ( 100 Fluopunkte f¸År 1 Screen )                 
+  25 0 DO        ( 25 Zyklen ¬† 100 Fluopunkte  )              
+  100 0 DO       ( 100 Fluopunkte f√ºr 1 Screen )                 
   4 0 DO                                                           
   NMI EICHGATE   ( 4x Eichmarken )                               
   LOOP                                                            
@@ -259,16 +259,16 @@ HEX
 DECIMAL  ( n  - )                                               
 : MESSUNG DECIMAL CLEARBUF MM MAKEE CR                      
              
-  0 DO                   ( n  Zyklen † 100 Fluopunkte  )             
-  MAKEF                  ( Fluoscreenz‰hler initialisieren )         
+  0 DO                   ( n  Zyklen ¬† 100 Fluopunkte  )             
+  MAKEF                  ( Fluoscreenz√§hler initialisieren )         
   I 1+  . ." Zyklus : "                                          
-  100 0 DO               ( 100 Fluopunkte f¸År 1 Screen )                 
+  100 0 DO               ( 100 Fluopunkte f√ºr 1 Screen )                 
   NMI EG EG EG EICHGATE NMI                                      
   FLUOGATE GETF          ( 1x Fluopunkte )               
   LOOP                                                            
   TRANSFERM              ( Messdatentransfer -> PC )              
   1 DO.PC                ( Kopieren der Screens   )               
-  FCLR                   ( Fluo-Puffer lˆschen    )          
+  FCLR                   ( Fluo-Puffer l√∂schen    )          
   LOOP  ;                                                        
                                                                                                                           
 ( Starte MESSUNG                           TF TF 12:48 07/24/87)
@@ -284,4 +284,3 @@ DECIMAL  ( n  - )
   MESSUNG                                                        
   KOMMENTAR TRANSFERK                                            
   CR ." Ende" CR ;   
-
