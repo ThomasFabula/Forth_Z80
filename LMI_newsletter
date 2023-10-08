@@ -1,0 +1,368 @@
+
+                    LMI Forth User Newsletter
+
+                          August 1987
+
+                     Laboratory Microsystems, Inc.
+              P. O. Box 10430, Marina Del Rey, CA 90295
+                            (213) 306-7412
+
+
+-------------------------------------------------------------------------
+
+PC/FORTH 3.2 and PC/FORTH+ 3.2
+
+LMI is pleased to announce the release of PC/FORTH and PC/FORTH+
+versions 3.2.  These new versions represent a significant improvement
+in capability.  The new or improved features include:
+
+     Full path support throughout;
+
+     An enhanced, two-level file interface that allows you to
+     compile identical code on PC/FORTH 3.2, PC/FORTH+ 3.2, and
+     UR/FORTH;
+
+     "Well-behaved" use of system dynamic memory allocation
+     functions;
+
+     Powerful new string handling operators (search, extract,
+     compare, and concatenate) and dynamic string storage
+     manager;
+
+     A completely rewritten, much faster binary overlay loader
+     (the PC/FORTH+ overlay loader now supports all three
+     relocation types: paragraph, 16-bit offset, and 32-bit
+     offsets);
+
+     An improved multitasker with programmable delays and
+     semaphores;
+
+     Enhanced user interface, including a SHELL command that
+     allows you to run any DOS command, batch file, or program
+     (either interactively or under the control of a Forth
+     application) and examine its return code;
+
+     Completely new table-driven full-screen editor and assembler
+     supplied in both overlay and source code form (includes all
+     80286 and 80287 mnemonics).
+
+     Maximum possible compatibility with UR/FORTH on the source
+     code level.
+
+     3.5" media available on request at no extra charge;
+
+     Internal serialization of the Forth system and graphics
+     drivers discontinued.
+
+Updates are available to registered users of PC/FORTH and PC/FORTH+ at
+a nominal charge.  An order form for updates is included in this
+newsletter.
+
+-------------------------------------------------------------------------
+
+New Products
+
+UR/FORTH for Microsoft OS/2.  A fully functional version of UR/FORTH
+that runs in protected mode under OS/2 is now available.  UR/FORTH for
+OS/2 allows full access to the operating system's facilities for
+multi-tasking, virtual memory management, and inter-process
+communication.  Turnkey applications can be compiled with UR/FORTH for
+OS/2 and distributed without any license fee or royalty.
+
+Until January 1, 1988, registered users of the MS-DOS version of
+UR/FORTH and of the IBM or Microsoft OS/2 Software Development Kits
+can obtain a copy of the OS/2 version of UR/FORTH at no charge.  After
+January 1, the upgrade to the OS/2 version for registered MS-DOS
+UR/FORTH owners will be $100.
+
+
+UR/FORTH for Windows.  A preliminary version of UR/FORTH is now
+running under Microsoft Windows 1.03.  It will be available for
+purchase after Microsoft begins shipping the retail version of Windows
+2.0, which will probably be 4th Qtr 1987.
+
+
+UR/FORTH for 80386.  A 32-bit version of UR/FORTH for the Intel 80386
+is under development, and should be available for purchase in
+November, 1987.  Preliminary timings indicate that the 32-bit 80386
+UR/FORTH will offer a 4 GB address space at virtually no speed penalty
+(compared to the 16-bit UR/FORTH running on the same machine), due to
+the 80386's improved addressing modes and instruction set.
+
+
+New Metacompiler Targets.  New 16-bit targets for the 6809, 6303,
+HD64180, and Z-8 microprocessors are now available.  A target for the
+Super 8 is in preparation.
+
+New 32-bit targets for the 8086 and 68000 are now available.  The 32-
+bit 8086 target is symmetric with the PC/FORTH+ implementation, while
+the 32-bit 68000 target is a ROMable, token threaded implementation
+developed by Klaus Flesch of Forth Systeme Angelika Flesch in West
+Germany.
+
+LMI also performs custom ports of its Forth systems by special
+arrangement.  The usual porting fee is $5000, but this fee may be
+substantially reduced if loaner hardware is provided and LMI retains
+the rights to market the system.
+
+
+SRS-63 EPROM Simulator.  Klaus Flesch of Forth Systeme Angelika
+Flesch, West Germany, has developed a new EPROM simulator that can
+support up to 63 KB of address space.  The simulator includes IBM PC
+host software that allows you to download precompiled images, edit and
+download source code, and debug interactively using the target
+system's interpreter without the need for a separate serial port.
+
+The SRS-63 will be available in the U.S.A. through LMI in late 1987.
+A data sheet for this product is available on request.
+
+-------------------------------------------------------------------------
+
+Technical Support
+
+Technical support for LMI Forth products is available by several
+avenues of electronic mail.
+
+The quickest way to obtain technical support is to leave a message on
+the LMI Forth Board at (213) 306-3530.  This board is available 7 days
+a week, 24 hours a day, and supports 1200, 2400, and 9600 baud.  The
+LMI Forth Board also offers some 20 MB of Forth source code,
+tutorials, useful MS-DOS utilities and programming aids.
+
+You can also contact LMI via MCI Mail (lmi or 114-9487), BIX (join lmi
+to post a message in the LMI Vendor Support Conference), or CompuServe
+Easyplex (72406,1577).
+
+After over two years of experience running a bulletin board service
+for users, we have become convinced that electronic mail is by far the
+most efficient means of providing technical support --- for both
+ourselves and our customers.  Consequently, technical support by voice
+phone call will be discontinued as of September 1, 1987: technical
+support will be available only by electronic mail.  For a limited
+time, LMI will be offering 1200 baud Hayes-compatible internal modems,
+bundled with ProComm telecommunications software, to registered users
+for $100 (our cost).
+
+When you make a request for technical support, be sure to include the
+following vital information:
+
+     A general idea of what you are trying to do;
+
+     A detailed description of the problem;
+
+     Your development environment (including version numbers);
+
+     System software configuration (including version numbers), and
+     type of machine being used;
+
+     The possibilities you've already exhausted (and their results);
+
+     Your name, company name, and the serial number of your Forth
+     system.
+
+An answer to your question, or a request for further information, will
+generally be posted to you within 24 hours.  Please do not request or
+expect a phone call in answer to your question; this eliminates the
+advantages of electronic mail for all concerned.
+
+-------------------------------------------------------------------------
+
+Electronic Updates
+
+We have been posting free incremental updates to the MS-DOS version of
+UR/FORTH on the LMI Forth Board since the release of UR/FORTH in 1986.
+This has been very popular with UR/FORTH owners, and has proven to be
+an economical way to distribute enhancements to the UR/FORTH screen
+editor, assembler, multi-tasker, and other tools.
+
+Accordingly, over the next few months, we will also be establishing a
+procedure to distribute free incremental updates for PC/FORTH and
+PC/FORTH+ via the LMI Forth Board.  However, this service will only be
+available to purchasers of the 3.2 update.
+Mailing List Cleanup
+
+This is the last newsletter that will be sent to all known present and
+previous users of LMI Forth products.  Our mailing list has been
+growing for over six years and needs pruning badly.
+
+If you wish to continue to receive LMI newsletters and update
+announcements, you must affix the newsletter mailing label to the
+enclosed postcard, make any necessary address corrections, and return
+the postcard to LMI.
+
+-------------------------------------------------------------------------
+
+Packaging and Pricing Changes
+
+Coincident with the release of PC/FORTH and PC/FORTH+ versions 3.2, we
+are making a number of changes in our pricing and packaging structure.
+The thrust of these changes is to provide an integrated development
+environment at a much lower price than before, and eliminate the
+confusing menu of "extension packages."
+
+PC/FORTH version 3.2                                           $150.00
+
+     Interpreter/compiler, editor, assembler, host file interface,
+     relocating binary overlay utility, 400 page manual.
+
+PC/FORTH+ version 3.2                                          $250.00
+
+     Interpreter/compiler, editor, assembler, host file interface,
+     relocating binary overlay utility, 400 page manual.
+
+Programmer's Package #1 (16-bit)                               $250.00
+
+     PC/FORTH 3.2 (16-bit) as above, software floating point, Intel
+     8087 support, graphics driver (IBM CGA, EGA, Hercules), and
+     native code optimizer.
+
+Programmer's Package #2 (32-bit)                               $350.00
+
+     PC/FORTH+ 3.2 (32-bit) as above, software floating point, Intel
+     8087 support, graphics driver (IBM CGA, EGA, Hercules), and
+     native code optimizer.
+
+Programmer's Package #3 (16-bit and 32-bit)                    $500.00
+
+     PC/FORTH 3.2 (16-bit) and PC/FORTH+ 3.2 (32-bit) as above,
+     software floating point, Intel 8087 support, graphics driver (IBM
+     CGA, EGA, Hercules), and native code optimizer.
+
+The PC/FORTH and PC/FORTH+ software floating point, Intel 8087
+support, graphics support, and native code optimizer will no longer be
+available for purchase as separate extension packages.
+
+For the present, we will continue to sell the floating point and
+native code optimizer extension packages separately for 8086 FORTH,
+8086 FORTH+, and Z-80 FORTH.
+
+-------------------------------------------------------------------------
+
+LMI Products Withdrawn
+
+The following LMI Forth systems are withdrawn from the price list as
+of September 1, 1987:
+
+     PC/FORTH for the Hewlett-Packard HP-150 and HP-110
+     PC/FORTH for the Wang Professional Computer
+     68000 FORTH 3.0 for CP/M-68K
+     68000 FORTH+ 3.0 for CP/M-68K
+
+Technical support for these systems will be continued for a limited
+period.
+
+The B-tree index manager, symbolic debugger, cross reference utility,
+and PC/TERM extension packages will also be withdrawn as of September
+1, 1987.  They will be placed (together with their documentation
+files) on the LMI Bulletin Board System and may be downloaded at no
+charge by all registered users.  Overseas distributors will be
+supplied with master disks for these four extensions which they can
+duplicate and supply to their customers.
+
+-------------------------------------------------------------------------
+
+LMI Products Frozen
+
+The following Forth systems remain on the price list for the present,
+but will not be updated for symmetry with IBM PC/FORTH 3.2 and
+UR/FORTH because of vanishing market demand:
+
+     Z-80 FORTH 3.1 for CP/M
+     8080 FORTH 3.0 for CP/M
+     PC/FORTH 3.0 for Apple IIe
+     8086 FORTH 3.1 for MS-DOS or CP/M-86
+     8086 FORTH+ 3.1 for MS-DOS or CP/M-86
+
+-------------------------------------------------------------------------
+
+Authorized Overseas LMI Distributors
+
+Forth-Systeme Ang. Flesch     Southern Pacific Ltd.
+Postfach 1103                 Sanwa Building
+D-7814 Breisach am Rhein      2-16-20 Minamisaiwai
+West Germany                  Nishi, Yokohama, 220 Japan
+Phone:  (49) 7667-551         Phone: 045-314-9514
+
+Systems Science Limited       Wave-onic Associates
+6-7 West Smithfield           199 Watts Road
+London, England EC1A 9JX      Wilson 6107, Australia
+Phone:  01-248-0962           Phone:  (09) 451-2946
+
+Micro-Sigma S.A.R.L.
+10, rue de la Boetie
+75008 Paris, France
+Phone:  (1) 42.65.95.16
+
+-------------------------------------------------------------------------
+
+
+             PC/FORTH and PC/FORTH+ 3.2 Update Order Form
+
+
+
+Name:                       __________________________________________
+
+Company:                    __________________________________________
+
+Address:                    __________________________________________
+
+City, State, ZIP:           __________________________________________
+
+
+
+
+
+Old PC/FORTH serial no.: _______      Old PC/FORTH+ serial no.: ______
+
+
+
+[ ]  PC/FORTH 3.2 and manual                                    $50.00
+
+[ ]  PC/FORTH+ 3.2 and manual                                   $50.00
+
+[ ]  Programmers Package #1                                     $75.00
+
+     Includes PC/FORTH 3.2, manual, software floating point,
+     Intel 8087 support, graphics, and native code optimizer.
+     To order this update you must be a registered owner of
+     PC/FORTH and at least one of those four extension
+     packages.
+
+[ ]  Programmers Package #2                                     $75.00
+
+     Includes PC/FORTH+ 3.2, manual, software floating point,
+     Intel 8087 support, graphics, and native code optimizer.
+     To order this update you must be a registered owner of
+     PC/FORTH+ and at least one of those four extension
+     packages.
+
+[ ]  Programmers Package #3                                    $125.00
+
+     Includes PC/FORTH 3.2 and manual, PC/FORTH+ 3.2 and
+     manual, software floating point, Intel 8087 support,
+     graphics, and native code optimizer.  To order this
+     update you must be a registered owner of PC/FORTH and
+     PC/FORTH+, and at least one of those four extension
+     packages.
+
+
+
+     Sales tax (California residents)                        _________
+
+     Shipping ($5.00 in USA, $25.00 overseas airmail)        _________
+
+     Total                                                   _________
+
+
+
+Method of payment:  [ ] Check enclosed   [ ] Visa   [ ] Mastercard
+
+Credit card number: _________________________        Exp. date: ______
+
+                                   
+
+                    Allow four weeks for shipment.
+
+
+=========================================================================
+
