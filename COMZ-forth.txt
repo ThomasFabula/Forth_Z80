@@ -50,7 +50,7 @@ HEX
 10 CONSTANT INT_MASK        ( INTERUPT-MASKE IRQ4            )  
 30 CONSTANT COM_INT_ADR     ( 0000:0030  Int-Adr von IRQ4    )
                                                                   
-( IO-ADR COM2                              KD  11:47 02/04/87 )
+( IO-ADR COM2                             KD  11:47 02/04/87 )
                                                                  
 HEX      : MARKE ;          ( COM2 MIT INT3                  )     
                                                            
@@ -66,7 +66,7 @@ HEX      : MARKE ;          ( COM2 MIT INT3                  )
 08 CONSTANT INT_MASK        ( INTERUPT-MASKE IRQ3            ) 
 2C CONSTANT COM_INT_ADR     ( 0000:0030  Int-Adr von IRQ3    ) 
                                                                 
-( BAUDRATE                                 KD  16:49 01/23/87 )  
+( BAUDRATE                                KD  16:49 01/23/87 )  
                                                                
 HEX                                                              
                                                               
@@ -112,15 +112,15 @@ CODE SCHIRM_SWAP
  ES,      DI MOV                                                 
  DI,  # 0000 MOV    ( Sichtbar        = B000:0000 )              
  BX,  # 1000 MOV    ( Unsichtbar      = B000:1000 )             
- CX,  # 0FA0 MOV    ( Zähler                      ) 
+ CX,  # 0FA0 MOV    ( ZÃ¤hler                      ) 
                                                                     
- 1$: ES: AL,[DI] MOV    ( Tausch der Inhalte          )          
+ 1$: ES: AL,[DI] MOV    ( Tausch der Inhalte      )          
  ES: AH,    [BX] MOV                                             
  ES: [BX],   AL  MOV                                             
  ES: [DI],   AH  MOV    ( --> )                            
  ( Tausche Bildschirminhalt   SCHIRM_SWAP       09:55 02/04/87 ) 
                                                                 
- BX          INC    ( Nachziehen der Zähler        )      
+ BX          INC    ( Nachziehen der ZÃ¤hler        )      
  DI          INC                                                 
  CX          DEC                                             
  1$  JNZ                                                            
@@ -144,7 +144,7 @@ SCHIRM_SWAP                                         ;
                 
 ( Tausche Bildschirminhalt   CLSS  HGC_FULL   KD 12:37 02/16/87)
                                                                
-: CLSS         ( Lösch Bildschirm 1 = SLAVE-Schirm )
+: CLSS         ( LÃ¶sch Bildschirm 1 = SLAVE-Schirm )
                         
  ?XY CUR_POS_S0 2!    
  SCHIRM_SWAP CLS                            
@@ -178,8 +178,8 @@ HEX
 CREATE  COM_BUF  COM_BUF_SIZE ALLOT                                    
 COM_BUF  COM_BUF_SIZE ERASE                                        
                                                     
-VARIABLE COM_IN                        ( geändert von COM_INT ) 
-VARIABLE COM_OUT                       ( geändert von    @COM )
+VARIABLE COM_IN                        ( geÃ¤ndert von COM_INT ) 
+VARIABLE COM_OUT                       ( geÃ¤ndert von    @COM )
 
 VARIABLE ?SLAVE_EIN                    ( 0 = AUS   1 = EIN    )                                                                 
 ( original interruptvektor wird hier gespeichert )              
@@ -336,7 +336,7 @@ HEX
                                                                 
 VARIABLE SL_MELDUNG                                                     
                                                         
-: .1M ." Í> SL " ."  < USING: " .SCREEN-FILE ." > " CR ;   
+: .1M ." Ã> SL " ."  < USING: " .SCREEN-FILE ." > " CR ;   
                                                      
 : SLAVE_EIN                          
                                       
@@ -396,5 +396,3 @@ HEX
   DUP UNTIL                                                      
   DROP            
   ESC_CODE ;                           
-
- 
