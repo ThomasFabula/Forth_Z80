@@ -1,6 +1,5 @@
 ( PC->SLAVE      Emulation                    KD 18:46 06/26/87)
 ( Last changed screen # 003                   KD 18:24 06/29/87) 
-                                             
 ( LADEN-->                                    KD 18:46 06/26/87)  
                                                               
 FORTH DEFINITIONS                                               
@@ -77,7 +76,6 @@ CODE    COM_BAUD
   NEXT, 
 END-CODE                                                             
                                                                      
-                                    
 ( !COM                                     KD  16:49 01/23/87 )
                                                                 
 HEX                                                             
@@ -100,8 +98,8 @@ HEX
                                                                
 2VARIABLE CUR_POS_S0      ( Cursorposition Seite 0 )            
 2VARIABLE CUR_POS_S1      ( Cursorposition Seite 1 )                  
-                                               
-                                                                                                                              
+                                              
+                                                                                                                             
 ( Tausche Bildschirminhalt   SCHIRM_SWAP       09:55 02/04/87 ) 
 HEX                                                                  
 ( Tauscht den Speicherinhalt B000:0000 <-> B000:1000  )             
@@ -118,7 +116,8 @@ CODE SCHIRM_SWAP
  ES: AH,    [BX] MOV                                             
  ES: [BX],   AL  MOV                                             
  ES: [DI],   AH  MOV    ( --> )                            
- ( Tausche Bildschirminhalt   SCHIRM_SWAP       09:55 02/04/87 ) 
+
+( Tausche Bildschirminhalt   SCHIRM_SWAP       09:55 02/04/87 ) 
                                                                 
  BX          INC    ( Nachziehen der Zähler        )      
  DI          INC                                                 
@@ -126,7 +125,8 @@ CODE SCHIRM_SWAP
  1$  JNZ                                                            
  NEXT, 
 END-CODE                                                                
-                                                                                                                                                                                                                   
+                                                                                                                        
+
 ( Tausche Bildschirminhalt     B_SCHIRM_       10:03 02/04/87 )
                                                                 
 (   Tauscht Inhalte mit Sicherung der Cursor-Positionen aus   ) 
