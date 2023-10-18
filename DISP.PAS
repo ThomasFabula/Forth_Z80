@@ -1,10 +1,8 @@
 program display_fluodata;
 
-
 {$I typedef.sys}          { System unabhaengige Typendefinitionen     }
 {$I graphix.sys}          { System abhaengige Definitionen & Routinen }
 {$I kernel.sys}           { System unabhaengige Support Routinen      }
-
 
 var  fil             : file of byte;
      i,j,k,m         : integer;
@@ -17,7 +15,6 @@ var  fil             : file of byte;
      y_max,gy_max,xx : real;
      antwort,cha     : char;
      temp,anzahl     : real;       { Anzahl der Fluowerte }
-
 
 {---------------------}
 {-----  Anfang  ------}
@@ -60,7 +57,6 @@ begin
   end;
   for i:=1 to 2000 do yflu[i]:=0;
 end;
-
 
 procedure in_dat;
 begin
@@ -154,7 +150,6 @@ begin
   LeaveGraphic;
   writeln('Display beendet.');
 end;
-
 
 {===================    H a u p t p r o g r a m m    ==================}
 
