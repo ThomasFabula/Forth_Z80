@@ -10,7 +10,7 @@
                                                                
 ( Testmessprogramm:                                            )
 ( =================                                            )
-( NMI-Puls erzeugt Interrupts für Laser-MOPS -> Laserscan      )
+( NMI-Puls erzeugt Interrupts für Laser-MOPS -> Laserscan     )
 ( EICHGATE steuert den EICHMARKEN-Zähler                       )
 ( FLUOGATE steuert den FluoreszenZ-Zähler                      )
                                                                 
@@ -23,14 +23,14 @@
 (                                                              )
 ( entsprechen der CP/M-Maschine von W.Kress & U.Urmoneit       )
 ( und sind somit gegeneinander direkt austauschbar.            )                                                               
-( Screen 2, 3 und 4 sind Kommandoscreens für PC vom SLAVE     )                                                                   
+( Screen 2, 3 und 4 sind Kommandoscreens für PC vom SLAVE      )                                                                   
 3 20 THRU                                                                                                                                          
 ( MM : PC-Kommandoscreen                      KD 15:54 07/20/87)
 ( ACHTUNG:  Dieser Screen kann  n u r  auf dem PC auf          )
 ( ========  Veranlassung des SLAVE ausgeführt werden !!!       )                                                               
 ( Initialisiere Screenzähler )                                  
 1.SCR                                                                                                                           
-( Benutze Messdatei MESSDATF.SCR für Fluoreszenzmessungen      )
+( Benutze Messdatei MESSDATF.SCR für Fluoreszenzmessungen      )
 USING MESSDATF                                                         
                                       
 ( IO-Adressen: PIO-Karte                      TF 12:43 07/24/87)
