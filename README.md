@@ -3,7 +3,7 @@
 ## FORTH
 Forth code for Microprocessor Z80, CP/M-Version 2.2x - 3.0
 
-## LMI Version 
+## Version 
 - LMI - Laboratory Microsystems, Inc. Version 3.1  
 - P.O. Box 10430, Marina Del Rey, CA 90295
 
