@@ -1,7 +1,9 @@
 # Forth_Z80
 
 ## FORTH
-Forth code for Microprocessor Z80, CP/M-Version 2.2x - 3.0
+Forth code for 
+- Microprocessor Z80, CP/M-Version 2.2x - 3.0
+- and PC-compatible computer MS-DOS 3.x
 
 ## Version 
 - LMI - Laboratory Microsystems, Inc. Version 3.1  
