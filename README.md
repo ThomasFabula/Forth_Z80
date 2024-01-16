@@ -6,7 +6,8 @@ Forth code for:
 - PC-compatible computers PC/MS-DOS 3.x
 
 ## Version 
-- LMI - Laboratory Microsystems, Inc. Version 3.1  
+LMI - Laboratory Microsystems, Inc. 
+- Forth Version 3.1  
 - P.O. Box 10430, Marina Del Rey, CA 90295, USA
 
 ## Credits to
