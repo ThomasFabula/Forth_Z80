@@ -13,5 +13,5 @@ LMI - Laboratory Microsystems, Inc.
 ## Credits to
 CP/M-Version adapted for Z80 CPU:  
 - at Institute for Applied Physics, University of Bonn 
-- Author: Dipl.-Ing. (E-Technik) Klaus-Dieter Krause
+- Author: Dipl.-Ing. (Elektro-Technik) Klaus-Dieter Krause
 - https://www.iap.uni-bonn.de/de
