@@ -24,13 +24,13 @@ F000   EQU RING_BUF        ( Startadresse Ringpuffer    2kb  )
 F800   EQU FIRST           ( Startadresse Disk-Puffer   2kb  ) 
 FFFF   EQU RAM-END         ( Endadresse          RAM  System )                             
                                      
-RAM-END RAM-BASE - 1+      ( Errechnet wird die RAM-Grˆﬂe    )       
-EQU RAM-SIZE          	   ( RAM-Grˆﬂe                       )       
+RAM-END RAM-BASE - 1+      ( Errechnet wird die RAM-Gr√∂√üe    )       
+EQU RAM-SIZE          	   ( RAM-Gr√∂√üe                       )       
                                                         
 ( Speicherverteilung                         KD 15:21 07/21/87)  
                                                                     
                                                           
-50    EQU TIB_LEN           ( L‰nge Terminal-Puffer          )
+50    EQU TIB_LEN           ( L√§nge Terminal-Puffer          )
                                                                  
 EM TIB_LEN - EQU ^TIB       ( Startadresse Terminal-Puffer)     
 ^TIB 400   - EQU ^STR       ( Sting-Bereich )                   
@@ -96,19 +96,19 @@ HEX
  8  EQU  BSIN        
 0C  EQU  FFEED           
 1B  EQU  ESC                                                                                                                                                                                                                                                                                                                                 
-( Start 0000 ; F¸llen                        KD 10:11 02/18/87)
+( Start 0000 ; F√ºllen                        KD 10:11 02/18/87)
 
 ASSEMBLER                                                       
 NOP  DI  ECLD  JP                    ( Sprung zum Kaltstart  ) 
 FORTH                                                              
                                                                   
                                                            
-( ---- Bis 65H mit Nullen fÅllen ---------------------------- )
+( ---- Bis 65H mit Nullen f¬Ållen ---------------------------- )
                                                                  
 HEX                                                                
 66  HERE  ROM-BASE  -  -  DUP     ( Leerstellen im ROM     )  
-HERE  SWAP  0   FILL              ( mit 0 f¸llen           ) 
-ALLOT                             ( und ¸berspringen       )     
+HERE  SWAP  0   FILL              ( mit 0 f√ºllen           ) 
+ALLOT                             ( und √ºberspringen       )     
                                                          
                                                                  
                                                                   
@@ -118,11 +118,11 @@ HEX
 C3  C,  0  ,     ( NMI auf Adresse 0066 mit C30000 besetzen) 
                                                               
                                                            
-( ---- Bis 80H mit Nullen fÅllen ---------------------------- ) 
+( ---- Bis 80H mit Nullen f¬Ållen ---------------------------- ) 
                                                                    
 80  HERE  ROM-BASE  -  -  DUP       ( Leerstellen im ROM     )  
-HERE  SWAP  11  FILL                ( mit 11 f¸llen          )  
-ALLOT                               ( und ¸berspringen       ) 
+HERE  SWAP  11  FILL                ( mit 11 f√ºllen          )  
+ALLOT                               ( und √ºberspringen       ) 
                                                                   
                                                               
 ( .VERSION                                    KD 15:27 07/21/87)
@@ -135,11 +135,11 @@ CR
 CR ; 
                                                               
                                                     
-( --------------- Bis 100H mit   11   f¸llen ---------------- )  
+( --------------- Bis 100H mit   11   f√ºllen ---------------- )  
                                                               
 100  HERE  ROM-BASE  -  -  DUP       ( Leerstellen im ROM     ) 
-HERE SWAP  11  FILL                  ( mit 11 f¸llen          )
-ALLOT                                ( und ¸berspringen       )   
+HERE SWAP  11  FILL                  ( mit 11 f√ºllen          )
+ALLOT                                ( und √ºberspringen       )   
                                                                                                                               
 ( Festlegung: Stack, TIB, u.s.w.              KD 10:15 02/18/87)  
                                                                   
@@ -154,7 +154,7 @@ L: INIT-DP        0 ,      ( initial DP )
 ( Kaltstart FORTH                             KD 23:02 02/19/87)
 ASSEMBLER HEX                                                   
                                                                 
-PROC ECLD ( ------RAM wird zuerst mit 00 gef¸llt -------------) 
+PROC ECLD ( ------RAM wird zuerst mit 00 gef√ºllt -------------) 
  E, # 00 LD    
  BC, # RAM-SIZE LD     
  HL, # RAM-BASE LD      
@@ -179,14 +179,14 @@ L: CLD1  ] COLD [
 ( Systemfrequenz = 6.144 MHz  --> CTC-Frequenz = 3.072 MHz     )
 ( CTC Baudratenerzeugung = Countermode                         )
 ( 9600 Baud * 16 = 153600 Hz zum SIO; 153600 * 14h = 3.072 MHz )
-( Konstanten f¸r Baudraten :                                   )
+( Konstanten f√ºr Baudraten :                                   )
 ( 9600 = 14h   1200 = A0h  bei 16-facher Eingangsfrequenz      )
 (  300 = A0h               bei 64-facher Eingangsfrequenz      ) 
                                                                
 ( Systemfrequenz = 3.9936 MHz  --> CTC-Frequenz = 1.9968 MHz   )
 ( CTC Baudratenerzeugung = Countermode                         )
 ( 9600 Baud * 16 = 153600 Hz zum SIO; 153600 * 0Dh = 1.9968 MHz)
-( Konstanten f¸r Baudraten :                                   )
+( Konstanten f√ºr Baudraten :                                   )
 ( 9600 = 0Dh   1200 = 68h  bei 16-facher Eingangsfrequenz      )
 (  300 = 68h               bei 64-facher Eingangsfrequenz      ) 
                                                                
@@ -206,7 +206,7 @@ HEX
                                                                                                                        
  ( Init OR-SUB-S      CTC_Init_Baud_Tab        KD 22:02 04/26/87) 
                                                                
-DECIMAL  ( -- Init f¸r CTC_S1 und CTC_S2 = Baudratengenerator ) 
+DECIMAL  ( -- Init f√ºr CTC_S1 und CTC_S2 = Baudratengenerator ) 
 CREATE   INIT_CTC_BAUD   HERE  2+  ,                          
 S06 C,   ( Anzahl der Bytes )  
 BINARY                                                         
@@ -265,7 +265,7 @@ END-CODE
 ASSEMBLER  
 HEX                                                  
 (          ----   INIT_CTC        Initialisiert CTC's          )
-( Der obere Stackwert enth‰lt den Zeiger auf das erste Byte    )                                                                
+( Der obere Stackwert enth√§lt den Zeiger auf das erste Byte    )                                                                
 CODE    INIT_CTC  
                                                      
  EXX                                                            
@@ -284,8 +284,8 @@ END-CODE
 ( Init OR-SUB-S          INIT_SIO             KD 23:02 02/19/87)                                                                                                                                
 (  -- --   ----   INIT_SIO        Initialisiert SIO            )
 (  00 io   zeig      "                                         )
-( Der untere Stackwert enh‰lt die IO-adresse                   )
-( Der obere Stackwert enth‰lt den Zeiger auf das erste Byte    )                                                               
+( Der untere Stackwert enh√§lt die IO-adresse                   )
+( Der obere Stackwert enth√§lt den Zeiger auf das erste Byte    )                                                               
 CODE  INIT_SIO 
                                                      
  EXX                                                             
@@ -1269,7 +1269,7 @@ CODE    emit    	( ---- EMIT )
  Z     	1$     JR                                                
  A,     L     LD                                                
  A,    	# 7F  AND    	( Nur 7-Bit          )                      
- SIO_SB_D A  OUT    	( Drucker ¸ber SIO_B )                                                                           
+ SIO_SB_D A  OUT    	( Drucker √ºber SIO_B )                                                                           
 
 
 ( emit     ?Drucker oder Terminal             KD 23:03 04/25/87) 
@@ -1519,7 +1519,7 @@ VARIABLE   BLK
 ( ser disk    ADRESS N!                       KD 06:00 02/19/87)
 HEX                                                                                                                                                                                             
 : ADDRESS  ( --- ADRESS                                        )                                                                     
- 400  * FIRST  +  	( Errechnet wird in Abh‰ngigkeit von der )                      
+ 400  * FIRST  +  	( Errechnet wird in Abh√§ngigkeit von der )                      
 			( RAM-Puffernummer die Adresse dieses    );   
                   
 ( Puffers im Speicherbereich             ) 
@@ -1528,17 +1528,17 @@ HEX
 ( ser disk   ABSENT                           KD 06:00 02/19/87)
 HEX                                                             
 : ABSENT  ( BLK_NR  ---  TOS = Blocknummer. Die im RAM-Puffer  )          
-( vorhandenen Blˆcke werden mit der gew¸nschten      )   
+( vorhandenen Bl√∂cke werden mit der gew√ºnschten      )   
  1                 ( Blocknummer verglichen. Wenn der Block  )   
  SWAP              ( nicht vorhanden ist wird eine  1  auf   ) 
  NB 0 DO           ( dem TOS und die Blocknummer auf TOS-1   )   
- DUP               ( zur¸ckgegeben.                          )   
+ DUP               ( zur√ºckgegeben.                          )   
  I BUFFERS @       ( Wenn der Block vorhanden ist liegt auf  )   
  7FFF AND  =       ( dem TOS eine  0  und auf TOS-1 die      )   
  IF DROP I PREV !  ( Startadresse des entsprechenden Blockes )      
  DROP 0                                                          
  I ADDRESS         ( -- TOS ----- TOS-1 -------------------- )      
- LEAVE             (     ∫          ∫                        )   
+ LEAVE             (     ¬∫          ¬∫                        )   
 
  THEN              (     1     Blocknummer    nicht im RAM   ) 
  LOOP   SWAP ;     (     0      Adresse          im RAM      )
@@ -1573,20 +1573,20 @@ HEX
  THEN ;
                                                         
 
-( ser disk   BLOCK - Erl‰uterungen            KD 14:11 02/22/87)
+( ser disk   BLOCK - Erl√§uterungen            KD 14:11 02/22/87)
                                                                 
 ( BLOCK     Blk_Nr  ---  Speicheradresse                       )
 ( Liest Block n vom Massenspeicher                             )
-( Es werden 2 F‰lle unterschieden:                             )
+( Es werden 2 F√§lle unterschieden:                             )
 (  1. Wenn der Block sich bereits im Slaverechner befindet, er-)
 (     folgt kein Zugriff auf den Massenspeicher und es wird die)
 (     Anfangsadresse des Speicherbereiches auf den Stack       )
 (     gelegt.                                                  )
 (  2. Wenn der Block noch nicht vorhanden ist, wird zuerst ge- )
-(     prÅft, ob der fÅr die neuen Daten vorgesehene Speicherbe-)
-(     reich einen Block enth‰lt, der das Update-Bit trÑgt.     )
+(     pr¬Åft, ob der f¬År die neuen Daten vorgesehene Speicherbe-)
+(     reich einen Block enth√§lt, der das Update-Bit tr‚Äûgt.     )
 (     Wenn das der Fall ist, wird zuerst dieser Block auf den  )
-(     Massenspeicher Åbertragen und dann erst der gewÅnschte   )
+(     Massenspeicher ¬Åbertragen und dann erst der gew¬Ånschte   )
 (     Block in den Slaverechner eingelesen. Dann wird die      )
 (     Speicheranfangsadresse dieses Blocks auf den Stack gelegt)
 
@@ -1625,9 +1625,9 @@ HEX
 IMMEDIATE                                                                       
 
 : THRU        CR 1+ SWAP DO ." ." I LOAD LOOP ;                                                                                 
-( -- Veranlaﬂt den Massenspeicherrechner  SCREEN ' n ' der    ) 
+( -- Veranla√üt den Massenspeicherrechner  SCREEN ' n ' der    ) 
 
-( -- ¸ber USING angemeldeten Datei einzulesen und auszuf¸hren ) 
+( -- √ºber USING angemeldeten Datei einzulesen und auszuf√ºhren ) 
                                                                 
 : MS_R_LOAD   04 EMIT  100 /MOD EMIT EMIT ;                                                                                     
 ( ser disk  list                              KD 20:25 02/21/87)HEX                                                                                                                             
@@ -2046,21 +2046,21 @@ END-CODE
                                                               
 ( Die Startadresse der Tabelle  INT_TAB_1  wird auf eine       )
 ( Adresse ???0 gelegt. Da bei der Oettle u. Reichler-Karte die )
-( KanÑle 0 bis 2 nicht f¸r den Interruptverkehr im Mode 2 ge-  )
+( Kan‚Äûle 0 bis 2 nicht f√ºr den Interruptverkehr im Mode 2 ge-  )
 ( dacht sind, wird der FORTH-Interrupt1 auf den Kanal 3 des    )
 ( CTC gezogen                                                  )                                                                
-( -- Adressenberechnung fÅr die CTC-Interruptadresse --------- )      
+( -- Adressenberechnung f¬År die CTC-Interruptadresse --------- )      
 HEX   INT_TAB_1   00F8  AND    CONSTANT   INT_ADR_C0   
                                                                    
-( Bringt HERE auf ???0 + 6 , weil die Kan‰le 0, 1, 2, ¸ber-    )
+( Bringt HERE auf ???0 + 6 , weil die Kan√§le 0, 1, 2, √ºber-    )
 ( gangen werden                            !                   )
 (                                          !                   )   
 
 HEX    0F  HERE  DUP  FFF0  AND  -  -  6  +  ALLOT                                                                         
 ( Interrupt Routinen                          KD 23:47 02/21/87) 
  
-( !! Bei der Berechnung der Interrupttabelle wird die LÑnge    )
-( des Wortes  INT_TAB_1 ber¸cksichtigt. !!                     )  
+( !! Bei der Berechnung der Interrupttabelle wird die L‚Äûnge    )
+( des Wortes  INT_TAB_1 ber√ºcksichtigt. !!                     )  
 CREATE INT_TAB_1 HERE 2+ ,                                                                                                      
 ' INTSERV1 >BODY ,   ' INTSERV2 >BODY ,    ' INTSERV3 >BODY ,   
 ' INTSERV4 >BODY ,   ' INTSERV5 >BODY ,    ' INTSERV6 >BODY ,   
@@ -2081,7 +2081,7 @@ BINARY
  10100111  EQU  CTC_S3_STW                                                                                                                                                                                                                                                                                                                                                                                                                         
 ( Interrupt  OR-SUB-S    Init_Int_S0_S3_Tab   KD 15:36 07/21/87)
                                                                
-DECIMAL  ( -- gibt Interrupt fÅr CTC_S3 frei + startet CTC_S0 )                                                                 
+DECIMAL  ( -- gibt Interrupt f¬År CTC_S3 frei + startet CTC_S0 )                                                                 
 CREATE     INT_S0_S3_TAB       HERE  2+  ,                                                           
 07 C, 				( Anzahl der Bytes ) 
 BINARY                                                                      
@@ -2095,7 +2095,7 @@ CT1_0  C,   TC0         C,    	(  7               )
                                                                 
 
 ( Interrupt  OR-SUB-S    INIT_INT_S3_Tab      KD 15:37 07/21/87)                                                                                                                               
-DECIMAL    ( ---- Gibt Interupt nur fÅr CTC_S3 frei --------- )  
+DECIMAL    ( ---- Gibt Interupt nur f¬År CTC_S3 frei --------- )  
                                                                
 CREATE     INT_S3_TAB      HERE  2+  ,                                                          
  05 C,    			( Anzahl der Bytes )                                                                  
@@ -2108,8 +2108,8 @@ BINARY
 
 ( Interrupt  OR-SUB-S     INT_CTC_S3_NO_NMI   KD 15:37 07/21/87)                                                                
 ASSEMBLER  HEX                                                                                                                  
-( verhindert, daﬂ CTC_S0  NMI auslˆst und  ??????????????      )
-( ---- auslˆsen mit INT_S0_S3_TAB    INIT_CTC ---------------- )                                                                
+( verhindert, da√ü CTC_S0  NMI ausl√∂st und  ??????????????      )
+( ---- ausl√∂sen mit INT_S0_S3_TAB    INIT_CTC ---------------- )                                                                
 CODE    NO_NMI                                                                                                            
  A,        # CTC_S0_STW   LD                                     
  CT1_0          A        OUT                                     
@@ -2121,7 +2121,7 @@ END-CODE
 ( Interrupt  OR-SUB-S     INT_CTC_S3_TEST     KD 17:39 02/22/87)
    
 ASSEMBLER  HEX                                                                                                                  
-( ---------Interupt-Testroutine fÅr CTC_S3 ------------------- )   
+( ---------Interupt-Testroutine f¬År CTC_S3 ------------------- )   
                                                                                                                              
 CODE    INT_S3                                                                                                            
  NOP NOP NOP                                                   
@@ -2130,7 +2130,7 @@ CODE    INT_S3
 END-CODE                                                                                                                                                                    
 ( watch_on                                    KD 23:48 02/21/87)
                                                                
-( ---- NMI verhindern durch zur¸cksetzen der Zeitkonste ------ )                                                                
+( ---- NMI verhindern durch zur√ºcksetzen der Zeitkonste ------ )                                                                
 : watch_no_nmi NO_NMI   EINT  ;  
                                                                                              
 ( ------------------------------------------------------------ )                                                                
@@ -2140,7 +2140,7 @@ INT_TAB_1  SET_IREG     [']  watch_no_nmi   I1  !
  INT_S0_S3_TAB           
  INIT_CTC     EINT  ;                                                                                                                                           
 ( TEST INT CTC_S3                             KD 22:49 02/22/87)                                                               
-( --Lˆst Interupt in CTC Kanal 3 aus, ohne Kanal 0 zu starten  )                                                                
+( --L√∂st Interupt in CTC Kanal 3 aus, ohne Kanal 0 zu starten  )                                                                
 : int_c3        INT_S3   EINT   ;                                                                                                                                                                                                                               
 : INT_C3                                                                                                                                 
 INT_TAB_1      SET_IREG     [']  int_c3   I1  !                
@@ -2168,7 +2168,7 @@ INT_TAB_1      SET_IREG     [']  int_c3   I1  !
 ( break                                       KD 23:22 02/22/87)  
                                                               
 ( --- BREAK in Definition compilieren. Dann wird bis zu einem  )
-(     GO der SPEZIAL-INTERPRTER mit <bok> ausgefÅhrt           ) 
+(     GO der SPEZIAL-INTERPRTER mit <bok> ausgef¬Åhrt           ) 
                                                                        
 VARIABLE CHECK       VARIABLE  BREAK_END                                                                                
 : BREAK  ( --- BREAK in Definition compilieren ----- )                  
