@@ -13,7 +13,7 @@ DECIMAL
 345   VARIABLE   XMASS     ( X-Achsenbemassung )                 
 0     VARIABLE   DX        ( Increment X-Achse )                
 680   VARIABLE   XGES      
-( Gesamtauflösung x-Achse )
+( GesamtauflÃ¶sung x-Achse )
                                                                        
                                                           
 ( Primitives                                  KD 17:21 07/08/87)
@@ -26,9 +26,9 @@ DECIMAL
 
 (  HERCULES-Grafikseite 1 )
 : INIT  HGR            ( Grafik einschalten )                           
-H0 CLS H1 CLS  ( Löschen der beiden Screens )                   
+H0 CLS H1 CLS  ( LÃ¶schen der beiden Screens )                   
 TEXT ;         
-( Textseite zurückschalten )       
+( Textseite zurÃ¼ckschalten )       
 ( AXIS0, MHZ                                   15:42 07/05/87 ) 
 ( Zeichnet kleines Koordinatenkreuz            15:36 07/05/87 ) 
 : AXIS0                                                                
@@ -202,7 +202,7 @@ DUP 13 =  IF  TEXT THEN ;
 ( Startwert      ST = 0                                        )
 ( Counts [max]   ZF = 5 x 10E4                                 )
 ( Frequenz [max] FQ = 5 x 10E3 MHz                             )
-( Abschätzung: bei TF = 100 ms --> ZF ca. 5 x 10E4             )
+( AbschÃ¤tzung: bei TF = 100 ms --> ZF ca. 5 x 10E4             )
 ( ------------------------------------------------------------ )
 ( EICH:                                                        )
 ( Messzeiten     TE = 10 ms                                    )
