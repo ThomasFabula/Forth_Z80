@@ -195,7 +195,7 @@ BINARY
   C/D2_D ;  
 
 ( Init FIO3                                   TF 14:52 07/04/87)  
-: INIT_FIO3 C/D3_C              ( Controlwort              )   
+: INIT_FIO3 C/D3_C                 ( Controlwort              )   
   00001101 CTRL_REG0 FIO3 REG!     ( RESET = High, Port-2: HS )   
   00001100 CTRL_REG0 FIO3 REG!     ( RESET = Low              )   
   00000000 CTRL_REG1 FIO3 REG!                                    
