@@ -1,0 +1,807 @@
+;************************************************************************
+; Datei Messwerterfassung File:MESSHF.MAC V1.1 		16.07.1985	*
+;************************************************************************
+;
+.Z80
+ASEG
+ORG 103H
+PUBLIC	TIMER,STOP,TIMEH
+EXT	ORIG
+;
+;*************************************************************************
+;	SPRUNGADDRESSEN FUER INTERRUPTS
+;
+ANF:	JP	ORIG
+	DS	10			; Programmbeginn bei 103H
+VECT1:	DS	4
+VECT2:	DW	INTVER
+	DS	2
+;
+TIME:	DS	1			; Messzeit
+TIME1:	DS	1			;Totzeit zwischen Messungen
+TIME2:	DS	1			;Messzeit (TIME3)*(TIME2) msec
+TIME3:	DS	1			;Vorteiler Inhalt 1 oder 10 msec
+BACK:	DS	1			; Hilfszelle fuer INT
+INTVEC:	DS	1
+;
+;
+RMASK:	DS	1			;Maske fuer Relais Port
+IANZA:	DS	1			;Laufindex fuer Messpunkt
+;
+HF1:	DS	4			;count mit HF
+UAN1:	DS	4			;1.count ohne HF
+UAN2:	DS	4			;2.count ohne HF
+ZAN:	DS	4			;Ergebnis von 2*HF1-UAN1-UAN2
+;
+BUFANZ:	DS	1			;aktuelle Ringbuffer Position
+ZANZA2:	DS	1			;Zeilen Zaehler modulo 10
+ZANZA1:	DS	4			;Zeilen Zaehler
+QFLAG:	DS	1			;Flg fuer harte Messunterbrechung
+SFLAG:	DS	1			;Flg fuer weiche Messunterbrechung
+FFLAG:	DS	1			;Flg=0 aufsteigende Zeile
+NMAX:	DS	1			;Anzahl von Messpunkten
+MFLAG:	DS	1			;Flg=1  Messung in gang
+ANZFLG:	DS	1			;Anzeige Flg
+YANZA:	DS	1			;Messpunkt fuer Anzeige
+COUALT:	DS	4			;alte Zaehlrate fuer Anzeige
+COUNEU:	DS	4			;neue Zaehlrate fuer Anzeige
+BUFALT:	DS	1			;Buffer Zeiger
+ZANZA3:	DS	1			;Zeilen pro Buffer
+QBUF:	DS	1			;Quit Buffer 
+ZQBUF:	DS	4			;Anzahl Zeilen in Quit Buffer
+VECINT:	DS	2			;Interrupt Vektor fuer Verteiler
+DUUM:	DS	2			;Dummy Zelle
+;
+;
+;
+;*************************************************************************
+;	Programmstart
+;*************************************************************************
+;
+TIMER:	IM	2
+	LD	HL,INT
+	LD	(VECT2),HL
+	LD	A,I			; alten Interruptvector retten
+	LD 	(INTVEC),A
+	DI
+	LD	HL,VECT1		; untere Interruptvektor- 
+	LD	A,L			; haelften werden in die 
+	OUT	(CTCA2),A		; Counter geladen	
+	LD	A,H			; obere Interruptvektor-
+	LD	I,A			; haelfte wird nach I
+	LD	A,55H			; Timernachteiler 
+	OUT	(TIMER2),A		; erhalten die Werte 1
+	OUT	(TIMER3),A
+	LD	A,1
+	OUT	(TIMER2),A
+	OUT	(TIMER3),A
+	LD	A,57H			; Countervorteiler
+	OUT	(CTCC0),A		; erhalten ihre Werte 
+	OUT	(CTCC1),A
+	LD	A,1
+	OUT	(CTCC0),A		; Teiler = 1
+	LD	A,10
+	OUT	(CTCC1),A		; Teiler = 10
+	LD	A,0D5H
+	OUT	(CTCC2),A		; Zaehler erhaelt
+	LD	A,1			; seine Startzeit = 10 msec
+	OUT	(CTCC2),A		; konstante
+	LD	A,17H			; Timer wird gestartet
+	OUT	(TIMER1),A		; im Timermode.
+	LD	A,250			; Vorteiler = 16
+	OUT	(TIMER1),A		; F= 100 Hz 
+	LD	A,0D5H			; Zaehler erhaelt seine 
+	OUT	(CTCC2),A		; Messzeit
+	LD	HL,TIME			; T = 10 msec * (TIME)
+	LD	A,(HL)
+	OUT	(CTCC2),A
+	EI				
+	LD	A,0
+	LD	(BACK),A
+DUMMY: 	LD	A,(BACK)
+	CP	2
+	JP	NZ,DUMMY     
+STOP:	LD	A,53H			; INT (CTC) disable
+	OUT	(TIMER1),A
+	OUT	(CTCA2),A		; und Softwarereset
+	OUT	(CTCB2),A
+	OUT	(CTCC2),A
+	LD	A,(INTVEC)
+	LD	I,A
+	LD	A,24			; alte Speicherbelegung
+	OUT	(0EEH),A		; wiederherstellen
+	EI
+	RET
+;
+;	INTERRUPTROUTINE
+;
+INT:	PUSH 	AF
+	PUSH	HL
+	LD	HL,BACK
+	INC	(HL)
+	POP	HL
+	POP 	AF
+	EI
+	RETI
+;
+;
+;
+;***   Unterprogramm Relais Treiber   ***
+;
+HFAUS:	LD	A,(RMASK)
+	OR	01
+	LD	(RMASK),A
+	OUT	(PORTR),A
+	RET
+;
+;
+;
+HFEIN:	LD	A,(RMASK)
+	AND	0FEH
+	LD	(RMASK),A
+	OUT	(PORTR),A
+	RET
+;
+;
+;
+;***   Unterprogramm ext. Zaehler Gate, Reset   ***
+;
+RESET1:	LD	A,(RMASK)
+	OR	08
+	OUT	(PORTR),A
+	NOP
+	NOP
+	NOP
+	LD	A,(RMASK)
+	AND 	0F7H
+	OUT	(PORTR),A
+	RET
+;
+;
+;
+GATON1:	LD	A,(RMASK)
+	OR	10H
+	LD	(RMASK),A
+	OUT	(PORTR),A
+	RET
+;
+;
+;
+GATOF1:	LD	A,(RMASK)
+	AND	0EFH
+	LD	(RMASK),A
+	OUT	(PORTR),A
+	RET
+;
+;
+;
+;***   Unterprogramm Dekaden Treiber   ***
+;
+;
+;Uebergabe Puls
+;
+UGABEP:	LD	A,04
+	OUT	(PORTD2),A
+	LD	A,05
+	OUT	(PORTD2),A
+	NOP
+	NOP
+	NOP
+	NOP
+	LD	A,00
+	OUT	(PORTD2),A
+	RET
+;
+;
+;
+;IOP Puls
+;
+IOPP:	LD	A,04
+	OUT	(PORTD2),A
+	LD	A,06
+	OUT	(PORTD2),A
+	NOP
+	NOP
+	NOP
+	NOP
+	LD	A,00
+	OUT	(PORTD2),A
+	RET
+;
+;
+;
+;I-te BCD kodierte Zahl in Array FREQUNZEN wird an Dekade angelegt
+;
+DEKADE:	LD	DE,FREQU
+	LD	A,(IANZA)
+	LD	L,A
+	LD	H,0
+	LD	A,0
+	AND	A
+	RL	L		;*9
+	RL	H
+	AND	A
+	RL	L
+	RL	H
+	AND	A
+	RL	L
+	RL	H
+	LD	A,(IANZA)
+	LD	C,A
+	LD	B,0
+	ADD	HL,BC
+	ADD	HL,DE
+	LD	C,9
+DEKAD1:	LD	A,(HL)
+	OUT	(PORTD1),A
+	CALL	IOPP
+	NOP
+	NOP
+	INC	HL
+	DEC	C
+	JP	NZ,DEKAD1
+	NOP
+	NOP
+	CALL	UGABEP
+	RET
+;
+;
+;
+;***   Unterprogramm Berechnung von 2*HF1-UAN1-UAN2   ***
+;
+;Ergebnis wird in ZAN abgelegt
+;
+ARISUM:	LD	HL,HF1
+	CALL	ARIS32
+	LD	HL,HF1
+	CALL	ARIS32
+	CALL	ARIADD
+	LD	HL,UAN1
+	CALL 	ARIS32
+	CALL	ARISUB
+	LD 	HL,UAN2
+	CALL	ARIS32
+	CALL	ARISUB
+	LD	HL,ZAN
+	CALL	ARIF32
+	RET
+;
+;
+;
+;lege 32 bit ab adr HL auf Arithm. Proz. Stack
+;
+ARIS32:	CALL	BUSY
+	LD	C,04
+ARI1:	LD	A,(HL)
+	OUT	(ARISKT),A
+	INC	HL
+	DEC	C
+	JP	NZ,ARI1
+	RET
+;
+;
+;
+;hole 32 bit von Arithm. Stack und lege auf adr HL
+;
+ARIF32:	CALL	BUSY
+	INC	HL
+	INC	HL
+	INC	HL
+	LD	C,04
+ARI2:	IN	A,(ARISKT)
+	LD	(HL),A
+	DEC	HL
+	DEC	C
+	JP	NZ,ARI2
+	RET
+;
+;
+;
+;pruefe ob Arithm.Proz. frei
+;
+BUSY:	IN	A,(ARICRT)
+	AND	80H
+	JP	NZ,BUSY
+	RET
+;
+;
+;
+;addiere zwei 32 bit Zahlen
+;
+ARIADD:	LD	A,2CH
+	CALL	ARICOM
+	RET
+;
+;
+;
+;subtrahiere zwei 32 bit Zahlen
+;
+ARISUB:	LD	A,2DH
+	CALL	ARICOM
+	RET
+;
+;
+;
+ARICOM:	LD	B,A
+	CALL	BUSY
+	LD	A,B
+	OUT	(ARICRT),A
+	RET
+;
+;
+;
+;***   Unterprogramm Zaehler   ***
+;
+;hole Zaehlrate, speicher diese ab HL ab
+;danach clr Zaehler
+;
+ZHOL:	CALL	LATCH
+	LD	A,86H
+	OUT	(62H),A		;low byte enable
+	NOP
+	NOP
+	IN	A,(60H)
+	LD	(HL),A
+	INC	HL
+	LD	A,87H
+	OUT	(62H),A
+	NOP
+	NOP
+	LD	A,85H
+	OUT	(62H),A		;medium byte enable
+	IN	A,(60H)
+	LD	(HL),A
+	INC	HL
+	LD	A,87H
+	OUT	(62H),A
+	NOP
+	NOP
+	LD	A,83H
+	OUT	(62H),A		;high byte enable
+	NOP
+	NOP
+	IN	A,(60H)
+	LD	(HL),A
+	INC	HL
+	LD	A,87H
+	OUT	(62H),A
+	LD	A,00
+	LD	(HL),A
+	LD	A,8FH		;clr counter
+	OUT	(62H),A
+	NOP
+	NOP
+	LD	A,87H
+	OUT	(62H),A
+	RET
+;
+;
+;
+LATCH:	LD	A,97H
+	OUT	(62H),A
+	NOP
+	NOP
+	LD	A,87H
+	OUT	(62H),A
+	RET
+;
+;
+;
+;***   Unterprogramm speicher ZAN in Ringbuffer ab   ***
+;
+RAMSTO:	LD	A,(ZANZA2)
+	LD	HL,ZANZA3
+	CP	(HL)
+;
+	JP	NZ,RAMST1
+	LD	A,(BUFANZ)
+	LD	(BUFALT),A
+	LD	A,0
+	LD	(ZANZA2),A
+	LD	HL,BUFANZ
+	INC	(HL)
+	LD	A,(BUFANZ)
+	CP	3
+	JP	NZ,RAMST1
+	LD	A,00
+	LD	(BUFANZ),A
+RAMST1:	LD	A,(BUFANZ)		;Quit Buffer aktuallisierung
+	LD	HL,QBUF
+	CP	(HL)
+	JP	NZ,RAMST7
+	INC	(HL)
+	LD	A,(QBUF)
+	CP	3
+	JP	NZ,RAMST6
+	LD	A,0
+	LD	(QBUF),A
+RAMST6:	LD	HL,ZANZA1		;ZANZA1->ZQBUF
+	LD	DE,ZQBUF
+	CALL	VERSCH
+RAMST7:	LD	A,(BUFALT)
+	CALL	RAMS
+	LD	(DUUM),HL		;HL enthaelt alte Addresse
+;
+	LD	DE,0C00H		;Untergrund Kanal abspeichern
+	ADD	HL,DE			;adr.von altem Untergrund
+	CALL	ARIS32			;UAN1 + alter Untergrund
+	LD	HL,UAN1
+	CALL	ARIS32
+	CALL	ARIADD
+	LD	HL,UAN2
+	CALL	ARIF32
+	LD	HL,(DUUM) 	
+	LD	DE,COUALT
+	LD	C,04
+RAMST4:	LD	A,(HL)			;alte Zaehlrate COUALT
+	LD	(DE),A
+	INC	HL
+	INC	DE
+	DEC 	C
+	JP	NZ,RAMST4
+	LD	HL,(DUUM)
+	CALL	ARIS32
+;
+	LD	HL,ZAN
+	CALL	ARIS32
+	CALL	ARIADD
+	LD	HL,COUNEU
+	CALL	ARIF32			;neue Zaehlrate COUNEU
+;
+	LD	A,(BUFANZ)
+	CALL	RAMS			;HL enthaelt neue Addresse
+;
+	LD	(DUUM),HL		;UAN2 -> Buffer
+	LD	DE,0C00H
+	ADD	HL,DE
+	EX	DE,HL
+	LD	HL,UAN2
+	CALL	VERSCH
+	LD	HL,(DUUM)
+;
+	LD	DE,COUNEU
+	LD	C,04
+;
+RAMST5:	LD	A,(DE)
+	LD	(HL),A
+	INC	HL
+	INC	DE
+	DEC	C
+	JP	NZ,RAMST5
+;
+	LD	A,0
+	LD	(ANZFLG),A
+	RET
+;
+;
+RAMS:	LD	DE,512
+	LD	HL,RAMADR
+RAMST2:	CP	0
+	JP	Z,RAMST3
+	ADD	HL,DE
+	DEC	A
+	JP	RAMST2	
+RAMST3:	EX	DE,HL
+	LD	A,(IANZA)
+	LD	(YANZA),A
+	LD	L,A
+	LD	A,0
+	LD	H,A
+	AND	A		;clr carry flg
+	RL	L		;*4
+	RL	H
+	AND	A
+	RL	L
+	RL	H
+	ADD	HL,DE
+	RET
+;
+;
+;
+;+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+;+++     Haupt Messprogramm Zyklus                                     +++
+;+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+;
+;
+;
+MAINR:	LD	HL,MAIN1		;Vektor setzen fuer naechsten
+	LD	(VECINT),HL		;Einsprung
+	CALL	DEKADE			;setze I-te Frequenz
+	JP	EXIT0
+;
+;
+;
+MAIN1:	LD	HL,MAIN2
+	LD	(VECINT),HL		;Vektor setzen
+	CALL	SETT1			;t1 vorprogrammieren
+	LD	HL,UAN1			;UAN1->UAN2
+	LD	DE,UAN2
+	CALL	VERSCH
+	JP	EXIT0
+;
+;
+;
+MAIN2:	LD	HL,MAIN3
+	LD	(VECINT),HL		;Vektor setzen
+	CALL	SETT2			;t2 vorprogrammieren
+	LD	HL,UAN1
+	CALL	ZHOL			;Zaehlrate UAN1 holen
+	CALL	HFEIN			;HF einschalten
+	CALL	RESET1			;setze ext.Zaehler zurueck
+	JP	EXIT0
+;
+;
+;
+MAIN3:	LD	HL,MAIN4
+	LD	(VECINT),HL		;Vektor setzen
+	CALL	SETT1			;t1 vorprogrammieren
+	CALL	GATON1			;oeffne Gate1 von ext Zaehler
+	JP	EXIT0
+;
+;
+;
+MAIN4:	LD	HL,MAIN1
+	LD	(VECINT),HL		;Vektor setzen
+	CALL	SETT2			;t2 vorprogrammieren
+	CALL	GATOF1			;schliesse Gate1
+	LD	HL,HF1			;Zaehlrate HF1 holen
+	CALL	ZHOL
+	CALL	HFAUS			;HF ausschalten
+;
+	CALL	ARISUM
+	CALL	RAMSTO
+	LD	A,(QFLAG)
+	CP	0
+	JP	NZ,HSTOP		;harte Unterbrechung
+	LD	A,(FFLAG)
+	CP	0
+	JP	NZ,FFLAG1
+;
+	LD	HL,IANZA		;aufsteigende Zeile
+	INC	(HL)			;nachsten Messpunkt
+;
+	LD	A,(IANZA)		;ende der Zeile ?
+	LD	HL,NMAX
+	CP	(HL)
+	JP	Z,NMAX1			;ja
+	LD	A,0			;nein
+	LD	(FFLAG),A
+	JP	EXIT1
+;
+NMAX1:	LD	HL,IANZA
+	DEC	(HL)
+	LD	A,(BUFANZ)
+	LD	(BUFALT),A
+	LD	A,1
+	LD	(FFLAG),A
+;
+	LD	HL,(ZANZA1)		;erhoehe Zeilenzahl um eins
+	INC	HL
+	LD	(ZANZA1),HL
+	LD	HL,ZANZA2		;fuer RAMSTO:
+	INC 	(HL)
+	JP	SFLAG1
+;
+FFLAG1:	LD	HL,IANZA		;absteigende Zeile
+	DEC	(HL)			;naechsten Messpunkt
+;
+	LD	A,(IANZA)		;ende der Zeile?
+	CP	0FFH
+	JP	Z,ABZEIL
+;
+	LD	A,1			;nein
+	LD	(FFLAG),A
+	JP	EXIT1
+;
+ABZEIL:	LD	HL,IANZA
+	INC	(HL)
+	LD	A,(BUFANZ)
+	LD	(BUFALT),A
+	LD	A,0			;ja
+	LD	(FFLAG),A
+	LD	HL,(ZANZA1)		;erhohe Zeilenzahl um eins
+	INC	HL
+	LD	(ZANZA1),HL
+	LD	HL,ZANZA2		;fuer RAMSTO:
+	INC	(HL)
+;
+SFLAG1:	LD	A,(SFLAG)		;weiche Unterbrechung
+	CP	1			;der Messung
+	JP	Z,HSTOP
+EXIT1:	JP	MAINR
+;
+;
+;
+;+++   Hier ist zentraler Einsprung fuer Interrupt per Timer   +++
+;
+INTVER:	PUSH	AF
+	PUSH	HL
+	PUSH	DE
+	PUSH	BC
+	LD	HL,(VECINT)
+	JP	(HL)
+EXIT0:	POP	BC
+	POP	DE
+	POP	HL
+	POP	AF
+	EI
+	RETI
+;
+;
+;
+;+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+;
+;
+;
+;+++   Unterprogramm Harte Messunterbrechung   +++
+;
+HSTOP:	LD	A,53H			;interrupt CTC disable
+	OUT	(TIMER1),A		;& Softwarereset
+	OUT	(CTCC2),A		;alten interrupt Vektor setzen
+	LD	A,(INTVEC)
+	LD	I,A
+;
+	LD	A,0			;Messflag ruecksetzen
+	LD	(MFLAG),A
+;
+	JP	EXIT0
+;
+;
+;
+;+++   Messzyklus nach einer harten Messunterbrechung anlaufen lassen  +++
+;
+TIMEH:	CALL	HFAUS
+	LD	HL,UAN2			;reset Zaehler
+	CALL	ZHOL
+	LD	A,0
+	LD	(QFLAG),A
+	LD	(SFLAG),A
+	LD	(BACK),A
+	LD	A,1
+	LD	(MFLAG),A		;Messflag setzen
+	LD	HL,INTVER
+	LD	(VECT2),HL
+	LD	HL,TIMEA		;Vektor setzen
+	LD	(VECINT),HL
+	IM	2
+	LD	A,I			; alten Interruptvector retten
+	LD 	(INTVEC),A
+	DI
+	LD	HL,VECT1		; untere Interruptvektor- 
+	LD	A,L			; haelften werden in die 
+	OUT	(CTCA2),A		; Counter geladen	
+	LD	A,H			; obere Interruptvektor-
+	LD	I,A			; haelfte wird nach I
+	LD	A,55H			; Timernachteiler 
+	OUT	(TIMER2),A		; erhalten die Werte 1
+	OUT	(TIMER3),A
+	LD	A,1
+	OUT	(TIMER2),A
+	OUT	(TIMER3),A
+	LD	A,57H			; Countervorteiler
+	OUT	(CTCC0),A		; erhalten ihre Werte 
+	OUT	(CTCC1),A
+	LD	A,1
+	OUT	(CTCC0),A		; Teiler = 1
+	LD	A,(TIME3)
+	OUT	(CTCC1),A		; Teiler = (TIME3)
+	LD	A,0D5H
+	OUT	(CTCC2),A		; Zaehler erhaelt
+	LD	A,(TIME1)
+	OUT	(CTCC2),A		; konstante
+	LD	A,17H			; Timer wird gestartet
+	OUT	(TIMER1),A		; im Timermode.
+	LD	A,250			; Vorteiler = 16
+	OUT	(TIMER1),A		; F= 100 Hz 
+	LD	A,0D5H			; Zaehler erhaelt seine 
+	OUT	(CTCC2),A		; Messzeit
+	LD	A,(TIME2)		; T = (TIME3) msec * (TIME2)
+	OUT	(CTCC2),A
+	EI
+;
+DUMM1:	LD	A,(BACK)
+	CP	1
+	JP	NZ,DUMM1
+	RET
+;
+;
+;
+TIMEA:	LD	HL,TIMEB		;Vektor setzen
+	LD	(VECINT),HL
+	CALL	SETT1			;t1 vorprogrammieren
+	JP	EXIT0
+;
+TIMEB:	LD	HL,MAIN1		;Vektor setzen
+	LD	(VECINT),HL
+	CALL	SETT2			;t2 vorprogrammieren
+	LD	HL,UAN2			;Zaehlrate holen
+	CALL	ZHOL
+	LD	HL,UAN2			;UAN2->UAN1
+	LD	DE,UAN1
+	CALL	VERSCH
+	LD	HL,UAN2			;UAN2->HF1
+	LD	DE,HF1
+	CALL	VERSCH
+	LD	A,1
+	LD	(BACK),A
+	JP	MAINR
+;
+;
+;
+;+++   Unterprogramm Verschieben von 4 Bytes von HL nach DE   +++
+;
+VERSCH:	LD	C,04
+LOOP1:	LD	A,(HL)
+	LD	(DE),A
+	INC	HL
+	INC	DE
+	DEC	C
+	JP	NZ,LOOP1
+	RET
+;
+;
+;
+;+++   Unterprogramm t1 vorprogrammieren   +++
+;
+SETT1:	LD	A,0D5H
+	OUT	(CTCC2),A
+	LD	A,(TIME1)
+	OUT	(CTCC2),A
+	RET
+;
+;
+;
+;+++   Unteprogramm t2 vorprogrammieren   +++
+;
+SETT2:	LD	A,0D5H
+	OUT	(CTCC2),A
+	LD	A,(TIME2)
+	OUT	(CTCC2),A
+	RET
+;
+;
+;
+;*************************************************************************
+; Tabelle fuer Timer/Counter, Flouro Zaehler, Dekade, Relais
+;*************************************************************************
+;
+TIMER1	EQU	30H		; Timer triggert Vorteiler 1
+TIMER2	EQU	31H		; Nachteiler 1 fuer Timer
+TIMER3	EQU	32H		; 	"    2  "     "	 
+CTCA0	EQU	34H		; Vorteiler 1 Kanal 0		
+CTCA1	EQU	38H		; Vorteiler 2 Kanal 0
+CTCA2	EQU	3CH		; Counter Kanal 0 u. Interuptvektor
+CTCB0	EQU	35H		; Vorteiler 1 Kanal 1
+CTCB1	EQU	39H		; Vorteiler 2 Kanal 1
+CTCB2	EQU	3DH		; Counter Kanal 1
+CTCC0	EQU	36H		; Vorteiler 1 Kanal 2
+CTCC1	EQU	3AH		; Vorteiler 2 Kanal 2
+CTCC2	EQU	3EH		; Counter Kanal 2
+EICHK	EQU	66H		; Eichmarkenkontrollport
+EICHZ	EQU	64H		; Eichmarkenzaehlerport
+FLUOK	EQU	62H		; Fluoreszenskontrollport
+FLUOZ	EQU	60H		; Fluoreszenszaehlerport
+SIOC	EQU	0E3H		; SIO-Control
+SIOD	EQU	0E2H		; SIO-Data
+ARICRT	EQU 	89H		; Arithmeticcontrol
+ARISKT	EQU	88H		; Arithmeticdata
+;
+;
+PORTD1	EQU	68H		;Dekade port A
+PORTD2	EQU	6AH		;Dekade port B
+;
+PORTR	EQU	6CH		;Relais Port
+;
+;
+UAMADR	EQU	8C00H		;Ringbuffer fuer Untergrundrate
+FREQU	EQU	8800H		;Frequenz BCD Array
+RAMADR	EQU	8000H		;Ringbuffer fuer Zaehlraten
+;
+;
+;
+;*************************************************************************
+;
+	END	ANF
+
+
+
