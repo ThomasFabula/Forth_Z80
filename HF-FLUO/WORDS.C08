@@ -58,7 +58,8 @@
 ( LDEL : loescht Zeile wo gerade der Cursor steht )
  
 ( CURPOS : cursor wird auf position x,y gebracht )
-(  x y    --       )Š
+(  x y    --       )
+Å 
 ( REVERSE : invers attribut von televideo wird eingeschaltet )
 
 ( CLR-TELE : loesche schirm von televideo             )
@@ -118,7 +119,8 @@
 ( FSUB : 32 Bit Gleitkomma Subtraktion )
 ( n1 n2 n3 n4 -- n1 n2 )
 
-Š( FLTD : 32 Bit Festpunkt auf 32 Bit Gleitkomma )
+
+Å ( FLTD : 32 Bit Festpunkt auf 32 Bit Gleitkomma )
 ( n1 n2 -- n1 n2 )
 
 ( FIXD : 32 Bit Gleitkomma auf 32 Bit Festpunkt )
@@ -178,7 +180,8 @@
 0 VARIABLE COR	( Hilfsvariable fuer Rueckschritt im Menue		)
 0 VARIABLE ZRK	( Hilfsvariable fuer Cursor { --> }			) 
 
-Š( ZR : steuert die Cursortaste { --> }					)
+
+Å ( ZR : steuert die Cursortaste { --> }					)
 
 (  n1 -->		)
 ( Z! : speichert gueltige ASCII-Zeichen im entsprechenden Buffer ab	)
@@ -238,7 +241,8 @@
 ( YDISA : gibt Ordinatenkopf aus ; n1 = Mantisse ; n2 = Exponent        )
 
 ( n1 -- n6 -->		)
-( YDISB : gibt 6 Werte  an die Ordinate aus			)Š
+( YDISB : gibt 6 Werte  an die Ordinate aus			)
+Å 
 ( n1 n2 -->		)
 ( YDIS2 : gibt alle Ordinatenwerte auf Graphikschirm aus                )
 ( n1 = Mantisse, n2 = Exponent						)
@@ -298,7 +302,8 @@ E1 CONSTANT SIOA    ( SIO-A )
 ( EMITA sendet ein Zeichen n aus der SIO-A				)
 
 ( ***************** Progamm fuer Blocktransfer zum Mops ******************** )
-Š10 VARIABLE F					( F=Fehlerzaehler 	)
+
+Å 10 VARIABLE F					( F=Fehlerzaehler 	)
 	
 ( READSEQ : read sequential	)
 
@@ -358,7 +363,8 @@ E1 CONSTANT SIOA    ( SIO-A )
 ( R2 , RN : Maskenaufbau Hilfswoerter )
 
 ( DISPLAY : Display-menu )
-Š( VARIABLE IST	: Hilfsvariable s.u.	)
+
+Å ( VARIABLE IST	: Hilfsvariable s.u.	)
 
 ( RUNZ  : steuert Zaehlerausgabe auf Graphikdisplay )
 
@@ -418,7 +424,8 @@ HEX
 0148	CONSTANT	ZQBUF  ( Anzahl gemessener Zeilen in Quit Buffer )
 
 
-Š0 VARIABLE FREQUNZ 8 ALLOT  ( Array fuer Dekaden Frequnz in BCD )
+
+Å 0 VARIABLE FREQUNZ 8 ALLOT  ( Array fuer Dekaden Frequnz in BCD )
 0 VARIABLE FREQUNZ1 8 ALLOT ( Array fuer Dekaden Frequnz in Ascii Menue1 )
 0 VARIABLE FREQUNZ2 8 ALLOT ( Array fuer Frequnzintervall in Ascii Menue1 )
 0 VARIABLE FREQUNZ4 8 ALLOT ( Array fuer Start Frequenz von Dekade Menue1 )
@@ -478,7 +485,8 @@ HEX
 ( DEKADE-SETZEN : Diese Routine erwartet eine BCD codierte Zahl in )
 ( der Var. FREQUNZ und gibt die Zahl an die Dekade.                )
 
-Š( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+Å ( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
 ( +++  HF Relais Treiber                                              +++ )
 ( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
 
@@ -538,7 +546,8 @@ HEX
 ( INFRE : steuert INFRE1 FREQUNZ1 MKH>FREN FREQUNZ4 MKH>FREN )
 
 ( INFRE-INC1 lese Dekadenintervall ein )
-( n1  --   )Š
+( n1  --   )
+Å 
 ( INFRE-INC :                          )
   
 ( INANPUN lese Anzahl von Messpunktschritten ein        )
@@ -598,7 +607,8 @@ HEX
 
 ( FRE>X wandle Frequnz um in X Koordinate fuer Graphik )
 ( n1 --  X )
-Š( DOTXY setzt ein Pixel im Koordinaten Kreuz an der Stelle x y )
+
+Å ( DOTXY setzt ein Pixel im Koordinaten Kreuz an der Stelle x y )
 ( x y  --  )
 
 ( ZHOL Hole Zaehlerrate vom Flourozenz Zaehler )
@@ -658,7 +668,8 @@ HEX
 
 ( INHALTPARA : speichert die Parameter ab )
 (              Startfrequenz , Punktabstand , Messpunktanzahl )
-(              Messzeit , gemessene Zeilen )Š
+(              Messzeit , gemessene Zeilen )
+Å 
 ( WORK	: steuert INHALTPARA COUNTFLO )
 
 ( ASCII Datei eroeffnen zum Abspeichern der Ascii Zeichen )
@@ -718,7 +729,8 @@ HEX
 ( FREQ1AN aehnlich zu obigem Wort )
 
 ( INFREQ1 Frequenz Eingabe fuer Menue2    )
-Š( INFREQ2 Frequenzintervall Eingabe       )
+
+Å ( INFREQ2 Frequenzintervall Eingabe       )
 
 ( PAR2AN :                                )
 
@@ -759,5 +771,3 @@ HEX
 (         Messdaten + Parameter oder beginne eine neue Messung )
 
 ( RUN	startet das gesamte HF-FLUO1-Programm )
-
-
