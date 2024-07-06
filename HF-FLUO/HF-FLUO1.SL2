@@ -1,0 +1,1989 @@
+ 
+
+
+( ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+( ++ Programm HF-FLUO1                                   16.07.1985          )
+(   ********             GRAPHIC-ROUTINES IN FORTH                   ******* )
+
+DECIMAL
+
+0 VARIABLE X1
+0 VARIABLE Y1
+0 VARIABLE Z1
+
+( y koordinate , x koordinate --                            )
+( setzt den cursor an x,y                                   )
+:  SETCUR   Y1 ! X1 !   X1 Y1 (SETCUR) ;  
+
+( n[0,1,2]     --                                                )
+( setzt,loescht oder komplementiert den gesamten graphikspeicher )
+:  CLRDIS    X1 !  X1 (CLRDIS)  ;   
+
+( einzelne graphic character in den graphicspeicher schreiben )
+( ichr[0..127] , idir[-8..7] , isz[0..15] --                  ) 
+:  GDPCHR    X1 ! Y1 ! Z1 !  Z1 Y1 X1 (GDPCHR) ;
+
+
+( y koordinate , x koordinate --                             )
+( einzelne pixel koennen geschrieben werden                  )
+:  GDPDOT    Y1 ! X1 ! X1 Y1 (GDPDOT)  ; 
+
+( zeichnen von linien von aktuelle cursor pos bis y , x      )
+( y koordinate , x koordinate --                             )
+:  GDPLIN     Y1 ! X1 ! X1 Y1 (GDPLIN) ; ( X1 Y1   ---       )
+
+
+( Mit dieser Routine wird der Schriebmodus festgelegt, d.h.  )
+( ob eine Schreibaktivitaet setzend, komplementierend oder   )
+( austauschend durchgefuehrt wird .                          )
+( 1=komplementierend 2=loeschend 3=setzend                   )
+( n1 -- )
+:  GDPMOD      X1 ! X1 (GDPMOD) ;
+
+       
+
+( Hochfrequnz Floresenz Programm   File:HF0 Programmer:u.u 09.07.1985 )
+
+
+HEX
+
+0 VARIABLE RRAM       ( addresse wo zeichen abgespeichert werden )
+0 VARIABLE POSX       ( x cursor position              )
+0 VARIABLE COUNT      ( anzahl der eingegebenen zeichen     )
+ 
+ 
+
+( ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+( +++ Televideo Attribute in FORTH                                       +++ )
+( ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+
+: BEEP           07 EMIT ;  ( warnton fuer falsche eingabe )
+
+ 
+: U-BL-CURSOR    1B EMIT      ( cursor schmall und blinkt )
+                 2E EMIT
+                 33 EMIT ;
+
+: BLINK-CURSOR   1B EMIT      ( cursor blinkt )
+                 2E EMIT
+                 31 EMIT ;
+
+: BLANK-SCREEN   1B EMIT      ( televideo anzeige dunkel steuern )
+                 4F EMIT ;
+
+: NORMAL-SCREEN  1B EMIT      ( televideo hell steuern )
+                 4E EMIT ;
+
+
+( loescht Zeile wo gerade der Cursor steht )
+(    --     )
+: LDEL  1B EMIT 52 EMIT ;
+ 
+
+( cursor wird auf position x,y gebracht                               )
+(  x y    --       )
+
+: CURPOS   1B EMIT
+           3D EMIT
+           20 + EMIT
+           20 + EMIT ;
+
+( invers attribut von televideo wird eingeschaltet )
+(      --        )
+
+: REVERSE  1B EMIT
+           47 EMIT
+           34 EMIT ;
+
+( loesche schirm von televideo             )
+(       --        )
+
+: CLR-TELE  1B EMIT
+            2B EMIT ;
+
+( attribut ausschalten                   )
+(       --        )
+ 
+: OFF-ATTRI 1B EMIT
+            47 EMIT
+            30 EMIT ;
+
+( schreibe n zeiechen auf televideo schirm )
+(    n   --      )
+ 
+: PRINTCHARS   0 DO
+                   DUP EMIT
+                 LOOP
+               DROP ;
+
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+
+
+( ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+( +++  Arithmetik Prozessor Treiber                                    +++ )
+( ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+0 VARIABLE X11
+0 VARIABLE Y11
+
+( f=0 wenn Arithm. Prozessor noch rechnet )
+(    --    )
+: BUSY  89 P@ 80 AND 0= ;
+
+( f=0 wenn arithm. Prozessor Stack neg. )
+(   --  flg )
+: SIGN   BEGIN BUSY UNTIL 89 P@ 40 AND 0= ;
+
+( Kommando Eingabe an Arithm. Prozessor )
+( nn   --     )
+: ARICOM   BEGIN BUSY UNTIL 89 P! ;
+
+( nn   --     )
+: ARII16! X11 ! X11 C@ 88 P! X11 1 + C@ 88 P! ;
+
+( speicher eine 32 bit Zahl auf den Arithm. Prozessor Stack )
+( nn nn  --    )
+: ARI32! SWAP BEGIN BUSY UNTIL ARII16! ARII16! ;
+
+( speicher eine 16 bit Zahl auf den Arithm. Prozessor Stack )
+( nn     --    )
+: ARI16! BEGIN BUSY UNTIL ARII16! ;
+
+(    --   nn )
+: ARI16@ 88 P@ Y11 1 + C! 88 P@ Y11 C! Y11 @ ;
+
+( hole eine 16 bit Zahl von Arithm. Prozessor Stack )
+(    --   nn )
+: ARI@  BEGIN BUSY UNTIL ARI16@ ;
+
+( hole eine 32 bit Zahl von Arithm. Stack )
+(    --  nn nn )
+: ARI@@  BEGIN BUSY UNTIL ARI16@ ARI16@ ;
+
+( 32 bit addition )
+( nn nn nn nn   --  nn nn  )
+: DADD ARI32! ARI32!  2C ARICOM ARI@@ SWAP ;
+
+( 32 bit subtraction )
+( nn nn nn nn   --  nn nn )
+: DSUB  ARI32! ARI32! 2D ARICOM ARI@@ SWAP ;
+
+( 32 bit multiplikation, untere 32 bit liegen als ergegnis vor )
+( nn nn nn nn  --  nn nn  )
+: DMUL  ARI32! ARI32! 2E ARICOM ARI@@ SWAP ;
+
+
+( 32 bit division )
+( n1 n2 n3 n4  --  nn nn )
+: DDIV ARI32! ARI32! 2F ARICOM ARI@@ SWAP ;
+
+
+( 32 Bit Gleitkomma Multiplikation  )
+( n1 n2 n3 n4 -- n1 n2  )
+: FMUL ARI32! ARI32! 12 ARICOM ARI@@ SWAP ;
+
+( 32 Bit Gleitkomma Division )
+( n1 n2 n3 n4 -- n1 n2 )
+: FDIV ARI32! ARI32! 13 ARICOM ARI@@ SWAP ;
+
+( 32 Bit Gleitkomma Addition )
+( n1 n2 n3 n4 -- n1 n2 )
+: FADD ARI32! ARI32! 10 ARICOM ARI@@ SWAP ;
+
+( 32 Bit Gleitkomma Subtraktion )
+( n1 n2 n3 n4 -- n1 n2 )
+: FSUB ARI32! ARI32! 11 ARICOM ARI@@ SWAP ;
+
+( 32 Bit Festpunkt auf 32 Bit Gleitkomma )
+( n1 n2 -- n1 n2 )
+: FLTD ARI32! 1C ARICOM ARI@@ SWAP ;
+
+( 32 Bit Gleitkomma auf 32 Bit Festpunkt )
+( n1 n2 - n1 n2 )
+: FIXD ARI32! 1E ARICOM ARI@@ SWAP ;
+
+( Funktion > auf 32 Bit Festpunkt ausgedehnt )
+( n1 n2 n3 n4 -- f )
+: D> DSUB ARI32! SIGN ARI@@ DROP DROP 0= ;
+ 
+( 32 Bit Gleitkomma Wurzelfunktion )
+( n1 n2 -- n1 n2 )
+: SQRT ARI32! 01 ARICOM ARI@@ SWAP ;
+
+ 
+( ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+
+( n1 n2   --   n1 n2 n1 n2  )
+: DDUP OVER OVER ;
+
+(  adr       --   n1 n2  )
+: D@   DUP @ SWAP 2+  @ ;
+   
+( n1 n2 adr  --          )
+: D! DUP ROT SWAP 2 + !  ! ;
+
+
+      
+
+
+( Hochfrequenz Messung     File:HF1                             16.07.1985 )
+ 
+DECIMAL
+
+0 VARIABLE OMAN      ( Mantisse )
+0 VARIABLE OEXP      ( Exponent )
+0 VARIABLE MHZA      ( Frequenz alt )
+0 VARIABLE MHZP      ( hilfs Variable )
+0 VARIABLE MN5       ( Schrittanzahl /10 )
+0 VARIABLE MN6       ( entweder K oder Space )		 
+0 VARIABLE MN7	     ( Schrittfrequenz Zahl )	
+0 VARIABLE MN100     ( Y-Achsenabschnitte neg. )
+0 VARIABLE TEILER    
+0 VARIABLE COUOFF 2 ALLOT    ( Offset fuer negative Zaehlraten )
+
+HEX
+0118 CONSTANT TIME
+0106 CONSTANT BUFM
+0104 CONSTANT BUFE
+0 VARIABLE COUNT
+
+: INITFL		( FLUOZAEHLER PORT 1	   )
+	CF 61 P!	( MODE 3 )
+	FF 61 P!	( EINGAENGE )
+	CF 63 P!	( AUSGAENGE )
+	0  63 P!	
+	87 62 P!	( CLR COUNTER UND FLIPFLOP )
+	0F 62 P!
+	87 62 P! ;
+
+: INITEI		( EICHMARKENZAEHLER PORT 2 )
+	CF 65 P!
+	FF 65 P!
+	CF 67 P!
+	00 67 P!
+	98 66 P!	( CLR COUNTER UND FLIPFLOP )
+	1A 66 P!
+	98 66 P! ;	
+
+: CLR 8F 62 P! 87 62 P! ; 	( CLR counter )
+
+: LATCH	97 62 P! 87 62 P! ;	( Latch )		
+
+: SAVEH	83 62 P!		( enable high )
+	60 P@	 87 62 P! ;	( in )
+
+: SAVEL	86 62 P! 		( enable low )
+	60 P@	 87 62 P! ;	( in )
+
+: SAVEM	85 62 P!		( enable middel )
+	60 P@    87 62 P! ;	( in )
+
+DECIMAL
+ 
+0 VARIABLE MA1	( Anzahl der Zeichen vor der Maske			)
+0 VARIABLE MA2	( Anzahl der Maskenzeichen				)
+0 VARIABLE MAZ	( Zaehler fuer Cursorstand				)
+0 VARIABLE COR	( Hilfsvariable fuer Rueckschritt im Menue		)
+0 VARIABLE ZRK	( Hilfsvariable fuer Cursor { --> }			) 
+
+: ZR 	MA1 @ MAZ @ > ZRK @ AND IF 48 BUFM 1 -	(     -->		)
+	MAZ @ + C! 32 EMIT 1 MAZ +! ENDIF ; 
+( ZR steuert die Cursortaste { --> }					)
+
+: Z!	0 ZRK ! DUP MAZ @ MA1 @ > IF BUFE C!   	(  n1 -->		)
+	EMIT 1 MAZ +! ELSE BUFM 1 - MAZ @ + 
+	C! EMIT 1 MAZ +! MAZ @ MA1 @ > IF MA2 
+	@ 0 DO 12 EMIT 1 MAZ +! LOOP ENDIF 
+	ENDIF ;
+( Z! speichert gueltige ASCII-Zeichen im entsprechenden Buffer ab	)
+( n1 = ASCII-Zeichen							)
+
+: ZL	MAZ @ DUP 1 = IF DROP 7 EMIT ELSE 	(    -->		)
+	MA1 @ > IF MA2 @ 1+ 0 DO 8 EMIT -1 
+	MAZ +! LOOP 95 EMIT 8 EMIT ELSE 8 
+	EMIT 95 EMIT 8 EMIT -1 MAZ +! ENDIF 
+	ENDIF MAZ @ 1 = IF 1 ZRK ! ENDIF ;
+( ZL steuert die Cusortaste { <-- }					)
+
+: NULL	MA1 @ 0 DO 0 BUFM I + C! LOOP 0 BUFE 	(    -->		)
+	C! MA1 @ MA2 @ + 2+ MAZ ! ;
+( NULL belegt den Eingabebuffer mit ASCII {48}				)
+
+: CORI  0 COR ! MA1 @ MA2 @ + 2+ MAZ ! ;	(    -->		)
+( CORI speichert 0 nach COR						)
+
+: Z@    MA1 ! MA2 ! MA1 @ 0 DO 95 EMIT		( n1 n2 --> f		)
+	LOOP MA2 @ 0 > IF MA2 @ 0 DO 12 
+	EMIT LOOP 95 EMIT MA1 @	MA2 @ + 
+	1+ 0 DO 8 EMIT LOOP ELSE MA1 @ 0 
+	DO 8 EMIT LOOP ENDIF 1 MAZ ! 1 COR 
+	! 1 ZRK ! BEGIN KEY DUP 58 < OVER 
+	47 > AND IF Z! ELSE DUP 8 = IF ZL 
+	ENDIF DUP 13 = IF NULL ENDIF DUP 
+	12 = OVER 32 = OR IF ZR ENDIF 11 
+	= IF CORI ENDIF	ENDIF MA1 @ MA2 @ 
+	+ 1+ MAZ @ < UNTIL 0 BUFE 1+ C! 0 
+	BUFM MA1 @ + C! COR @ ;
+( Z@ ist der Verteiler fuer die Cursormaske.Die Tastatur wird abge-	)
+( fragt und nach entsprechenden Steuerzeichen verzweigt.n1=Anzahl der 	)
+( Maskenzeichen ,n2 Anzahl der Zeichen vor der Maske			)
+( ASCII {48 -->57} --> Z! ; ASCII {8} --> ZL ; ASCII {13} --> NULL	)
+( ASCII {12} --> ZR ; ASCII {11} --> CORI				)
+( wenn f=1 ist,befinden sich die Eingabewerte im entsprechenden Buffer	)
+  
+: M@ 	Z@ IF 0 0 BUFM 1 - (NUMBER) DROP DROP  	( n1 n2 --> [n3] [n4] f	) 
+	MA2 @ 0 > IF 0 0 BUFE 1 - (NUMBER) 
+	DROP DROP ENDIF ENDIF COR @ ;
+( M@ ist ene Cursormaske fuer die Tastaturabfrage.n1=Anzahl der Zeichen,)
+( die uebersprungen werden muessen[Maske].n2=Anzahl der Zeichen vor der	)
+( Maske.1 Zeichen kann hinter der Maske gelesen werden.f=1 Zeichen ok,	)
+( kein Rueckschritt im Menue . f=0 Wert fuer Rueckschritt im Menue	)
+( n3 und n4 werden dann nicht auf den Stapel abgelegt.			)
+( n4 = Wert hinter Maske,wenn n1>0 sonst Wert vor Maske			)
+( n3 = Wert vor der Maske,wenn n1>0	Beispiel einer Maske:		)  
+( n1=5,n2=4 --> {Maske=5 Zeichen}            ____Maske_			)
+
+: CURS	31 + SWAP 31 + 27 EMIT 61 EMIT		( n1 n2 -->		)
+	EMIT EMIT ;
+( CURS setzt den Cursor n1 = Zeile , n2 = Spalte			)
+
+: MNW 	BEEP DROP 24 6 CURS 		(  -->				)
+." ************************ Falsche Eingabe ! ************************ " ;
+( MNW gibt eine Warnung durch Bel und Display aus			)
+
+: DEL 0 DO 27 EMIT 82 EMIT LOOP ;		(  n1 --> 		)
+( DEL loescht n1 Zeilen							)
+
+: MTEST	DUP 10000 < IF 32 EMIT ENDIF		(  n1 --> n1		)
+	DUP 1000 < IF 32 EMIT ENDIF 
+	DUP 100 < IF 32 EMIT ENDIF
+	DUP 10 < IF 32 EMIT ENDIF ; 
+( MTEST sorgt fuer rechtsbuendige Darstellung im Menue , n1 = Zahl	)
+
+: DELW 23 0 CURS 2 DEL         ; ( DELW loescht Kommentar Displaywarnung	)
+
+
+
+( ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+( +++   Graphikteil fuer Ausgabe von Zaehlraten                    +++ )
+( ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+
+: KOORD  					(    -->		)
+        2 CLRDIS 40 49 SETCUR 239 49 GDPLIN 239 700 GDPLIN 40 48 
+	GDPDOT 80 48 GDPDOT 120 48 GDPDOT 160 48 GDPDOT 200 48 
+	GDPDOT 
+	11 0 DO 241 50 I 65 * + GDPDOT LOOP
+	11 0 DO 242 50 I 65 * + GDPDOT LOOP ;
+( KOORD gibt ein Koordinatensystem an den Bildschirm aus		)
+  
+: YTESTN DUP 2 < IF 32 2 0 GDPCHR ENDIF		( n1  --> n1     	)
+	 DUP 3 < IF 32 2 0 GDPCHR ENDIF
+	 DUP 4 < IF 32 2 0 GDPCHR ENDIF ;
+( YTESTN sorgt fuer rechtsbuendige Beschriftung,n1 = Stringanzahl	)
+
+: YCHR  DUP 0< 
+	IF	-1 * S->D 
+		45 2 0 GDPCHR
+		<# #S #> 0 DO DUP I + C@ 2 0 GDPCHR LOOP DROP
+	ELSE	S->D <# #S #> YTESTN 0         		( n1 -->		)
+       		DO DUP I + C@ 2 0 GDPCHR LOOP DROP 
+       THEN	 ;			 
+( YCHR wandelt n in ASCII-Zeichen um und gibt sie an Graphikschirm aus	)
+( n1 = auszugebene Zahl							)
+
+: YDIV 6 0 DO DUP 10 MN100 @ 2 * - I 2 * - 10 */ SWAP LOOP DROP ;
+( YDIV erzeugt alle Countunterteilungen	fuer die Ordinate n1 bis n6	)
+
+: YDISA 10 1 SETCUR 115 116 110 117 111 67	( n1 n2  -->		)
+	6 0 DO 2 0 GDPCHR LOOP 
+	26 1 SETCUR 48 49 32 42 
+	4 0 DO 2 0 GDPCHR LOOP 
+	21 14 SETCUR YCHR ;
+( YDISA gibt Ordinatenkopf aus ; n1 = Mantisse ; n2 = Exponent 		)
+
+: YDISB 244 1 SETCUR DUP ABS 0  
+	OEXP @ 0= IF  COUOFF D!
+		  ELSE 1 OEXP @ 0 DO 10 * LOOP 0 DMUL COUOFF D!
+		  THEN
+		 YCHR
+	204 1 SETCUR 				( n1 -- n6 -->		)
+	YCHR 164 1 SETCUR YCHR 124 1 SETCUR 
+	YCHR 84 1 SETCUR YCHR 44 1 SETCUR 
+	YCHR   ;
+( YDISB gibt 6 Werte  an die Ordinate aus			)
+
+: YDIS2 YDISA YDIV YDISB ;			( n1 n2 -->		)
+( YDIS2 gibt alle Ordinatenwerte auf Graphikschirm aus			)
+( n1 = Mantisse, n2 = Exponent						)
+
+: ANZ8  23 55 CURS OMAN @ MTEST . 69 EMIT 	(         -->		)
+	43 EMIT OEXP @ . ; 
+( ANZ8 gibt den Eingabewert neu ans Display aus				)
+
+: TESTDISM BEGIN OEXP @ 0= OMAN @ 999 > OR 0=	(         -->		)
+	   WHILE OMAN @ 10 * OMAN ! -1 OEXP +!
+	   REPEAT 
+	   OEXP @ DUP 0=			
+	   IF OMAN @ 200 /MOD SWAP
+	      IF 1+ 200 * OMAN ! 1 ENDIF DROP	( Exponent = 0		)
+	   ENDIF DUP 1 =
+	   IF OMAN @ 20 /MOD SWAP
+	      IF 1+ 20 * OMAN ! 1 ENDIF DROP	( Exponent = 1		)
+	   ENDIF 2 =	
+	   IF OMAN @ 2 /MOD SWAP		
+	      IF 1+ 2 * OMAN ! 1 ENDIF DROP	( Exponent = 2		)
+	   ENDIF ;   
+( TESTDISM ermittelt die moeglichen Ordinatenwerte und sorgt dafuer,	)
+( 	   dass alle Stellen [ max 4 ] ausgenutzt werden.		)
+ 
+: T6MIL	OEXP ! OMAN ! TESTDISM 			( n1 n2 --> f		)
+	      OEXP @ 4 < OMAN @ OEXP @   	( Test auf 6000000	)
+	      * 18001 < AND OEXP @ 0=
+	      IF OMAN @ 199 > AND ENDIF
+	      IF OEXP @ DUP 0=			( Teiler wird ermittelt )
+	         IF DROP OMAN @ 200 / TEILER ! 
+	         ELSE 1 SWAP 0 DO 10 * LOOP OMAN @
+		  200 */                     ( Potenz bilden		)
+		       TEILER ! 
+	         ENDIF 1 DELW
+	      ELSE 1 MNW 0
+	      ENDIF ;
+( T6MIL testet die Eingabe n1,n2 [ Mantisse,Exponent] und ermittelt	)
+(	den Teiler							)
+
+: KOM6 ."     200 E+0 <= DISPLAYMAX <= 6000 E+3 " ;
+
+: KOM7 ." Y-Achsenabschnitte 0 - 5 fuer neg. Zaehlraten :"  ;
+
+: YDIS3
+	BEGIN	DELW 23 1 CURS KOM7
+		KEY DUP EMIT 15 AND DUP 0< SWAP DUP 5 > ROT OR
+	 IF	DROP BEEP 0
+	 ELSE	MN100 ! 1
+	 THEN
+	UNTIL 	;
+ 
+
+: YDIS1 BEGIN DELW  23 1 CURS KOM6 23 60		(       --> 	)
+	      CURS 32 EMIT 69 EMIT 43 EMIT 
+	      23 56 CURS 3 4 M@ DROP
+	      T6MIL
+   	UNTIL ANZ8 DELW 
+	YDIS3
+	INIGDC KOORD
+	OMAN @ OEXP @ YDIS2 ;
+( YDIS1 erwartet Mantisse u. Exponent ueber Tastatur 			)
+( Gueltigkeitsbereich: 200 - 6000000					)
+( sonst Fehlermeldung , Anzeige in der Menuetafel			)
+
+: XPLUS 
+	9 0 DO I 1 + MN5 @ * LOOP  ;
+( XPLUS erzeugt alle Abzissenwerte n1 bis n9				)
+
+: XTEST DUP 1 = IF ROT 254 SWAP SETCUR ENDIF	 ( n1 --> n1		) 
+    	DUP 2 = IF ROT 4 - 254 SWAP SETCUR ENDIF
+	DUP 3 = IF ROT 8 - 254 SWAP SETCUR ENDIF
+	DUP 4 = IF ROT 12 - 254 SWAP SETCUR ENDIF 
+	DUP 5 = IF ROT 16 - 254 SWAP SETCUR ENDIF ;
+( XTEST testet die Stringanzahl n1 u. setzt den Cursor entsprechend	)
+
+: XCHR  SWAP 0 			( n1 n2  -->		)
+	 <# #S #> XTEST 
+	   0 DO DUP I + C@ 2 0 GDPCHR LOOP 
+	   DROP  ;
+( XCHR gibt Zahl n1 mittenzentriert auf Graphikschirm aus { n1<=30000 }	)
+( n2 = Cursorposition							)
+
+: XDIS  XPLUS	10 310 SETCUR 
+	32 84 84 73 82 72 67 83 32 90 78 69 85 81 69 82 70  
+	17 0 DO 2 0 GDPCHR LOOP
+	MN6 @ 0 <# #S #> 
+	0 DO DUP I + C@ 2 0 GDPCHR LOOP DROP
+	44 2 0 GDPCHR 
+	 MN7 @ 0 <# #S #> DUP 3 SWAP - DUP 0=
+		IF 	DROP
+		ELSE	0 DO 48 2 0 GDPCHR LOOP
+		THEN
+	0 DO DUP I + C@ 2 0 GDPCHR LOOP DROP
+	 122 72 32 
+	2 0 GDPCHR 2 0 GDPCHR 2 0 GDPCHR 
+	9 0 DO 630 65 I * - XCHR  LOOP ;
+( XDIS gibt die Abzissenwerte n1 bis n9 auf Graphikschirm aus   	)
+
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+
+
+
+ 
+             
+( Hochfrequnz Flourozenz Programm  File:HF2 Programmer: u.u 28.06.1985  )
+
+HEX
+
+E8 CONSTANT CHANCW  ( CTC )
+E1 CONSTANT SIOA    ( SIO-A )
+
+0 VARIABLE MENFLG1	( Hauptmenueflg=1 wenn schon mal gelaufen )
+0 VARIABLE MENFLG2	( Dekade/Laser Flg =1 Parafeld gefuellt )
+0 VARIABLE MENFLG3	( CBLOCK geladen Flg=1   )
+
+
+: OPEN-SIOA  4D CHANCW P!     			( counter ) 
+             0D CHANCW P!     			( 9600 baud )
+             18 SIOA P!       			( channel reset )
+             1 SIOA P! 0 SIOA P!    		( interrupt disabled )
+             2 SIOA P! 0 SIOA P!    		( interrupt vector )
+             3 SIOA P! C1 SIOA P!   		( rx 8 bits )
+             4 SIOA P! 44 SIOA P!   		( x16 clock,1 stop,no parity )
+             5 SIOA P! 6A SIOA P! ;  		( rts on )
+( OPEN-SIOA eroeffnet die SIO-A						     )
+
+0 VARIABLE KEO					( Hilfsvariable		)
+
+: KEYO	0 KEO !					(  --> n		)
+	BEGIN SIOA P@ 01 AND 
+	      1 KEO +! KEO @ 1000 = OR
+	UNTIL KEO @ 1000 < 
+	IF SIOA 1 - P@  ELSE 0 ENDIF ;
+( KEYO erwartet ein Zeichen von der SIO-A mit kurzer Warteschleife.	)
+(      Wird kein Zeichen empfangen --> n = 0 sonst ASCII-Zeichen	)
+
+: KEYA 	BEGIN                 			(  --> n		)
+             SIOA P@ 01 AND 
+        UNTIL
+  	SIOA 1 - P@  ;
+( KEYA erwartet ein Zeichen von der SIO-A mit endloser Warteschleife	)
+
+: EMITA	BEGIN					(  --> n		)
+              SIOA P@ 04 AND   
+        UNTIL
+  	SIOA 1 - P!   ;
+( EMITA sendet ein Zeichen n aus der SIO-A				)
+
+
+DECIMAL
+
+( ***************** Progamm fuer Blocktransfer zum Mops ******************** )
+
+10 VARIABLE F					( F=Fehlerzaehler 	)
+	
+: READSEQ 20 FCB DOSCALL ;			( read sequential	)
+
+: BLOCK 255 EMITA 128 0 DO DMA I + C@ EMITA	( Gibt FFH und DMA-Bereich   )
+	LOOP ;    				( aus.			     )
+
+: VERG  0 128 DO DMA I 1 - + C@ = 0= IF F @ 1 +	( Zeichenvergleich vom	     )
+	F ! ENDIF -1 +LOOP ;			( Stack mit DMA		     )
+
+: TEST  128 0 DO KEYO 				( Daten einlesen und VERG    )
+	      LOOP VERG ;
+
+: TRAN 0 F ! BEGIN READSEQ 0= WHILE		( Datei lesen		     )
+       BLOCK TEST REPEAT ;			
+
+: MFCB 0 0 0 0 77 79 67 32 32 32 32 83 80 79	( FCB fuer MOPS.COM          )
+       77 1 FCB 16 + FCB DO I C! LOOP
+       0 0 0 0 FCB 36 + FCB 32 + DO I C! LOOP ;
+ 
+: TRANS 13 0 DOSCALL DROP			( Reset	)
+	MFCB 15 FCB DOSCALL DROP 	        ( Datei eroeffnen   )
+	TRAN 0 EMITA ;
+
+: CBLOCK OPEN-SIOA 6 EMITA KEYO 6 =  		(  -->			)
+	 IF TRANS ELSE 1 F !
+	 ENDIF ;
+( CBLOCK transferiert das Maschinenprogramm MOPS.COM zum Z80-Laser-	)
+(	 interface.Anschliessend wird der Datensatz ueberprueft.In	)
+(	 Variable ist der Fehlercode enthalten.				)
+
+
+DECIMAL
+ 
+: ZAEHLDIS 2 CLRDIS 150 1 SETCUR		( d -->			)
+	<# #S #> 0 
+	DO DUP I + C@ 2 8 GDPCHR LOOP DROP ;
+
+: SAVE 	LATCH SAVEL COUNT C! SAVEM COUNT 1+ C!
+	COUNT @ SAVEH ;
+
+
+
+
+: MNW 	BEEP DROP 20 6 CURS 		(  -->				)
+." ************************ Falsche Eingabe ! ************************ " ;
+( MNW gibt eine Warnung durch Bel und Display aus			)
+
+: MHZD	77 EMIT  72 EMIT 122 EMIT ;
+( MHZD gibt das Wort MHz an den Bildschirm aus				)
+ 
+: MSECD	109 EMIT 115 EMIT 101 EMIT 99 EMIT ; 	(  -->			)
+( MSECD gibt das Wort msec an den Bildschirm aus			)
+
+
+: DELW 	20 1 CURS 4 DEL ; ( DELW loescht Kommentar Displaywarnung	)
+
+0 VARIABLE HFE
+0 VARIABLE MN1
+0 VARIABLE MN2
+0 VARIABLE MOP2
+
+: KOM1 ."      2500 MHz <= Scanweite Laser <= 30000 MHz " ; 
+: KOM2 ."      0 < Scanweite <= Scanweite Laser " ;
+: KOM3 ."      10 msec <= Fluoreszenszeit <= 2500 msec " ;
+
+: SCAWL BEGIN 20 1 CURS 4 DEL KOM1		(  -->			)
+	5 59 CURS 48 EMIT 32 EMIT MHZD  
+	5 55 CURS 0 4 M@ IF DUP 249 > OVER 
+	3001 < AND DUP HFE ! IF MN1 ! DELW ELSE 
+	MNW ENDIF ELSE 0 MNW 0 HFE ! ENDIF HFE @
+	UNTIL 5 55 CURS MN1 @ 10 * MTEST . 
+	MHZD DELW ; 
+( SCAWL fragt die Scanweite des Lasers ab , MN1 = Scanweite L./10	)
+( Fehlermeldung : 2500 MHz > MN1 > 30000 MHz,Anzeige in der Menuetafel	)
+
+: MOPS2	4096 MN1 @ */ DUP MOP2 !	 	(  n1 --> 		)
+	 MN1 @ 10 * 4096 */ MN2 ! ;
+( MOPS2 ermittelt den moeglichen Startwert MN3 fuers Display und den 	)
+( Startwert fuer den MOPS MOP2. n1 = Eingabewert 			)
+( MOP2 = n1 * 4096 / MN1              { Integer }			)
+( MN2 = MOP2 * MN1 * 10 / 4096	      { Integer }			)
+
+: ANZ2	6 55 CURS MN2 @ MTEST . MHZD ;		(  -->			)
+( ANZ2 gibt den eingebenen Wert neu ans Display aus			)
+
+: SCST  BEGIN 20 1 CURS 4 DEL KOM2		(  -->			)
+	  6 59 CURS 48 EMIT 32 EMIT MHZD 
+	  6 55 CURS 0 4 M@ 
+	  IF DUP MN1 @ 1+ < DUP HFE ! 
+	     IF MOPS2 
+	     ELSE MNW 
+	     ENDIF 
+	  ELSE ANZ2 DELW SCAWL 0 HFE ! 
+	  ENDIF HFE @ 
+	UNTIL ANZ2 DELW ;
+( SCST fragt den Startwert der Messung ab , siehe MOPS2			) 
+( Fehlermeldung :  MN1 < MN2 , Anzeige in Menuetafel		)
+
+: ANZ3 DUP 10 * 7 55 CURS MTEST
+	   . MSECD TIME C! ;
+: ANZ3A TIME C@ 10 * 7 55 CURS MTEST
+	. MSECD ;
+
+: SCZEI	BEGIN 20 1 CURS 4 DEL KOM3 		(  -->			)
+	  7 59 CURS 48 EMIT 32 EMIT MSECD 
+	  7 56 CURS 0 3 M@ 
+	  IF DUP 0 > OVER 251 < AND DUP HFE !
+	     IF ANZ3  
+	     ELSE MNW 
+	     ENDIF
+	  ELSE ANZ3A DELW SCST 0 HFE !
+	  ENDIF HFE @
+	UNTIL DELW ;
+( SCZEI fragt die Floureszenszeit in msec ab.Gueltigkeitsbereich ist :	)
+( 10 - 2500 msec sonst Fehlermeldung , Anzeige in der Menuetafel	)
+
+   
+HEX
+: INVERSE 1B EMIT 47 EMIT 34 EMIT ;
+: NORMAL 1B EMIT 47 EMIT 30 EMIT ;
+DECIMAL
+: R2 INVERSE 32 EMIT 32 EMIT NORMAL ;
+: RN 79 CURS R2 ;
+: DISPLAY INIGDC 26 EMIT 32 EMIT
+	INVERSE	76 0 DO 32 EMIT LOOP NORMAL INVERSE  
+	2 28 CURS  ."     Programm DEKADE/LASER "  4 2 CURS NORMAL
+	4 0 DO 4 I + RN LOOP 8 79 CURS INVERSE CR CR 
+	NORMAL 5 10 CURS
+	." (1) SCANWEITE LASER : " 6 10 CURS
+	." (2) SETZPUNKT       : " 7 10 CURS
+	." (3) FLUORESZENSZEIT : " ;
+
+0 VARIABLE IST					( Hilfsvariable s.u.	)
+
+
+: RUNZ  BEGIN CLR MESSEN SAVE 
+	  ZAEHLDIS ?TERMINAL 
+        UNTIL ;	
+
+: SETMOPS  255 EMITA 
+	 MOP2 @ DUP 0=  
+	 IF IST ! 
+	 ELSE 16 * 1 - IST !
+	 ENDIF
+ 	 IST 1+ C@		( Startwert	)
+	 EMITA IST C@ EMITA
+	 KEYA DROP ;  
+
+: MOPUP MOP2 @ + DUP 4097 <				( n -->		)
+	IF DUP MOP2 !  
+	   MN1 @ 10 * 4096 */ MN2 !
+	   ANZ2 SETMOPS 0
+	ENDIF DROP ;
+
+: SETUP 1 MOPUP 
+	BEGIN ?TERMINAL 
+	      IF KEY DROP 5 MOPUP CLR MESSEN SAVE ZAEHLDIS 0 ELSE 1 ENDIF
+	UNTIL ;
+
+: MOPDOWN MOP2 @ SWAP - DUP -1 >
+	  	 IF DUP MOP2 ! 
+	     	    MN1 @ 10 * 4096 */ MN2 !
+	    	    ANZ2 SETMOPS 0
+	  	 ENDIF DROP ;
+
+: SETDOWN 1 MOPDOWN
+	  BEGIN ?TERMINAL 
+	     IF KEY DROP 5 MOPDOWN CLR MESSEN SAVE ZAEHLDIS 0 ELSE 1 ENDIF
+	  UNTIL ;
+
+
+: KOMC 	20 1 CURS 4 DEL 21 6 CURS
+	." AUSWAHL DER MENUEROUTINEN DURCH DIE ENT- " 22 6 CURS
+	." SPRECHENDE NUMMER ODER LASER/DEKADENSTEUERUNG " 23 6 CURS
+	." DURCH  CURSOR TASTEN (9) ENDE   :"     ; 
+
+
+: CONTROL DISPLAY SCAWL SCST SCZEI SETMOPS ;
+
+
+: ANZ21	5 55 CURS MN1 @ 10 * MTEST . MHZD ANZ2 ANZ3A ;
+
+( Laser soll am Anfang der Messung nue gesetzt werden )
+(  --  )
+: LRUN1   DECIMAL  INITFL INITEI
+	BEGIN 20 1 CURS 4 DEL
+	CBLOCK F @ 0=			( Datentransfer zum Mops	)
+        IF 4 EMITA KEYA DROP		( Programm C094 anwaehlen	)
+	MENFLG1 @ MENFLG2 @ OR
+	0= IF CONTROL  
+	   ELSE SETMOPS  
+	   THEN 1 MENFLG3 ! 1         ELSE 20 6 CURS 
+	 ." FEHLER IN DER DATENUEBERTRAGUNG ! " 21 6 CURS
+	     ." NEUER VERSUCH [J/N] ?           : "
+	     1 KEY DUP EMIT 74 = IF DROP 0 ENDIF
+	ENDIF
+      UNTIL         ;
+
+: KOMD  20 1 CURS 4 DEL 20 6 CURS
+	." MOPS.COM MUSS NOCH GELADEN WERDEN :"
+	KEY DROP LRUN1 ;
+
+( Laser ist schon mal gesetzt worden und soll jetzt veraendert werden )
+(  --  )
+: LRUN2	DISPLAY 
+	MENFLG3 @ 0= IF BEEP KOMD 
+	ELSE
+	ANZ21 KOMC 
+	BEGIN	RUNZ KEY
+ DUP 49 = IF SCAWL SCST SETMOPS KOMC	THEN
+ DUP 50 = IF SCST SETMOPS	KOMC	THEN
+ DUP 51 = IF SCZEI		KOMC	THEN
+ DUP 12 = IF SETUP			THEN
+ DUP 8  = IF SETDOWN			THEN
+	57 = UNTIL THEN ;
+	
+
+
+
+   
+
+( Hochfrequnz Flouro     Programm   File:HF3   Programmer:u.u 16.07.1985 )
+
+
+
+HEX
+
+( Uebergabe Speicherstellen von MESSHF                       )
+
+0119	CONSTANT	TIME1  ( Totzeit zwischen Messungen )
+011A	CONSTANT	TIME2  ( Messzeit time3*time2 msec  )
+011B	CONSTANT	TIME3  ( Vorteiler Inhalt 1 oder 10 msec )
+011E	CONSTANT	RMASK  ( Maske fuer Relais Port     )
+011F	CONSTANT	IANZA  ( Laufindex fuer Messpunkt   )
+0120	CONSTANT	HF1    ( Count mit HF               )
+0124	CONSTANT	UAN1   ( 1.Count ohne HF            )
+0128	CONSTANT	UAN2   ( 2.Count ohne HF            )
+012C	CONSTANT	ZAN    ( Ergebnis von 2*HF1-UAN1-UAN2 )
+0130	CONSTANT	BUFANZ ( aktuelle Ringbuffer Position )
+0131	CONSTANT	ZANZA2 ( Zeilenzaehler modulo 10 )
+0132	CONSTANT	ZANZA1 ( Zeilen Zaehler )
+0136	CONSTANT	QFLAG  ( Flg fuer harte Messunterbrechung )
+0137	CONSTANT	SFLAG  ( Flg fuer weiche Messunterbrechung )
+0138	CONSTANT	FFLAG  ( Flg=0 aufsteigende Zeile )
+0139	CONSTANT	NMAX   ( Anzahl von Messpunkten )
+013A	CONSTANT	MFLAG  ( Flg=1 Messung in gang )
+013B	CONSTANT	ANZFLG ( Anzeige Flg von Messhf )
+013C	CONSTANT	YANZA  ( Messpunkt Zaehler fuer Anzeige )
+013D	CONSTANT	COUALT ( zu loeschende Zaehlrate )
+0141	CONSTANT	COUNEU ( zu setzende Zaehlrate )
+0145	CONSTANT	BUFALT ( alte Ringbuffer Position )
+0146	CONSTANT	ZANZA3 ( Zeilen die im Ringbuffer gespeichert werden )
+0147	CONSTANT	QBUF   ( aktueller Quit Buffer )
+0148	CONSTANT	ZQBUF  ( Anzahl gemessener Zeilen in Quit Buffer )
+
+
+0 VARIABLE FREQUNZ 8 ALLOT  ( Array fuer Dekaden Frequnz in BCD )
+0 VARIABLE FREQUNZ1 8 ALLOT ( Array fuer Dekaden Frequnz in Ascii Menue1 )
+0 VARIABLE FREQUNZ2 8 ALLOT ( Array fuer Frequnzintervall in Ascii Menue1 )
+0 VARIABLE FREQUNZ4 8 ALLOT ( Array fuer Start Frequenz von Dekade Menue1 )
+
+0 VARIABLE FREQ1 8 ALLOT    ( Frequenz in Menue2 )
+0 VARIABLE FREQ2 8 ALLOT    ( Frequenzintervall in Menue2 )
+0 VARIABLE FREQUNZX
+  
+0 VARIABLE MHZ 2 ALLOT      ( Array fuer Mhz Eingabe in Ascii )
+0 VARIABLE KHZ 2 ALLOT      ( Array fuer Khz Eingabe in Ascii )
+0 VARIABLE HZ  2 ALLOT      ( Array fuer Hz  Eingabe in Ascii )
+0 VARIABLE XTEILER	 ( Anzahl von Punkten auf Graphikschirm pro Schritt )
+
+00 VARIABLE AN       ( Variable Anzahl )
+00 VARIABLE COUMAX 2 ALLOT  ( Abruch Count )
+
+69 CONSTANT CRPORTD  ( control port A )
+6B CONSTANT CRPORTD+1 ( control port B )
+68 CONSTANT PORTDEKADE ( port A )
+6A CONSTANT PORTDEKADE+1 ( port B )
+
+6D CONSTANT CRPORTR   ( control port A, von Relais Port )
+6C CONSTANT PORTR     
+
+( ueberschrift auf televideo        )
+(      --       )
+
+: PR-HEAD 0 0 CURPOS REVERSE
+          20 4F PRINTCHARS OFF-ATTRI
+          16 3 CURPOS ."        HF - FLOURO - PROGRAMM    "
+          16 4 CURPOS ."                     " 
+          0 6 CURPOS REVERSE
+          20 4F PRINTCHARS OFF-ATTRI ;
+
+( kennzeichne eingabefeld mit inverse attribut )
+(      --        )
+   
+: FIELD1   SPACE REVERSE 20 3 PRINTCHARS OFF-ATTRI ."  MHZ  "
+                 REVERSE 20 3 PRINTCHARS OFF-ATTRI ."  KHZ  "
+                 REVERSE 20 3 PRINTCHARS OFF-ATTRI ."  HZ   " ;
+
+: FIELD2   SPACE  20 5        PRINTCHARS           ."       " 
+	   	 REVERSE 20 3 PRINTCHARS OFF-ATTRI ."  KHZ  "
+		 REVERSE 20 3 PRINTCHARS OFF-ATTRI ."  HZ   " ;
+
+
+: FIELD3   SPACE REVERSE 20 3 PRINTCHARS OFF-ATTRI ."  N    " ;
+
+
+: FIELD4   SPACE REVERSE 20 3 PRINTCHARS OFF-ATTRI ."  N    " ;
+
+
+: FIELD5   SPACE REVERSE 20 3 PRINTCHARS OFF-ATTRI ."  MSEC " ;
+
+
+( option maske auf televideo              )
+(      --        )
+
+: PR-OPTIONS 	8 C CURPOS	." (1)" 
+		10 C CURPOS
+              	." Frequenz-Dekade  : " FIELD1  
+		8 E CURPOS	." (2)"
+              	10 E CURPOS  
+              	." Frequenzabstand  : " FIELD2  
+		8 10 CURPOS	." (3)"
+	      	10 10 CURPOS
+	      	." Messpunktanzahl  : " FIELD3  
+		8  12 CURPOS	." (4)"
+	      	10 12 CURPOS
+	      	." Zeilen Buffer#   : " FIELD4  	
+		8 14 CURPOS	." (5)"
+		10 14 CURPOS
+		." Zaehlzeit        : " FIELD5  ;
+ 
+
+( speicher eingegebenes zeichen in rram ab und gebe es auf bildschirm raus )
+(     char  --            )
+
+: CHAR!   COUNT @ POSX @ - 
+          0= IF   DUP RRAM @ POSX @ + C! EMIT 08 EMIT   ELSE
+          COUNT @ POSX @ -
+       0< 0= IF   DUP RRAM @ POSX @ + C! EMIT
+                  POSX @ 1 + POSX !                     ELSE
+          THEN  THEN     ;
+
+( gehe mit cursor ein schritt weiter, innerhalb der eingabe maske )
+(    char     --        )
+
+: FORCHAR COUNT @ 1 - POSX @ - DUP 0= SWAP 0< 0= OR
+       IF
+              EMIT POSX @ 1 + POSX !
+       ELSE   DROP
+       THEN ;
+
+
+( gehe mit cursor einen schritt zurueck, innerhalb der eingabe maske )
+(    char     --        )
+
+: BACKCHAR   POSX @ 0=
+       IF    DROP
+       ELSE  EMIT POSX @ 1 - POSX !
+       THEN ;
+   
+( erwarte n+1 ziffern < 0,..,9> und speichert sie in addr ab )
+(     addr n    --       )
+
+: EXPECT#
+       0 POSX ! SWAP RRAM !  COUNT !
+COUNT @ 2 + 0 DO 0 I RRAM @ + C! LOOP ( loesche eingabe feld )
+          BEGIN     KEY
+   DUP 30 < SWAP DUP 39 > ROT OR 0= IF   CHAR!    0   ELSE
+                  08 OVER = IF   BACKCHAR 0   ELSE   ( rueckschritt )
+                  0C OVER = IF   FORCHAR  0   ELSE   ( forwaertsschritt )
+                  0D OVER = IF   DROP 1       ELSE   ( ausgang )
+                  BEEP DROP 0
+                        THEN THEN THEN THEN
+          UNTIL       ;
+
+ 
+( erwarte 3 Ziffern, speicher diese in fre ab )
+( fre zeile spalte  --          )   
+: GETFRE        SWAP 2 * C + CURPOS REVERSE
+                02 EXPECT#  ;
+ 
+
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+( +++  Hochfrequnz Dekaden Treiber                                    +++ )
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+
+: INITDEKADE    CF CRPORTD P!
+                00 CRPORTD P!
+                CF CRPORTD+1 P!
+                00 CRPORTD+1 P!  ;
+
+: UGABEPULS     04 PORTDEKADE+1 P!
+                05 PORTDEKADE+1 P!
+                00 PORTDEKADE+1 P! ;
+
+: IOPPULS       04 PORTDEKADE+1 P!
+                06 PORTDEKADE+1 P!
+                00 PORTDEKADE+1 P! ;
+
+
+( Diese Routine erwartet eine BCD codierte Zahl in der Var. FREQUNZ )
+( und gibt die Zahl an die Dekade.                                  )
+(      --      )
+        
+: DEKADE-SETZEN AN @  0 DO
+                      I FREQUNZ + C@ PORTDEKADE P!
+                      IOPPULS 
+                    LOOP
+                UGABEPULS ;
+
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+( +++  HF Relais Treiber                                              +++ )
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+: INIT-RELAIS    CF CRPORTR  P!
+		00 CRPORTR   P!
+		00 PORTR     P!
+		0 RMASK C!   ;
+
+: HF-AUS   RMASK C@ 01 OR  DUP RMASK C! PORTR P! ;
+
+: HF-EIN   RMASK C@ FE AND DUP RMASK C! PORTR P! ;
+
+
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+( +++  Messzeit Zaehler                                             +++ )
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+: RESET2	RMASK C@ 02 OR PORTR P!
+		RMASK C@ FD AND DUP RMASK C! PORTR P!  ;
+
+: G2ON	RMASK C@ 04 OR DUP RMASK C! PORTR P!   ;
+
+: G2OFF RMASK C@ FB AND DUP RMASK C! PORTR P!  ;
+
+
+( ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+
+: INIT-FREQUNZ   09 0  DO 30  FREQUNZ I + C! LOOP 09 AN ! 0 FREQUNZ 9 + C! ;
+
+: ASCII>BCD  AN @  0 DO  AN @ I - 1 -  10 *
+                         I  FREQUNZ + C@
+                          0F AND OR                
+                     LOOP  
+             AN @ 0  DO  FREQUNZ I + C! LOOP 
+	9 AN @ - DUP 0= 0= IF
+		0 DO AN @ I + 10 * FREQUNZ AN @ + I + C! LOOP
+		           ELSE DROP
+			   THEN  9 AN ! ;
+ 
+
+  
+
+: R-F  15 16 CURPOS LDEL 10 14 CURPOS  9 0 DO I FREQUNZ + C@ 
+            HEX . DECIMAL LOOP ;
+
+: ANZAHL  0 AN !
+             BEGIN
+                DUP AN @ + C@
+                AN @ 1 + AN ! 18 <
+                 IF 1 ELSE 0 THEN
+         UNTIL DROP  AN @ 1 - AN ! ;   ( Anzahl von eingegebenen Ziffern )
+
+: INIT-TVI   BLANK-SCREEN U-BL-CURSOR
+		CLR-TELE
+                NORMAL-SCREEN ; ( Televideo wird initialisiert  )     
+
+
+   
+
+: KOM1  10 18 CURPOS LDEL BEEP 10 18 CURPOS
+       ." Hoecste Dekadenfrequnz erreicht "  ;
+
+: KOM2  10 18 CURPOS LDEL BEEP 10 18 CURPOS
+       ." Unterste Dekadenfrequnz erreicht " ;
+    
+: KOM3  10 18 CURPOS LDEL BEEP 10 18 CURPOS
+       ." Hoechste Frequenz ist 499,999,999 Hz " ;
+
+: KOM4  10 18 CURPOS LDEL BEEP 10 18 CURPOS
+       ." Hoechste Intervallfrequnz ist 999,999 KHz " ;
+
+: KOM5  10 18 CURPOS LDEL BEEP 10 18 CURPOS
+       ." 0 <  Messpunktanzahl < 100  " ;
+	  
+: KOM7  10 18 CURPOS LDEL BEEP 10 18 CURPOS
+       ." 0 < Zeilen Buffer Count < 256  " ; 	
+
+: KOM8  10 18 CURPOS LDEL BEEP 10 18 CURPOS
+       ." Alte Messung nicht eingelesen  " ; 
+
+: KOM9  10 18 CURPOS LDEL BEEP 10 18 CURPOS
+       ." Keine gueltigen Messwerte  " ;
+
+
+( transferiere FREQUNZ nach FREQUNZn )
+( adr  --    )
+: FRE>FREN   0A 0 DO DUP I + 0 SWAP C! LOOP
+          AN @  0 DO DUP I FREQUNZ + C@ SWAP I + C! LOOP
+            DROP ;
+
+( transferiere FREQUNZn nach FERQUNZ )
+( adr  --   )
+: FREN>FRE  0A 0 DO 0 FREQUNZ I + C! LOOP
+          AN @ 0 DO DUP I + C@ FREQUNZ I + C! LOOP
+           DROP ;
+
+( wandlere Eingabestring um in 32 bit Zahl )
+( adr  --  nn nn  )
+: ASCII>BI 1 - 0 0 ROT DECIMAL (NUMBER) DROP ;
+
+( wandlere binaere Zahl in Ascii String um und speicher die Zahl auf fre ab ) 
+( fre nn nn   --    )
+: BI>ASCII        ROT 0A 0 DO DUP I + 0 SWAP C! LOOP ROT ROT 
+                  <# #S #>  DUP DUP 09 < IF AN ! ELSE DROP 09 AN ! DROP 09 
+                                         THEN
+                0  DO DUP I + C@  ROT DUP ROT SWAP I + C!
+                      SWAP 
+                   LOOP  DROP DROP ;
+
+( pruefe ob Frequnzintervall Eingabe zu gross )
+( 4240 0F entspricht 1 MHz )
+(   --   )
+: TESTUPI  4240 0F DSUB DROP DROP SIGN ;
+
+( test auf obere Grenze Dekadenfrequnz )
+( 64FF 1DCD entspricht 499999999 Hz )
+( n1 n2    --  n1 n2 flg )
+: TESTUP  DDUP  64FF 1DCD  DSUB  DROP DROP SIGN  ;
+
+( test auf untere Grenze Dekadenfrequnz )
+( n1 n2    -- n1 n2 flg )
+: TESTDO  DDUP  0 0 DADD DROP DROP SIGN  ;
+ 
+( loesche Eingabefeld auf Televideo Terminal )
+( anzahl zeile   --    )
+: DELFELD      SWAP 2 * C +  CURPOS REVERSE  0 DO 20 EMIT LOOP ;
+
+
+( ubertrage Ascii Ziffern in Variablen MHZ,KHZ,HZ )
+( adr    --    )
+: MKH>FREN   FREQUNZ MHZ ASCII>BI 4240 0F DMUL
+		KHZ ASCII>BI 03E8 0 DMUL
+		HZ  ASCII>BI DADD DADD
+		BI>ASCII FREQUNZ
+		ANZAHL AN @ 0 DO FREQUNZ AN @ 1 - I - + C@
+			OVER 8 I - + C! LOOP
+		       9 AN @ - DUP IF	 0 DO DUP I + 30 SWAP
+				        C! LOOP
+				    ELSE DROP
+				    THEN  9 + 0 SWAP C! ;
+ 	    
+
+( lese Dekadenfrequnz ein )
+(    --    )
+: INFRE1   BEGIN 
+           3 0 24 DELFELD
+           MHZ 0 24 GETFRE
+           MHZ ASCII>BI DROP 01F4 < IF 1 ELSE KOM3 0 THEN
+   	   UNTIL
+		3 0 2F DELFELD	KHZ 0 2F GETFRE
+		3 0 3A DELFELD  HZ  0 3A GETFRE      ;
+
+: INFRE INFRE1 	FREQUNZ1 MKH>FREN  FREQUNZ4 MKH>FREN ;
+
+( lese Dekadenintervall ein )
+( n1  --   )
+: INFRE-INC1  
+                3 1 2F DELFELD
+		3 1 3A DELFELD
+		KHZ 1 2F GETFRE HZ 1 3A GETFRE
+		KHZ ASCII>BI DROP 
+		HZ ASCII>BI DROP  SWAP 0
+		03E8 0 DMUL ROT 0 DADD BI>ASCII ;
+
+: INFRE-INC FREQUNZ2 INFRE-INC1 
+	KHZ ASCII>BI DROP MN6 !
+	HZ  ASCII>BI DROP MN7 !     ;
+ 
+  
+( lese Anzahl von Messpunktschritten ein        )
+(  --  )
+: INANPUN     BEGIN  3 2 24 DELFELD
+		MHZ 2 24 GETFRE
+	MHZ ASCII>BI DROP 0=
+	IF	0 KOM5
+	ELSE	MHZ ASCII>BI DROP DUP 64 <
+		IF	DUP  0A /MOD SWAP  0= 
+				IF   MN5 !  NMAX C!
+				ELSE 1+ MN5 ! NMAX !
+				THEN
+			MN5 @ 0A * 28A 0A * SWAP / XTEILER ! 1
+		ELSE DROP 0 KOM5
+		THEN
+	THEN
+	       UNTIL ;		
+
+
+( lese Buffer Zeilen# ein, 0 < Zanza3 <256       )
+(   --   )
+: INCOUMAX   BEGIN
+		3 3 24 DELFELD
+		MHZ 3 24 GETFRE
+	MHZ ASCII>BI DROP DUP 0= SWAP 64 > OR
+	IF	0 KOM7
+	ELSE	1 MHZ ASCII>BI DROP ZANZA3 C!
+	THEN
+	      UNTIL ;
+
+( zeige FREQUNZ1 auf Tvi- Terminal an )
+(   --    )
+: FREQUNZ-ANZEIGE1	FREQUNZX @ ANZAHL
+	9 0 DO 30 FREQUNZ I + C! LOOP 0 FREQUNZ 09 + C!  
+	AN @ 0 DO FREQUNZX @  I + C@ FREQUNZ 9 AN @ - + I + C! LOOP
+	0 24 SWAP 2 * C + CURPOS REVERSE
+	3 0 DO FREQUNZ I + C@ EMIT LOOP OFF-ATTRI
+	0 2F SWAP 2 * C + CURPOS REVERSE
+	3 0 DO FREQUNZ 3 + I + C@ EMIT LOOP OFF-ATTRI
+	0 3A SWAP 2 * C + CURPOS REVERSE
+	3 0 DO FREQUNZ 6 + I + C@ EMIT LOOP   
+	10 14 CURPOS ;
+
+: FREQUNZ-ANZEIGE FREQUNZ4 FREQUNZX ! FREQUNZ-ANZEIGE1 ;
+
+( zeige FREQUNZ2 auf Tvi- Terminal an    )
+(  --  )
+: FRE2AN	1 2F SWAP 2 * C + CURPOS REVERSE 
+	MN6 @ 0 <# #S #> 0 DO DUP I + C@ EMIT LOOP DROP OFF-ATTRI
+		1 3A SWAP 2 * C + CURPOS REVERSE
+	MN7 @ 0 <# #S #> 0 DO DUP I + C@ EMIT LOOP DROP OFF-ATTRI ;
+  
+( zeige HF Parameter auf Tvi-Terminal  an )
+(   --   )
+: PARAMETER-ANZEIGE     
+	FREQUNZ-ANZEIGE
+	FRE2AN
+	2 24 SWAP 2 * C + CURPOS REVERSE
+	FREQUNZ NMAX C@  0 BI>ASCII FREQUNZ ANZAHL
+	AN @ 0 DO FREQUNZ I + C@ EMIT LOOP 
+	3 24 SWAP 2 * C + CURPOS REVERSE
+	FREQUNZ  ZANZA3 C@ 0 DECIMAL BI>ASCII FREQUNZ ANZAHL
+	AN @ 0 DO FREQUNZ I + C@ EMIT LOOP
+	4 24 SWAP 2 * C + CURPOS REVERSE
+	FREQUNZ TIME3 C@ TIME2 C@ *  0 DECIMAL BI>ASCII FREQUNZ ANZAHL
+	AN @ 0 DO FREQUNZ I + C@ EMIT LOOP 
+	10 18 CURPOS     ;
+
+  	   
+( erhoehe Dekadenfrequnz um Frequnzintervall )
+(  --   )
+: INCFRE      FREQ1 FREQ1  ASCII>BI  
+              FREQ2     ASCII>BI  
+              DADD     TESTUP IF    BI>ASCII
+              FREQ1 DUP ANZAHL FREN>FRE
+              ASCII>BCD DEKADE-SETZEN 
+                ELSE DROP DROP DROP KOM1 THEN       ;
+
+( erniedrige Dekadenfrequnz um Frequnzintervall )
+(   --    )
+: DECFRE     FREQ1 FREQ2 ASCII>BI  
+             FREQ1     ASCII>BI   
+             DSUB  TESTDO IF       BI>ASCII
+             FREQ1 DUP ANZAHL FREN>FRE
+             ASCII>BCD DEKADE-SETZEN   
+                ELSE DROP DROP DROP KOM2 THEN         ;
+
+( --  )
+: INIT   INIT-TVI INITDEKADE INIT-FREQUNZ ASCII>BCD DEKADE-SETZEN 
+	INIT-RELAIS ;
+: DINI FREQUNZ4 DUP ANZAHL FREN>FRE ASCII>BCD DEKADE-SETZEN HF-EIN  ;
+
+ 
+DECIMAL
+                            
+                
+
+ ( Hochfrequenz Messprogramm  V1.1  Programmer: u.u   File:HF4  16.07.1985 )   
+
+HEX
+
+0 VARIABLE TIME# 4 ALLOT  ( time Eingabebuffer )
+0 VARIABLE FREQUNZ3       ( Frequnz Intervallzaehler )
+
+00 VARIABLE RAMADR        ( Ram Addresse ab wo Zaehlraten abgespeichern )
+00 VARIABLE PARADR	  ( Parameter Ramfeld  )
+8800	CONSTANT FREADR	  ( Frequenz BCD Feld )
+8C00	CONSTANT UAMADR	  ( Untergrund Buffer )
+
+00 VARIABLE ZAEHLC	  ( adr fuer Asciikonvertierung )
+00 VARIABLE RAMADR1	  ( adr ab wo Datensatz fuer CONVERT angelegt wird )
+ 
+
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+( +++  Flourozenz Zaehler Anzeige                                     +++ )
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+
+
+
+: INPUT11  4 24  SWAP 2 * C + CURPOS REVERSE
+           TIME# 01 EXPECT# ;
+
+: INTIME BEGIN  3 4 24 DELFELD
+	MHZ 4 24 GETFRE 
+           MHZ ASCII>BI DROP   
+ DUP 0A < 	
+	IF	DROP BEEP 0
+	ELSE	DUP 8C < IF  TIME2 C! 4 TIME1 C! 1 TIME3 C!
+		 ELSE	0A / TIME2 C! 1 TIME1 C! 0A TIME3 C!    
+		 THEN	1
+	THEN	UNTIL ;  
+
+
+: PR-AENDER	10 16 CURPOS
+		." Aenderung in Eingabefeld Nr.1,..,5 "
+		10 17 CURPOS
+		." Ausgang mit >N<                  : "      ;
+
+: AENDER	BEGIN	PR-AENDER KEY DUP EMIT
+		 DUP 31 = IF	INFRE 	ELSE
+		 DUP 32 = IF	INFRE-INC  ELSE
+		 DUP 33 = IF 	INANPUN	ELSE
+		 DUP 34 = IF	INCOUMAX ELSE
+		 DUP 35 = IF	INTIME	ELSE
+		THEN THEN THEN THEN THEN
+		4E = IF 1 ELSE 0 THEN 
+		UNTIL       ;
+
+
+DECIMAL
+
+
+
+( BCD kodierte Frequnzen ins Ram Feld abspeichern )
+(  --  )
+: FBCD>	NMAX C@ 0 DO	FREQUNZ1 FREQUNZ4 ASCII>BI
+			FREQUNZ2 ASCII>BI I 0 DMUL DADD TESTUP
+		    IF	BI>ASCII FREQUNZ1 DUP ANZAHL FREN>FRE ASCII>BCD
+			9 AN ! FREADR I 9 * + FRE>FREN
+		    ELSE	DROP DROP FREQUNZ4 ASCII>BI 
+			BI>ASCII FREQUNZ1 DUP ANZAHL FREN>FRE ASCII>BCD
+			9 AN ! FREADR I 9 * + FRE>FREN
+		    THEN
+		  LOOP      ;
+ 
+
+( Zeige Gesamtmesszeit an )
+(   --   )
+: SHOW-MTIME	60 7 CURPOS
+		TIME2 C@ TIME3 C@ * 0 ZANZA1 @ 0 DMUL
+		DECIMAL D. ."   MSEC" 24 0 CURS ;
+
+: D/SIGN	DUP 0< ;
+
+
+( wandel Zaehlrate um in Y Koordinate fuer Graphik )
+( n1 n2  --  Y )
+: N#>Y   COUOFF D@  D+ D/SIGN 0= 
+	IF
+		TEILER @ U/ SWAP DROP
+		DUP 0< IF DROP 0 ELSE
+                DUP 200 > IF DROP 200
+			ELSE
+			THEN THEN 
+	ELSE	DROP DROP 0
+	THEN ;
+
+( wandel Frequnz um in X Koordinate fuer Graphik )
+( n1 --  X )
+: FRE>X   XTEILER @ 10 */ DUP 650 > IF DROP 650
+		ELSE
+		THEN ;
+
+( setze im Koordinaten Kreuz x y einen Pixel )
+( x y  --  )
+: DOTXY   DDUP 0= SWAP 0= OR 
+	  IF 	DROP DROP	
+	  ELSE   240 SWAP - SWAP 48 +  GDPDOT ( SETCUR 43 2 0 GDPCHR )  
+	  THEN  ;
+
+( Hole Zaehlerrate vom Flourozenz Zaehler )
+(  -- n1 n2 )
+: ZHOL   LATCH  SAVEL  X11  C! SAVEM X11 1 +  C!
+                X11 @ SAVEH X11 C! 0 X11 1 + C! X11 @ CLR ;
+
+
+( dotxy von Zaehlrate und Frequnz )
+( n1 n2 n3 --      )
+: ZF  ROT ROT N#>Y SWAP FRE>X SWAP DOTXY ;
+
+: INITZ   INITFL CLR
+	  BLINK-CURSOR U-BL-CURSOR  ;
+
+
+( ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+ 
+
+
+
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+( ++  Messwerte auf Diskette abspeichern.                              ++ )
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+ 
+
+
+( hole n-te Zaehlerrate aus Rambereich        )
+( n -- n1 n2  )  
+: RAMHOL	4 * RAMADR @ + QBUF   C@ 512 * + DUP @ SWAP 2 + @ ;
+
+( hole n-te Untergrundrate von Rambereich )
+( n  -- n1 n2 )
+: UAMHOL 4 * UAMADR + QBUF C@ 512 * + DUP @ SWAP 2+ @ ;
+ 
+( zeige mittlere Untergrundzaehlrate an )
+(  --  )
+: SUAN NMAX C@ 0 0 0 NMAX C@ 0 DO I UAMHOL DADD LOOP
+	DDIV 40 7  CURPOS D. ."  U "   ;
+
+( Uebertrage Eingabe Parameter in Ramfeld das spaeter auf Diskette )
+( abgespeichert wird .                                             )
+(   --   )
+: PARA>RAM	FREQUNZ4 ASCII>BI PARADR @ 0 + D! ( Start Frequenz )
+		FREQUNZ2 ASCII>BI PARADR @ 4 + D! ( Punktabstand   )
+		COUMAX D@ PARADR @ 8 + D!	    ( Abbruch Count  )
+		4 0 DO TIME I + C@ PARADR @ 12 + I + 
+			C!			( Messzeit abspeichern )
+		    LOOP
+		44 0 DO RMASK I + C@ PARADR @ 16 + I +
+			C!			( Rest der Parameter sichern )
+		    LOOP
+		MN1 @ PARADR @ 60 + !		    ( L.scanweite      )
+		HFE @ PARADR @ 62 + !
+		MN2 @ PARADR @ 64 + !
+		MOP2 @ PARADR @ 66 + !  
+		MN6 @ PARADR @ 68 + !		    ( Graphik )
+		MN7 @ PARADR @ 70 + !		    ( Graphik )  
+		MN100 @ PARADR @ 72 + !
+		OMAN @ PARADR @ 74 + !
+		OEXP @ PARADR @ 76 + !         
+		TEILER @ PARADR @ 78 + !	; 
+
+
+( Uebertrage Werte von Ramfeld in die Parameter )
+(  --  )
+: RAM>PARA	FREQUNZ4 PARADR @ 0 + D@ BI>ASCII ( start Frequenz )
+		FREQUNZ1 PARADR @ 0 + D@ BI>ASCII 
+		FREQUNZ2 PARADR @ 4 + D@ BI>ASCII ( Punktabstand )
+		PARADR @ 8 + D@ COUMAX D!	    ( Abbruch Count )
+		4 0 DO PARADR @ 12 + I + 
+			C@ TIME I + C!		( Messzeit einsetzen )
+		    LOOP
+		44 0 DO PARADR @ 16 + I + C@
+			RMASK I + C!	( Rest der Parameter einsetzen )
+		     LOOP
+		PARADR @ 60 + @ MN1 !		    ( L.Scanweite )
+		PARADR @ 62 + @ HFE !
+		PARADR @ 64 + @ MN2 !
+		PARADR @ 66 + @ MOP2 !
+		PARADR @ 68 + @ MN6 !		    ( Graphik )
+		PARADR @ 70 + @ MN7 !       
+		PARADR @ 72 + @ MN100 !
+		PARADR @ 74 + @ OMAN !
+		PARADR @ 76 + @ OEXP !     
+		PARADR @ 78 + @ TEILER !	;
+ 
+( Datei eroeffnen zum Einlesen, f=1 wenn nicht erfolgreich  )
+( -- f )
+: MASSI	23 1 CURS 2 DEL
+	23 1 CURS ." Datei benennen [max 8 Buchstaben] .H1B wird gesetzt ! "
+ BEGIN	24 0 CURS 1 DEL
+	2 FCB C!	( B: default )
+	24 1 CURS ." Name der Datei ? :  " ?DATNAM
+	46 EMIT 72 EMIT 49 EMIT 66 EMIT
+	66 49 72 FCB 12 + FCB 9 + DO I C! LOOP
+	15 FCB DOSCALL   	( Datei eroeffnen )
+	4 < 0=
+	 IF	24 6 CURS 1 DEL
+		." Datei existiert nicht ! Neuer Versuch (J/N) ? : "
+		KEY DUP EMIT 74 =
+		IF 0 ELSE 1 1 THEN
+	 ELSE	0 1
+	 THEN
+ UNTIL		;
+
+( Datei eroeffnen zum Abspeichern )
+(  -- )
+: MASSO	23 1 CURS 2 DEL
+	13 0 DOSCALL ( Reset ) DROP
+	23 1 CURS
+	." Datei benennen [max 8 Buchstaben] .H1B wird gesetzt ! "
+	." Laufwerk B:  "
+	BEGIN	24 0 CURS 1 DEL
+		2 FCB C! ( B: Default )
+		24 10 CURS ." Name der Datei ? :  "  ?DATNAM  
+		66 49 72 FCB 12 + FCB 9 + DO I C! LOOP
+		1 15 FCB DOSCALL 4 <  ( Datei eroeffnen )
+		IF 24 6 CURS 1 DEL DROP
+		." Datei existiert schon ! Loeschen (J/N) ? : "
+		0 KEY DUP EMIT 74 = IF DROP 1 THEN THEN
+	UNTIL  ;
+
+
+( speicher n mal 128 Byte ab 32768 auf Diskette ab  )
+( n  --   )
+: DOS!  32768 SWAP 0 DO 26 OVER DOSCALL
+	DROP 21 FCB DOSCALL DROP 128 + LOOP DROP  ;
+
+: DONE 64 DOS! ;  ( speicher 8 K ab )
+
+( speicher 8 K ab 32768 auf Diskette ab )
+(  --  )
+: RAM>MASS	MASSO 
+		19 FCB DOSCALL DROP ( delete File )
+		22 FCB DOSCALL DROP ( make File )
+		OPEN
+		DONE
+		16 FCB DOSCALL DROP ( close File )
+		26 128 DOSCALL DROP   ; ( DMA reset )
+
+
+( hole 8 K von Diskette )
+( f -- f )
+: MASS>RAM	MASSI  DUP 0=
+	IF	OPEN
+		64 0 DO
+                	READSEQ DROP DMA 32768 I 128 * + 128 CMOVE 
+		    LOOP 
+		16 FCB DOSCALL DROP 
+	ELSE	THEN ;
+
+ 
+
+( ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+( ++  Messwerte auf Ascii konvertieren & auf Diskette abspeichern.     ++ )
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+
+( speicher n mal 128 Byte ab RAMADR1 auf Diskette ab )
+( n  --  )
+: DOS!!	RAMADR1 @ SWAP 0 DO 26 OVER DOSCALL DROP
+		21 FCB DOSCALL DROP
+		128 + LOOP DROP  ;
+
+: INITCONVERT	PARA>RAM 40960 DUP RAMADR1 ! ZAEHLC ! ;
+
+: STOR1	ZAEHLC @ C! 1 ZAEHLC +! ;
+
+: STOR2	DUP 0<
+	IF	45 STOR1 DABS
+		<# #S #> 0 DO DUP I + C@ STOR1 LOOP
+	ELSE	<# #S #> 0 DO DUP I + C@ STOR1 LOOP
+	THEN	DROP 46 STOR1 13 STOR1 10 STOR1 
+				;
+
+: COUNTFLO	NMAX C@  0 DO I RAMHOL STOR2 LOOP
+		NMAX C@  0 DO I UAMHOL STOR2 LOOP
+		26 ZAEHLC @ C! 1 ZAEHLC +! ( end Zeichen )
+		ZAEHLC @ RAMADR1 @ - 128 / 1+ DOS!!    ;
+
+: INHALTPARA	0 X11 ! PARADR @ 424 +
+	BEGIN	DUP X11 @ + C@ DUP 0= 0=
+	WHILE	STOR1 X11 DUP @ 1+ SWAP !
+	REPEAT	DROP DROP
+		13 STOR1 10 STOR1  ( CR LF )
+	PARADR @ 0 + D@ STOR2  ( Startfrequenz )
+	PARADR @ 4 + D@ STOR2  ( Punktabstand )
+	PARADR @ 43 + C@  0 STOR2 ( Messpunktanzahl )
+	PARADR @ DUP 15 + C@ SWAP 14 + C@ * 0 STOR2   ( Messzeit )
+	PARADR @ 36 + @ 0 STOR2 ( gemessene Zeilen )
+		                     ;
+
+: WORK	INHALTPARA COUNTFLO ;
+
+( Datei eroeffnen zum Abspeichern der Ascii Zeichen )
+(  -- )
+: ASCI1	23 0 CURS 2 DEL
+	23 10 CURS
+	." Ascii Datei wird abgespeichert : "
+		24 0 CURS 1 DEL
+		2 FCB C! ( B: Default )
+		65 49 72 FCB 12 + FCB 9 + DO I C! LOOP
+		15 FCB DOSCALL  DROP
+		  ;
+
+
+: ASCI2	
+		19 FCB DOSCALL DROP ( delete File )
+		22 FCB DOSCALL DROP ( make File )
+		OPEN
+		WORK
+		16 FCB DOSCALL DROP ( close File )
+		26 128 DOSCALL DROP   ; ( DMA reset )
+
+( eingelesene Messung Ascii konvertieren )
+(  --  )
+: CONVERT	MENFLG1 @ 0= IF KOM9 KEY DROP 
+		ELSE	INITCONVERT	DECIMAL ASCI1 ASCI2 
+		THEN    ;
+
+
+( ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+
+( Textausgabe auf Tvi )
+( -- )
+: TEXTOUT	18 1 CURS 2 DEL
+		18 1 CURS ." TEXT   : "
+		19 1 CURS
+		0 X11 ! PARADR @ 424 + 
+	BEGIN	DUP X11 @ + C@ DUP 0= 0=
+	WHILE	EMIT X11 DUP @ 1+ SWAP !
+	REPEAT  DROP DROP 	;
+
+ 	
+( Texteingabe uber Tvi )
+( -- )
+: TEXTIN	18 1 CURS 2 DEL 
+		18 1 CURS ." Bemerkung zur Messung : "
+		19 1 CURS
+		PARADR @ 424 + 78 EXPECT  ;
+
+
+
+
+( zeige Messwerte auf Graphikschirm mit Werten aus Parameterfeld an )
+(  --   )
+: MESSGRAPHIK	NMAX C@    10 /MOD SWAP 0=
+		IF	  DUP MN5 ! 10 * 650 10 * SWAP / XTEILER !
+		ELSE	1+ DUP MN5 ! 10 * 650 10 * SWAP / XTEILER !
+		THEN
+		MENFLG1 @ 0= IF YDIS1 XDIS
+			ELSE INIGDC KOORD OMAN @ OEXP @ YDIS2 XDIS THEN
+		01 GDPMOD ( komplement mode )
+		NMAX C@   0 DO I RAMHOL I 1+ ZF LOOP ;
+
+
+ 
+
+
+
+     
+( Hochfrequenz Messung HF - Flouro V1.1 File:HF5 Programmer:u.u  30.07.1985 ) 
+
+
+DECIMAL
+
+
+0 VARIABLE LFLAG	( Flg=1 Laser setzen )
+0 VARIABLE XN		( Laufindex fuer Anzeige waehrend Messung )
+0 VARIABLE AUX1	2 ALLOT	( Hilfszellen fuer Berechnung von AMP,MFX,SIG )
+0 VARIABLE AUX2 2 ALLOT
+0 VARIABLE AUX3 2 ALLOT
+0 VARIABLE AMP  2 ALLOT	( Amplitude )
+0 VARIABLE MFX  2 ALLOT ( Mitte )
+0 VARIABLE SIG  2 ALLOT ( Breite )
+
+
+( ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+( +++  Berechnung von Amplitude,Breite und Mitte der Messkurve       +++ )
+( ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+: STARW1	0 0 AMP D! 0 0 AUX1 D! 0 0 AUX2 D! 0 0 AUX3 D!
+		NMAX C@ 0
+	DO	I RAMHOL DABS DDUP AMP D@ D>
+			IF DDUP AMP D!
+			ELSE THEN
+		FLTD DDUP AUX1 D@ FADD AUX1 D!  I 0 FLTD FMUL
+		AUX2 D@ FADD AUX2 D! 
+	LOOP
+		AUX1 D@ AUX2 D@ FDIV MFX D!
+		NMAX C@ 0
+	DO	I RAMHOL DABS FLTD I 0 FLTD MFX D@
+		FSUB DDUP FMUL FMUL AUX3 D@ FADD AUX3 D!
+	LOOP ;
+
+: STARW		AUX1 D@ AUX2 D@ FDIV FREQUNZ2 ASCII>BI FLTD FMUL
+		FIXD FREQUNZ4 ASCII>BI DADD MFX D! 
+		AUX1 D@ AUX3 D@ FDIV  SQRT FREQUNZ2
+		ASCII>BI FLTD FMUL FIXD 2 0 DMUL SIG D! ;
+
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+
+
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+( +++  Hochfrequnz Flourozenz Messung                                 +++ )
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+
+(  --  )
+: INITRAM   32768 DUP RAMADR ! 1536 + PARADR !  
+	    RAMADR @ 1535 0 FILL UAMADR 1535 0 FILL ;
+
+( Abfrage nach den Tasten CR,Q                )
+( es werden dann entsprechende Flags gesetzt   )
+(  --  )
+: QKEY	?TERMINAL
+	IF	KEY DUP 81 = IF DROP 1 QFLAG C! ELSE
+		        13 = IF 1 SFLAG C!      ELSE
+		THEN THEN 
+	ELSE
+	THEN   ;
+
+( Pruefe ob neuer Messpunkt vorhanden, wenn ja zeige diesen an auf )
+( Graphikschirm.                                                   )
+(  --  )
+: ANZEIGEN	
+		COUALT D@ YANZA C@ 1+ ZF   
+		COUNEU D@ YANZA C@ 1+ ZF  ;
+
+	      
+: IN-ALL1	
+	MENFLG1 @ 0= IF
+	INFRE       ( Dekadenfrequenz eingabe )
+	INFRE-INC   ( Frequenzintervall eingabe )
+        INANPUN     ( Messpunktanzahl eingabe )
+	INCOUMAX    ( Abbruch Count eingabe   )
+	INTIME	    ( Eingabe von Zaehlzeit   ) 	
+	AENDER	    ( Aenderungen             )
+  ELSE  PARAMETER-ANZEIGE AENDER THEN
+	FBCD>	    ( BCD kodierte Frequenzen ins Ramfeld )
+	;
+  	
+
+: INIT-ALL  
+  	PR-HEAD  PR-OPTIONS  ( fuer Dekade )
+	IN-ALL1
+	FREQUNZ1 DUP ANZAHL FREN>FRE
+	ASCII>BCD DEKADE-SETZEN 
+	36 14 CURPOS 0 MHZA !
+	MESSGRAPHIK  
+	1 MENFLG1 !  ( Parameterfeld gefuellt )
+	PR-OPTIONS PARAMETER-ANZEIGE 0 FREQUNZ3 !  ;
+
+
+
+
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+( +++  Dekadensetz Unterprogramm                                      +++ )
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+
+( zeige FREQ2 Frequnzintervall an   )
+( --  )
+: FREQ2AN	1000. FREQ2 ASCII>BI DDIV DDUP
+		1 47 SWAP 2 * 12 + CURPOS REVERSE
+	<# #S #> 0 DO DUP I + C@ EMIT LOOP DROP OFF-ATTRI
+		1000. DMUL FREQ2 ASCII>BI DSUB
+		1 58 SWAP 2 * 12 + CURPOS REVERSE
+	<# #S #> 0 DO DUP I + C@ EMIT LOOP DROP OFF-ATTRI ;
+
+
+: FREQ1AN FREQ1 FREQUNZX ! FREQUNZ-ANZEIGE1 ;
+
+( Frequenz Eingabe fuer Menue2    )
+: INFREQ1	INFRE1 FREQ1 MKH>FREN   ;
+
+( Frequenzintervall Eingabe       )
+: INFREQ2	FREQ2 INFRE-INC1  ;
+
+: PAR2AN  	ANZ21 FREQ1AN FREQ2AN 20 70 CURS ;
+
+( Dekade/Laser eingabe wenn Parameterfeld von Menue2 gefuellt war  )
+( --  )
+: AENDER2         ( Mops ist auf C094 eingestellt )	
+   BEGIN	PAR2AN  KOMC RUNZ 
+	KEY
+	DUP 49 = IF SCAWL SCST SETMOPS  THEN
+	DUP 50 = IF SCST SETMOPS THEN
+	DUP 51 = IF SCZEI 		THEN
+	DUP 52 = IF INFREQ1 		THEN
+	DUP 53 = IF INFREQ2 		THEN
+	DUP 12 = IF SETUP		THEN
+	DUP 8  = IF SETDOWN		THEN
+	DUP 11 = IF INCFRE FREQ1AN 		THEN
+	DUP 22 = IF DECFRE FREQ1AN		THEN
+ 	DUP 54 = IF HF-EIN 8 35 CURS ." ** HF-EIN **" THEN
+	DUP 55 = IF HF-AUS 8 35 CURS ." ** HF-AUS **" THEN
+	    57 = 
+		UNTIL      ;
+
+
+( Optionen fuer Dekadensetz Programm     )
+(  --  )
+: PR-OPTIONS2	8 12 CURPOS	." (4)" 
+		16 12 CURPOS
+              	." Frequenz-Dekade  : " FIELD1  
+		8 14 CURPOS	." (5)"
+              	16 14 CURPOS  
+              	." Frequenzabstand  : " FIELD2  
+		8 16 CURPOS	." (6)"
+		16 16 CURPOS
+		." HF-EIN           : "
+		8 18 CURPOS	." (7)"
+		16 18 CURPOS
+		." HF-AUS           : "   ;
+
+
+
+: IN-ALL2	LRUN1 PR-OPTIONS2
+		INFREQ1 
+		INFREQ2
+		1 MENFLG2 !		  ;
+
+( Dekade/Laser wird verstellt und Countdarstellung )
+(  --  )
+: DEKADESUB	INIT-TVI INITFL INITEI DISPLAY
+		PR-OPTIONS2
+	MENFLG2  @ 0=
+	IF	IN-ALL2 
+	ELSE
+	THEN HF-EIN 8 35 CURS ." ** HF-EIN **"
+	KOMC INCFRE DECFRE AENDER2   ;
+
+
+( ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+
+
+( lese eine binaere Messdatei ein    )
+( -- )
+: MESSEIN 	INITRAM
+		16 22 CURPOS 3 DEL 16 22 CURPOS
+		MASS>RAM 0=
+	IF	RAM>PARA
+		16 22 CURPOS 3 DEL 1 22 CURPOS TEXTOUT 
+		1 MENFLG1 ! MENFLG3 @ 0= IF ELSE SETMOPS THEN   
+	ELSE 	THEN ;
+
+
+( speicher eine binaere Messdatei ab )
+( -- )
+: MESSAUS	MENFLG1 @ 0=
+	IF	KOM9 KEY DROP
+	ELSE	16 22 CURPOS 3 DEL 16 22 CURPOS
+		PARA>RAM
+		16 22 CURPOS 3 DEL 16 22 CURPOS
+		RAM>MASS CONVERT
+	THEN	  ;
+
+
+
+( Hauptzyklus fuer Anzeige der Messwerte                )
+(  --  )
+: HF-RUNX	0 0 HF1 D!
+		0 0 UAN1 D!
+		0 0 UAN2 D!
+		0 0 ZAN  D!
+		0 ZANZA2 C!
+		0 LFLAG ! 0 SFLAG C! 0 QFLAG C!
+	ZANZA1 @ ZQBUF ! 
+	1 ANZFLG C!
+		G2ON MESSHF	( HF Messung starten )
+	BEGIN	QKEY
+		ANZFLG C@ 0=
+			IF ANZEIGEN 1 ANZFLG C!
+			ELSE
+			THEN
+		MFLAG C@ 0=
+	UNTIL  G2OFF  ; 
+
+( mache weiter mit QBUF Zeilenblock )
+(  -- )
+: SOLDB	0 FFLAG C! 0 IANZA C!
+	QBUF C@ BUFALT C! QBUF C@ 1+
+		DUP 3 = IF DROP 0 BUFANZ C!
+		ELSE BUFANZ C! THEN  
+		ZQBUF @ ZANZA1 !    ;
+
+: SOLDA 0 FFLAG C! 0 IANZA C!
+	BUFANZ C@ QBUF C!
+	BUFANZ C@ 1+ DUP 3 = IF DROP 0 BUFANZ C!
+		ELSE BUFANZ C! THEN    ;
+
+	
+: HF-RUN   BEGIN	16 22 CURPOS 3 DEL
+			16 22 CURPOS ." (Q)Schnellabbruch "
+			16 23 CURPOS ." (CR)Weicher Abbruch      :"
+ SFLAG C@ QFLAG C@ OR 0= IF
+		    ELSE MESSGRAPHIK
+		    THEN
+		HF-RUNX
+		QFLAG C@ 0= 0= IF SOLDB 1         ELSE
+		SFLAG C@ 0= 0= IF SOLDA 1         ELSE
+		THEN THEN
+	    UNTIL SHOW-MTIME SUAN        ;
+
+
+( Optionmaske fuer Hauptmenue                           )
+(  --  )
+: PR-OPTIONS1	PR-HEAD
+		22 4 CURPOS ."        HAUPT - MENUE  "
+		8 8 CURPOS ." (1)"
+		16 8 CURPOS
+		." Messdatei einlesen                  : "
+		8 9 CURPOS ." (2)"
+		16 9 CURPOS
+		." Laser/Dekade setzen & Zaehlerrate   : " 
+  		8 10 CURPOS ." (3)"
+		16 10 CURPOS
+		." Messdaten sichern                   : "
+		8 11 CURPOS ." (6)"
+		16 11 CURPOS 
+		." HF Messung C08                      :"
+		8 12 CURPOS ." (7)"
+		16 12 CURPOS
+		." Kommentartext eingabe               :"
+		8 13 CURPOS ." (8)"
+		16 13 CURPOS
+		." Rueckkehr ins Betriebssystem        :"
+				;
+
+( Televideo wird fuer Hauptmenue vorbereitet )
+( -- )
+: INIT-TVI1	BLANK-SCREEN
+		U-BL-CURSOR
+		CLR-TELE
+		PR-OPTIONS1
+		NORMAL-SCREEN ;
+
+( initialisiert Gesamtapparatur am Anfang )
+(  --  )
+: INIT-ALL1	INIT ( init HF-Dekade, Relais, Tvi )
+		INITZ ( init Flouro Zaehler )
+		INITRAM   ;
+
+( initialisiere Parameter fuer neue Messung   )
+(  --  )
+: INITM		RESET2 G2OFF
+		INITRAM
+		HF1 16 0 FILL   ( HF1,UAN1,UAN2,ZAN loeschen )
+		0  IANZA C! 
+		0 FFLAG C! 0 LFLAG ! 0 COUNEU 4 + C!  
+		BUFANZ 9 0 FILL
+		0 QBUF C! 1 BUFANZ C! 0 BUFALT C!
+		1 ANZFLG C!
+		              ;
+
+( Unter Menue fuer HF1-RUN )
+(  --  )
+: HF-UMENUE	
+	BEGIN	PR-HEAD PR-OPTIONS PARAMETER-ANZEIGE
+		16 22 CURPOS 3 DEL
+	10 22 CURPOS ." (1)Graphikanzeige (2)HF-Messung (N)eue-Messung"
+	10 23 CURPOS ." (A)bbruch (B)erechnen (L)Laser (P)arametr     :"
+		KEY DUP EMIT
+	 DUP 49 = IF DROP MENFLG1 @ 0 MENFLG1 ! MESSGRAPHIK 
+		       MENFLG1 ! 0	ELSE
+	 DUP 50 = IF DROP HF-RUN      0	ELSE
+	 DUP 76 = IF DROP LRUN2 INIT-TVI PR-HEAD PR-OPTIONS
+			PARAMETER-ANZEIGE MESSGRAPHIK 0 ELSE
+	 DUP 66 = IF DROP 1 22 CURPOS 3 DEL STARW1 STARW
+			." MITTE : " MFX D@ D.  ."  HZ "
+		 ." AMP : " AMP D@ D. ."  N "
+		 ." BREITE : " SIG D@ D. ."  HZ "
+		KEY DROP 0			ELSE
+	 DUP 78 = IF DROP INITM PARAMETER-ANZEIGE 
+		     MESSGRAPHIK FBCD> 0 ELSE
+	 DUP 80 = IF DROP 10 22 CURPOS 3 DEL
+			INITM INIT-ALL DINI 0 ELSE
+	     65 = IF       1 ELSE BEEP 0
+		THEN THEN THEN THEN THEN THEN THEN HF-EIN
+	UNTIL ;
+  
+
+( Fuehre HF-Messung durch mit alten Messdaten + Parameter )
+( oder beginne eine neue Messung                          )
+( -- )
+: HF1-RUN	INIT-TVI
+		MENFLG1 @ 0= 0= IF
+			PR-HEAD PR-OPTIONS
+			PARAMETER-ANZEIGE
+			DINI
+			MESSGRAPHIK
+			HF1 16 0 FILL
+			QBUF C@ BUFALT C! QBUF C@ 1+ DUP 3 =
+	IF	DROP 0 BUFANZ C!
+	ELSE	BUFANZ C!
+	THEN
+			1 ANZFLG C!
+			HF-UMENUE 
+	ELSE	INIT-TVI INITM INIT-ALL DINI HF-UMENUE
+	THEN
+			;
+
+
+: RUN	DECIMAL INIT-ALL1 0 MENFLG1 ! 0 MENFLG2 ! 0 MENFLG3 !
+		PARADR @ 424 + 20 0 FILL DEKADESUB 
+	BEGIN	INIT-TVI1 TEXTOUT 16 22 CURPOS
+	   ." Waehle (1) bis (8) :" KEY DUP EMIT
+	   DUP 49 = IF      MESSEIN   ELSE
+	   DUP 50 = IF      DEKADESUB ELSE
+	   DUP 51 = IF      MESSAUS   ELSE
+	   DUP 54 = IF     HF1-RUN    ELSE
+	   DUP 55 = IF     TEXTIN     ELSE
+		  THEN THEN THEN THEN THEN 56 =
+	UNTIL MENFLG3 @ 0= IF ELSE 0 EMITA ( Mops zuruecksetzen ) THEN ;
+  
+
+
+DECIMAL
+
+
+END-OF-FILE
+
+
