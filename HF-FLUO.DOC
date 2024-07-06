@@ -1,0 +1,29 @@
+*********************************
+****                         ****
+****   Datei : HF-FLUO.DOC   ****
+****                         ****
+*********************************
+
+Diese Datei enthält die Dokumentation zu den Programmen
+des Subdirectories   C:\HF-FLUO\
+
+
+
+Programm       :  Meßprogramm für die Hochfrequenz-Spektroskopie
+                  an der RABI-ABMR-Apparatur
+                  ( früher C08-Programm auf DEC PDP-8 )
+
+Beschreibung   :  HF-Spektroskopie an der RABI-Apparatur,
+                  Messung der Zählraten mit/ohne Untergrund,
+                  Ansteuerung der Rhode & Schwarz-Frequenzdekade
+
+Autor          :  Uwe Urmoneit
+                  Diplomarbeit 1986, IAP-Uni Bonn, Wegelerstr. 8
+
+Rechnerumgebung:  Z80-ECB System (Janich & Klass)
+
+Betriebssystem :  CP/M 3.0 (Digital Research)
+
+Sprache        :  Z80-FORTH  (Ver. F2.COM)
+                  Z80-Assembler
+
