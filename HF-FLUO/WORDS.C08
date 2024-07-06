@@ -1,0 +1,763 @@
+ 
+		   ( ++++++++++++++++++++++++++++++ )
+                   ( +++    Datei : WORDS.C08   +++ )
+		   ( +++    Stand : 13.3.86     +++ )
+		   ( +++    Dokumentation : tf  +++ )
+		   ( ++++++++++++++++++++++++++++++ )
+
+( Diese Datei enthaelt alle FORTH-Worte aus dem Programm HF-FLUO1 von    )
+( U.Urmoneit. Die FORTH-Worte werden kurz erklaert und eventuelle STACK- )
+( manipulationen dokumentiert. )
+
+( ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+( Datei : HF1.SL2 )
+
+( GRAPHIC-ROUTINES IN FORTH  )
+
+( VARIABLE X1,Y1,Z1 )
+
+( y koordinate , x koordinate --     )
+( SETCUR setzt den cursor an x,y     )
+
+( n[0,1,2]     --                    )
+( CLRDIS setzt,loescht oder komplementiert den gesamten graphikspeicher )
+
+( GDPCHR :  einzelne graphic character in den graphicspeicher schreiben )
+( ichr[0..127] , idir[-8..7] , isz[0..15] --                  ) 
+
+( y koordinate , x koordinate --      )
+( GDPDOT : einzelne pixel koennen geschrieben werden )
+
+( GDPLIN : zeichnet Linien von aktuelle cursor pos bis y , x      )
+( y koordinate , x koordinate --      )
+
+( GDPMOD : Schreibmodus festlegen, d.h. :                    )
+( ob eine Schreibaktivitaet setzend, komplementierend oder   )
+( austauschend durchgefuehrt wird .                          )
+( 1=komplementierend 2=loeschend 3=setzend                   )
+( n1 -- )
+
+( VARIABLE RRAM       Addresse wo Zeichen abgespeichert werden )
+( VARIABLE POSX        x Cursorposition              )
+( VARIABLE COUNT      Anzahl der eingegebenen Zeichen     )
+
+( +++++++++++++++++++++++++++++++++++++ )
+( +++ Televideo Attribute in FORTH  +++ )
+( +++++++++++++++++++++++++++++++++++++ )
+
+( BEEP : Warnton fuer falsche eingabe )
+
+( U-BL-CURSOR : cursor schmall und blinkt )
+
+( BLINK-CURSOR : cursor blinkt )
+
+( BLANK-SCREEN : televideo anzeige dunkel steuern )
+
+( NORMAL-SCREEN : televideo hell steuern )
+
+( LDEL : loescht Zeile wo gerade der Cursor steht )
+ 
+( CURPOS : cursor wird auf position x,y gebracht )
+(  x y    --       )Š
+( REVERSE : invers attribut von televideo wird eingeschaltet )
+
+( CLR-TELE : loesche schirm von televideo             )
+
+( OFF-ATTRI : attribut ausschalten                   )
+
+( PRINTCHARS : schreibe n zeiechen auf televideo schirm )
+(    n   --      )
+ 
+( +++++++++++++++++++++++++++++++++++++ )
+( +++  Arithmetik Prozessor Treiber +++ )
+( +++++++++++++++++++++++++++++++++++++ )
+
+(  VARIABLE X11,Y11 )
+
+( BUSY : f=0 wenn Arithm. Prozessor noch rechnet )
+
+( SIGN : f=0 wenn arithm. Prozessor Stack neg. [ --  flg ] )
+
+( ARICOM : Kommando Eingabe an Arithm. Prozessor [ nn   --     ] )
+
+( ARI32! : speichert eine 32 bit Zahl auf den Arithm. Prozessor Stack )
+( nn nn  --    )
+
+( ARI16! : speichert eine 16 bit Zahl auf den Arithm. Prozessor Stack )
+( nn     --    )
+
+(  ARI16@ : [  --  nn  ] )
+
+( ARI@ : hole eine 16 bit Zahl von Arithm. Prozessor Stack )
+(    --   nn )
+
+( ARI@@ : hole eine 32 bit Zahl von Arithm. Stack )
+(    --  nn nn )
+
+( DADD : 32 bit Addition    )
+( nn nn nn nn   --  nn nn   )
+
+( DSUB : 32 bit Subtraktion )
+( nn nn nn nn   --  nn nn   )
+
+( DMUL : 32 bit Multiplikation, untere 32 bit liegen als Ergebnis vor )
+( nn nn nn nn  --  nn nn  )
+
+( DDIV : 32 bit Division )
+( n1 n2 n3 n4  --  nn nn )
+
+( FMUL : 32 Bit Gleitkomma Multiplikation  )
+( n1 n2 n3 n4 -- n1 n2  )
+
+( FDIV : 32 Bit Gleitkomma Division )
+( n1 n2 n3 n4 -- n1 n2 )
+
+( FADD : 32 Bit Gleitkomma Addition )
+( n1 n2 n3 n4 -- n1 n2 )
+
+( FSUB : 32 Bit Gleitkomma Subtraktion )
+( n1 n2 n3 n4 -- n1 n2 )
+
+Š( FLTD : 32 Bit Festpunkt auf 32 Bit Gleitkomma )
+( n1 n2 -- n1 n2 )
+
+( FIXD : 32 Bit Gleitkomma auf 32 Bit Festpunkt )
+( n1 n2 - n1 n2 )
+
+( D> : Funktion > auf 32 Bit Festpunkt ausgedehnt )
+( n1 n2 n3 n4 -- f )
+ 
+( SQRT : 32 Bit Gleitkomma Wurzelfunktion )
+( n1 n2 -- n1 n2 )
+
+( DDUP : n1 n2   --   n1 n2 n1 n2  )
+
+( D@ :  adr       --   n1 n2  )
+   
+( D! : n1 n2 adr  --          )
+
+( ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+ 
+( Datei : HF1.SL2 )
+ 
+0 VARIABLE OMAN      ( Mantisse )
+0 VARIABLE OEXP      ( Exponent )
+0 VARIABLE MHZA      ( Frequenz alt )
+0 VARIABLE MHZP      ( hilfs Variable )
+0 VARIABLE MN5       ( Schrittanzahl /10 )
+0 VARIABLE MN6       ( entweder K oder Space )		 
+0 VARIABLE MN7	     ( Schrittfrequenz Zahl )	
+0 VARIABLE MN100     ( Y-Achsenabschnitte neg. )
+0 VARIABLE TEILER    
+0 VARIABLE COUOFF 2 ALLOT    ( Offset fuer negative Zaehlraten )
+
+0118H CONSTANT TIME
+0106H CONSTANT BUFM
+0104H CONSTANT BUFE
+0 VARIABLE COUNT
+
+( INITFL : Initialisierung des FLUO-Zaehlers, FLUOZAEHLER PORT 1 )
+(          MODE 3, CLR COUNTER UND FLIPFLOP )
+
+( INITEI : Initialisierung des EICH-Zaehlers, EICHMARKENZAEHLER PORT 2 )
+(          CLR COUNTER UND FLIPFLOP )
+
+( CLR : clear counter )
+
+( LATCH	: Zaehlerwert latchen )
+
+( SAVEH	: enable high und einlesen )
+
+( SAVEL	: enable low und einlesen )
+
+( SAVEM	: enable middel u. einlesen )
+
+0 VARIABLE MA1	( Anzahl der Zeichen vor der Maske			)
+0 VARIABLE MA2	( Anzahl der Maskenzeichen				)
+0 VARIABLE MAZ	( Zaehler fuer Cursorstand				)
+0 VARIABLE COR	( Hilfsvariable fuer Rueckschritt im Menue		)
+0 VARIABLE ZRK	( Hilfsvariable fuer Cursor { --> }			) 
+
+Š( ZR : steuert die Cursortaste { --> }					)
+
+(  n1 -->		)
+( Z! : speichert gueltige ASCII-Zeichen im entsprechenden Buffer ab	)
+( n1 = ASCII-Zeichen							)
+
+( ZL : steuert die Cusortaste { <-- }					)
+
+( NULL : belegt den Eingabebuffer mit ASCII {48}				)
+
+( CORI : speichert 0 nach COR						)
+
+( n1 n2 --> f		)
+( Z@ : ist der Verteiler fuer die Cursormaske.Die Tastatur wird abge-	)
+( fragt und nach entsprechenden Steuerzeichen verzweigt.n1=Anzahl der 	)
+( Maskenzeichen ,n2 Anzahl der Zeichen vor der Maske			)
+( ASCII {48 -->57} --> Z! ; ASCII {8} --> ZL ; ASCII {13} --> NULL	)
+( ASCII {12} --> ZR ; ASCII {11} --> CORI				)
+( wenn f=1 ist,befinden sich die Eingabewerte im entsprechenden Buffer	)
+  
+( n1 n2 --> [n3] [n4] f	) 
+( M@ : ist eine Cursormaske fuer die Tastaturabfrage.n1=Anzahl der Zeichen,)
+( die uebersprungen werden muessen[Maske].n2=Anzahl der Zeichen vor der	)
+( Maske.1 Zeichen kann hinter der Maske gelesen werden.f=1 Zeichen ok,	)
+( kein Rueckschritt im Menue . f=0 Wert fuer Rueckschritt im Menue	)
+( n3 und n4 werden dann nicht auf den Stapel abgelegt.			)
+( n4 = Wert hinter Maske,wenn n1>0 sonst Wert vor Maske			)
+( n3 = Wert vor der Maske,wenn n1>0	Beispiel einer Maske:		)  
+( n1=5,n2=4 --> {Maske=5 Zeichen}            ____Maske_			)
+
+( n1 n2 -->		)
+( CURS : setzt den Cursor n1 = Zeile , n2 = Spalte			)
+
+( MNW : gibt eine Warnung durch Bel und Display aus			)
+
+( DEL : loescht n1 Zeilen [ n1 -- ]    )
+
+( MTEST : sorgt fuer rechtsbuendige Darstellung )
+
+( DELW : loescht Display Warnung )
+
+
+( ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+( +++   Graphikteil fuer Ausgabe von Zaehlraten                    +++ )
+( ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+( KOORD : gibt ein Koordinatensystem an den Bildschirm aus		)
+  
+( YTESTN : sorgt fuer rechtsbuendige Beschriftung,n1 = Stringanzahl	)
+
+( n1 --  )
+( YCHR : wandelt n in ASCII-Zeichen um und gibt sie an Graphikschirm aus)
+( n1 = auszugebene Zahl							)
+
+( YDIV : erzeugt alle Countunterteilungen fuer die Ordinate n1 bis n6	)
+
+( n1 n2  -->		)
+( YDISA : gibt Ordinatenkopf aus ; n1 = Mantisse ; n2 = Exponent        )
+
+( n1 -- n6 -->		)
+( YDISB : gibt 6 Werte  an die Ordinate aus			)Š
+( n1 n2 -->		)
+( YDIS2 : gibt alle Ordinatenwerte auf Graphikschirm aus                )
+( n1 = Mantisse, n2 = Exponent						)
+
+( ANZ8 : gibt den Eingabewert neu ans Display aus			)
+
+( TESTDISM : ermittelt die moeglichen Ordinatenwerte und sorgt dafuer,	)
+( 	   dass alle Stellen [ max 4 ] ausgenutzt werden.		)
+ 
+( n1 n2 --> f		)
+( T6MIL testet die Eingabe n1,n2 [ Mantisse,Exponent] und ermittelt	)
+(	den Teiler							)
+
+( KOM6 , KOM7 : Kommentare )
+
+( YDIS3 :      )
+
+( YDIS1 erwartet Mantisse u. Exponent ueber Tastatur 			)
+( Gueltigkeitsbereich: 200 - 6000000					)
+( sonst Fehlermeldung , Anzeige in der Menuetafel			)
+
+( XPLUS erzeugt alle Abzissenwerte n1 bis n9				)
+
+( XTEST testet die Stringanzahl n1 u. setzt den Cursor entsprechend	)
+
+( n1 n2  -->		)
+( XCHR gibt Zahl n1 mittenzentriert auf Graphikschirm aus { n1<=30000 }	)
+( n2 = Cursorposition							)
+
+( XDIS gibt die Abzissenwerte n1 bis n9 auf Graphikschirm aus   	)
+
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+( Datei : HF2.SL2 )
+
+E8 CONSTANT CHANCW  ( CTC )
+E1 CONSTANT SIOA    ( SIO-A )
+
+0 VARIABLE MENFLG1	( Hauptmenueflg=1 wenn schon mal gelaufen )
+0 VARIABLE MENFLG2	( Dekade/Laser Flg =1 Parafeld gefuellt )
+0 VARIABLE MENFLG3	( CBLOCK geladen Flg=1   )
+
+( OPEN-SIOA  : counter , 9600 baud , channel reset , interrupt disabled )
+(             interrupt vector , rx 8 bits , x16 clock,1 stop,no parity )
+(             rts on  -> OPEN-SIOA eroeffnet die SIO-A	)
+
+( VARIABLE KEO	Hilfsvariable		)
+
+(  --> n		)
+( KEYO erwartet ein Zeichen von der SIO-A mit kurzer Warteschleife.	)
+(      Wird kein Zeichen empfangen --> n = 0 sonst ASCII-Zeichen	)
+
+(  --> n		)
+( KEYA erwartet ein Zeichen von der SIO-A mit endloser Warteschleife	)
+
+(  --> n		)
+( EMITA sendet ein Zeichen n aus der SIO-A				)
+
+( ***************** Progamm fuer Blocktransfer zum Mops ******************** )
+Š10 VARIABLE F					( F=Fehlerzaehler 	)
+	
+( READSEQ : read sequential	)
+
+( BLOCK : Gibt FFH und DMA-Bereich aus. )
+
+( VERG  : Zeichenvergleich vom Stack mit DMA		     )
+
+( TEST  : Daten einlesen und VERG    )
+
+( TRAN  : Datei lesen		     )
+
+( MFCB  : FCB fuer MOPS.COM          )
+ 
+( TRANS : Reset	, Datei eroeffnen   )
+
+( CBLOCK transferiert das Maschinenprogramm MOPS.COM zum Z80-Laser-	)
+(	 interface.Anschliessend wird der Datensatz ueberprueft.In	)
+(	 Variable ist der Fehlercode enthalten.				)
+
+( ZAEHLDIS : [ d -->	]		)
+
+( SAVE 	: liesst die Zaehlerwerte aus )
+
+( MHZD gibt das Wort MHz an den Bildschirm aus				)
+ 
+( MSECD gibt das Wort msec an den Bildschirm aus			)
+
+0 VARIABLE HFE
+0 VARIABLE MN1
+0 VARIABLE MN2
+0 VARIABLE MOP2
+
+( KOM1 - KOM3 : Kommentare )
+
+( SCAWL fragt die Scanweite des Lasers ab , MN1 = Scanweite L./10	)
+( Fehlermeldung : 2500 MHz > MN1 > 30000 MHz,Anzeige in der Menuetafel	)
+
+(  n1 --> 		)
+( MOPS2 ermittelt den moeglichen Startwert MN3 fuers Display und den 	)
+( Startwert fuer den MOPS MOP2. n1 = Eingabewert 			)
+( MOP2 = n1 * 4096 / MN1              { Integer }			)
+( MN2 = MOP2 * MN1 * 10 / 4096	      { Integer }			)
+
+( ANZ2 gibt den eingebenen Wert neu ans Display aus			)
+
+( SCST fragt den Startwert der Messung ab , siehe MOPS2			) 
+( Fehlermeldung :  MN1 < MN2 , Anzeige in Menuetafel		)
+
+( ANZ3 , ANZ3A : Anzeige Routinen )
+
+( SCZEI fragt die Floureszenszeit in msec ab.Gueltigkeitsbereich ist :	)
+( 10 - 2500 msec sonst Fehlermeldung , Anzeige in der Menuetafel	)
+
+( INVERSE : Bildschirm inverse schalten )
+( NORMAL  :       "    normal     "     )
+
+( R2 , RN : Maskenaufbau Hilfswoerter )
+
+( DISPLAY : Display-menu )
+Š( VARIABLE IST	: Hilfsvariable s.u.	)
+
+( RUNZ  : steuert Zaehlerausgabe auf Graphikdisplay )
+
+( SETMOPS  : MOPS-steuerung )
+
+( MOPUP    : [ n -->	]   )
+
+( SETUP    :                )
+
+( MOPDOWN  :                )
+
+( SETDOWN  :                )
+
+( KOMC 	: Kommentar )
+
+( CONTROL : steuert DISPLAY SCAWL SCST SCZEI SETMOPS )
+
+( ANZ21	: Anzeige der Variablen )
+
+( LRUN1 : Laser soll am Anfang der Messung nue gesetzt werden )
+(         Datentransfer zum Mops, Programm C094 anwaehlen     )
+
+( KOMD  : Kommentar )
+
+( LRUN2 Laser ist schon mal gesetzt worden und soll jetzt veraendert werden )
+
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+( Datei : HF3.SL2 )
+
+( Uebergabe Speicherstellen von MESSHF                       )
+HEX
+0119	CONSTANT	TIME1  ( Totzeit zwischen Messungen )
+011A	CONSTANT	TIME2  ( Messzeit time3*time2 msec  )
+011B	CONSTANT	TIME3  ( Vorteiler Inhalt 1 oder 10 msec )
+011E	CONSTANT	RMASK  ( Maske fuer Relais Port     )
+011F	CONSTANT	IANZA  ( Laufindex fuer Messpunkt   )
+0120	CONSTANT	HF1    ( Count mit HF               )
+0124	CONSTANT	UAN1   ( 1.Count ohne HF            )
+0128	CONSTANT	UAN2   ( 2.Count ohne HF            )
+012C	CONSTANT	ZAN    ( Ergebnis von 2*HF1-UAN1-UAN2 )
+0130	CONSTANT	BUFANZ ( aktuelle Ringbuffer Position )
+0131	CONSTANT	ZANZA2 ( Zeilenzaehler modulo 10 )
+0132	CONSTANT	ZANZA1 ( Zeilen Zaehler )
+0136	CONSTANT	QFLAG  ( Flg fuer harte Messunterbrechung )
+0137	CONSTANT	SFLAG  ( Flg fuer weiche Messunterbrechung )
+0138	CONSTANT	FFLAG  ( Flg=0 aufsteigende Zeile )
+0139	CONSTANT	NMAX   ( Anzahl von Messpunkten )
+013A	CONSTANT	MFLAG  ( Flg=1 Messung in gang )
+013B	CONSTANT	ANZFLG ( Anzeige Flg von Messhf )
+013C	CONSTANT	YANZA  ( Messpunkt Zaehler fuer Anzeige )
+013D	CONSTANT	COUALT ( zu loeschende Zaehlrate )
+0141	CONSTANT	COUNEU ( zu setzende Zaehlrate )
+0145	CONSTANT	BUFALT ( alte Ringbuffer Position )
+0146	CONSTANT	ZANZA3 ( Zeilen die im Ringbuffer gespeichert werden )
+0147	CONSTANT	QBUF   ( aktueller Quit Buffer )
+0148	CONSTANT	ZQBUF  ( Anzahl gemessener Zeilen in Quit Buffer )
+
+
+Š0 VARIABLE FREQUNZ 8 ALLOT  ( Array fuer Dekaden Frequnz in BCD )
+0 VARIABLE FREQUNZ1 8 ALLOT ( Array fuer Dekaden Frequnz in Ascii Menue1 )
+0 VARIABLE FREQUNZ2 8 ALLOT ( Array fuer Frequnzintervall in Ascii Menue1 )
+0 VARIABLE FREQUNZ4 8 ALLOT ( Array fuer Start Frequenz von Dekade Menue1 )
+
+0 VARIABLE FREQ1 8 ALLOT    ( Frequenz in Menue2 )
+0 VARIABLE FREQ2 8 ALLOT    ( Frequenzintervall in Menue2 )
+0 VARIABLE FREQUNZX
+  
+0 VARIABLE MHZ 2 ALLOT      ( Array fuer Mhz Eingabe in Ascii )
+0 VARIABLE KHZ 2 ALLOT      ( Array fuer Khz Eingabe in Ascii )
+0 VARIABLE HZ  2 ALLOT      ( Array fuer Hz  Eingabe in Ascii )
+0 VARIABLE XTEILER	 ( Anzahl von Punkten auf Graphikschirm pro Schritt )
+
+00 VARIABLE AN       ( Variable Anzahl )
+00 VARIABLE COUMAX 2 ALLOT  ( Abruch Count )
+
+69 CONSTANT CRPORTD  ( control port A )
+6B CONSTANT CRPORTD+1 ( control port B )
+68 CONSTANT PORTDEKADE ( port A )
+6A CONSTANT PORTDEKADE+1 ( port B )
+
+6D CONSTANT CRPORTR   ( control port A, von Relais Port )
+6C CONSTANT PORTR     
+
+( PR-HEAD : ueberschrift auf televideo        )
+
+( FIELD1 - FIELD5 : kennzeichne eingabefeld mit inverse attribut )
+
+( PR-OPTIONS : option maske auf televideo              )
+
+( CHAR! speicher eingegebenes zeichen in rram ab und gebe )
+( es auf bildschirm raus )
+(     char  --            )
+
+( FORCHAR gehe mit cursor ein schritt weiter, innerhalb der eingabe maske )
+(    char     --        )
+
+( BACKCHAR gehe mit cursor einen schritt zurueck, innerhalb der eingabe maske )
+(    char     --        )
+
+( EXPECT# erwartet n+1 Ziffern < 0,..,9> und speichert sie in addr ab )
+(     addr n    --       )
+
+( GETFRE erwarte 3 Ziffern, speicher diese in fre ab )
+( fre zeile spalte  --          )   
+
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+( +++  Hochfrequnz Dekaden Treiber                                    +++ )
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+( INITDEKADE : Initialisierung der HF-Dekade    )
+
+( UGABEPULS  : Uebergabepuls                    )
+
+( IOPPULS    : IO-Puls generieren               )
+
+( DEKADE-SETZEN : Diese Routine erwartet eine BCD codierte Zahl in )
+( der Var. FREQUNZ und gibt die Zahl an die Dekade.                )
+
+Š( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+( +++  HF Relais Treiber                                              +++ )
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+( INIT-RELAIS : Initialisierung der Relais )
+
+( HF-AUS , HF-EIN  : HF ein/ausschalten    )
+
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+( +++  Messzeit Zaehler                                             +++ )
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+( RESET2 , G2ON , G2OFF : Steuerung des Zaehlers )
+
+( INIT-FREQUNZ : Frequenzen werden eingelesen )
+
+( ASCII>BCD  : Wandlung des Zahlenformats der Freuquenzwerte )
+
+( R-F  : Anzeige der Variablen FREQUNZ 1- 9 )
+
+( ANZAHL : Anzahl von eingegebenen Ziffern )
+
+( INIT-TVI Televideo wird initialisiert  )     
+
+( KOM1-KOM9 : Kommentare )
+
+( FRE>FREN transferiere FREQUNZ nach FREQUNZn )
+( adr  --    )
+
+( FREN>FRE transferiere FREQUNZn nach FERQUNZ )
+( adr  --   )
+
+( ASCII>BI wandlere Eingabestring um in 32 bit Zahl )
+( adr  --  nn nn  )
+
+( BI>ASCII wandlere binaere Zahl in Ascii String um )
+( und speicher die Zahl auf fre ab ) 
+( fre nn nn   --    )
+
+( TESTUPI pruefe ob Frequnzintervall Eingabe zu gross )
+( 4240 0F entspricht 1 MHz )
+
+( TESTUP test auf obere Grenze Dekadenfrequnz )
+( 64FF 1DCD entspricht 499999999 Hz )
+( n1 n2    --  n1 n2 flg )
+
+( TESTDO test auf untere Grenze Dekadenfrequnz )
+( n1 n2    -- n1 n2 flg )
+ 
+( DELFELD loesche Eingabefeld auf Televideo Terminal )
+( anzahl zeile   --    )
+
+( MKH>FREN uebertrage Ascii Ziffern in Variablen MHZ,KHZ,HZ )
+( adr    --    )
+
+( INFRE1 lese Dekadenfrequnz ein )
+
+( INFRE : steuert INFRE1 FREQUNZ1 MKH>FREN FREQUNZ4 MKH>FREN )
+
+( INFRE-INC1 lese Dekadenintervall ein )
+( n1  --   )Š
+( INFRE-INC :                          )
+  
+( INANPUN lese Anzahl von Messpunktschritten ein        )
+
+( INCOUMAX lese Buffer Zeilen# ein, 0 < Zanza3 <256       )
+
+( FREQUNZ-ANZEIGE1 zeige FREQUNZ1 auf Tvi- Terminal an )
+
+( FREQUNZ-ANZEIGE steuert dasselbige )
+
+( FRE2AN zeige FREQUNZ2 auf Tvi- Terminal an    )
+  
+( PARAMETER-ANZEIGE zeige HF Parameter auf Tvi-Terminal  an )
+  	   
+( INCFRE erhoehe Dekadenfrequnz um Frequnzintervall )
+
+( DECFRE erniedrige Dekadenfrequnz um Frequnzintervall )
+
+( INIT  initialisiert mehrere Vorgaenge, z.B. Dekade, Relais etc... )
+
+( DINI  initialisiert die Dekade  )
+
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+( Datei : HF4.SL2  )
+
+HEX
+0 VARIABLE TIME# 4 ALLOT  ( time Eingabebuffer )
+0 VARIABLE FREQUNZ3       ( Frequnz Intervallzaehler )
+00 VARIABLE RAMADR        ( Ram Addresse ab wo Zaehlraten abgespeichern )
+00 VARIABLE PARADR	  ( Parameter Ramfeld  )
+8800	CONSTANT FREADR	  ( Frequenz BCD Feld )
+8C00	CONSTANT UAMADR	  ( Untergrund Buffer )
+00 VARIABLE ZAEHLC	  ( adr fuer Asciikonvertierung )
+00 VARIABLE RAMADR1	  ( adr ab wo Datensatz fuer CONVERT angelegt wird )
+ 
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+( +++  Flourozenz Zaehler Anzeige                                     +++ )
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+( INPUT11  steuert TIME# Eingabe )
+
+( INTIME   steuert Eingabe der Parameter )
+
+( PR-AENDER : Kommentar der Aenderungen im Eingabefeld Nr.1,..,5 )
+
+( AENDER    : steuert die Aenderungen )
+
+( FBCD> : BCD kodierte Frequnzen ins Ram Feld abspeichern )
+
+( SHOW-TIME : Zeige Gesamtmesszeit an )
+
+( D/SIGN : DUP 0< ;)
+
+( N#>Y : wandle Zaehlrate um in Y Koordinate fuer Graphik )
+( n1 n2  --  Y )
+
+( FRE>X wandle Frequnz um in X Koordinate fuer Graphik )
+( n1 --  X )
+Š( DOTXY setzt ein Pixel im Koordinaten Kreuz an der Stelle x y )
+( x y  --  )
+
+( ZHOL Hole Zaehlerrate vom Flourozenz Zaehler )
+(  -- n1 n2 )
+
+
+( ZF : dotxy von Zaehlrate und Frequnz )
+( n1 n2 n3 --      )
+
+( INITZ   : Initialisierung von FLUO-Zaehler, Latch und Cursor )
+
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+( ++  Messwerte auf Diskette abspeichern.                              ++ )
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+( RAMHOL hole n-te Zaehlerrate aus Rambereich        )
+( n -- n1 n2  )  
+
+( UAMHOL hole n-te Untergrundrate von Rambereich )
+( n  -- n1 n2 )
+ 
+( SUAN zeige mittlere Untergrundzaehlrate an )
+
+( PARA>RAM Uebertrage Eingabe Parameter in Ramfeld das spaeter )
+( auf Diskette abgespeichert wird .      )
+
+( RAM>PARA Uebertrage Werte von Ramfeld in die Parameter )
+ 
+( MASSI Datei eroeffnen zum Einlesen, f=1 wenn nicht erfolgreich  )
+( -- f )
+
+( MASSO Datei eroeffnen zum Abspeichern )
+
+( DOS! speicher n mal 128 Byte ab 32768 auf Diskette ab  )
+( n  --   )
+
+( DONE speichert 8 K ab )
+
+( RAM>MASS speicher 8 K ab 32768 auf Diskette ab )
+
+( MASS>RAM hole 8 K von Diskette [ f -- f ] )
+
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+( ++  Messwerte auf Ascii konvertieren & auf Diskette abspeichern.     ++ )
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+( DOS!! speichert n mal 128 Byte ab RAMADR1 auf Diskette ab )
+( n  --  )
+
+( INITCONVERT steuert PARA>RAM )
+
+( STOR1	: Hilfsvariablen ZAEHLC wird abgespeichert )
+
+( STOR2	:                                )
+
+( COUNTFLO :                             )
+
+( INHALTPARA : speichert die Parameter ab )
+(              Startfrequenz , Punktabstand , Messpunktanzahl )
+(              Messzeit , gemessene Zeilen )Š
+( WORK	: steuert INHALTPARA COUNTFLO )
+
+( ASCII Datei eroeffnen zum Abspeichern der Ascii Zeichen )
+
+( ASCI2	steuert das abspeichern mittels WORK )
+
+( CONVERT eingelesene Messung Ascii konvertieren )
+
+( TEXTOUT Textausgabe auf Tvi )
+ 	
+( TEXTIN Texteingabe uber Tvi )
+
+( MESSGRAPHIK zeige Messwerte auf Graphikschirm )
+(             mit Werten aus Parameterfeld an   )
+
+( ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+     
+( Datei : HF5.SL2  )
+
+0 VARIABLE LFLAG	( Flg=1 Laser setzen )
+0 VARIABLE XN		( Laufindex fuer Anzeige waehrend Messung )
+0 VARIABLE AUX1	2 ALLOT	( Hilfszellen fuer Berechnung von AMP,MFX,SIG )
+0 VARIABLE AUX2 2 ALLOT
+0 VARIABLE AUX3 2 ALLOT
+0 VARIABLE AMP  2 ALLOT	( Amplitude )
+0 VARIABLE MFX  2 ALLOT ( Mitte )
+0 VARIABLE SIG  2 ALLOT ( Breite )
+
+( ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+( +++  Berechnung von Amplitude,Breite und Mitte der Messkurve       +++ )
+( ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+( STARW1 , STARW :          siehe oben      )
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+( +++  Hochfrequnz Flourozenz Messung                                 +++ )
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+( INITRAM   loeschendes RAM-Bereichs  )
+
+( QKEY Abfrage nach den Tasten CR,Q                )
+(      es werden dann entsprechende Flags gesetzt  )
+
+( ANZEIGEN Pruefe ob neuer Messpunkt vorhanden, )
+(          wenn ja zeige diesen auf Graphikschirm an )
+
+( IN-ALL1 Eingabe aller Parameter )
+
+( INIT-ALL  Initialisierungsroutine )
+
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+( +++  Dekadensetz Unterprogramm                                      +++ )
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+( FREQ2AN zeige FREQ2 Frequnzintervall an   )
+
+( FREQ1AN aehnlich zu obigem Wort )
+
+( INFREQ1 Frequenz Eingabe fuer Menue2    )
+Š( INFREQ2 Frequenzintervall Eingabe       )
+
+( PAR2AN :                                )
+
+( AENDER2 Dekade/Laser eingabe wenn Parameterfeld von Menue2 gefuellt war  )
+
+( PR-OPTIONS2 Optionen fuer Dekadensetz Programm     )
+
+( IN-ALL2 steuert LRUN1 PR-OPTIONS2 INFREQ1 INFREQ2 )
+
+( DEKADESUB Dekade/Laser wird verstellt und Countdarstellung )
+
+( MESSEIN liest eine binaere Messdatei ein    )
+
+( MESSAUS speichert eine binaere Messdatei ab )
+
+( HF-RUNX Hauptzyklus fuer Anzeige der Messwerte                )
+
+( SOLDB mache weiter mit QBUF Zeilenblock )
+
+( SOLDA :                                 )
+	
+( HF-RUN : steuert die HF-Messung )
+
+( PR-OPTIONS Optionmaske fuer Hauptmenue  )
+
+( INIT-TVI Televideo wird fuer Hauptmenue vorbereitet )
+
+( INIT-ALL1 initialisiert Gesamtapparatur am Anfang )
+(           init HF-Dekade, Relais, Tvi init Flouro Zaehler )
+
+( INITM initialisiere Parameter fuer neue Messung   )
+(       HF1,UAN1,UAN2,ZAN loeschen )
+
+( HF-UMENUE Unter Menue fuer HF1-RUN )
+  
+
+( HF1-RUN Fuehre HF-Messung durch mit alten )
+(         Messdaten + Parameter oder beginne eine neue Messung )
+
+( RUN	startet das gesamte HF-FLUO1-Programm )
+
+
