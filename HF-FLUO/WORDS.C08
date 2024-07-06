@@ -1,13 +1,13 @@
  
 		   ( ++++++++++++++++++++++++++++++ )
                    ( +++    Datei : WORDS.C08   +++ )
-		   ( +++    Stand : 13.3.86     +++ )
+		   ( +++    Stand : 13.03.1986  +++ )
 		   ( +++    Dokumentation : tf  +++ )
 		   ( ++++++++++++++++++++++++++++++ )
 
-( Diese Datei enthaelt alle FORTH-Worte aus dem Programm HF-FLUO1 von    )
-( U.Urmoneit. Die FORTH-Worte werden kurz erklaert und eventuelle STACK- )
-( manipulationen dokumentiert. )
+( Diese Datei enthaelt alle FORTH-Worte aus dem Programm HF-FLUO1 von )
+( Uwe Urmoneit. Die FORTH-Worte werden kurz erklaert und eventuelle   )
+( STACK-Manipulationen dokumentiert. )
 
 ( ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
 ( Datei : HF1.SL2 )
