@@ -803,5 +803,3 @@ RAMADR	EQU	8000H		;Ringbuffer fuer Zaehlraten
 ;
 	END	ANF
 
-
-
