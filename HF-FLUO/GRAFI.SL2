@@ -1,0 +1,45 @@
+
+
+
+( ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+( ++ Programm HF-FLUO1                                   16.07.1985          )
+(   ********             GRAPHIC-ROUTINES IN FORTH                   ******* )
+
+DECIMAL
+
+0 VARIABLE X1
+0 VARIABLE Y1
+0 VARIABLE Z1
+
+( y koordinate , x koordinate --                            )
+( setzt den cursor an x,y                                   )
+:  SETCUR   Y1 ! X1 !   X1 Y1 (SETCUR) ;  
+
+( n[0,1,2]     --                                                )
+( setzt,loescht oder komplementiert den gesamten graphikspeicher )
+:  CLRDIS    X1 !  X1 (CLRDIS)  ;   
+
+( einzelne graphic character in den graphicspeicher schreiben )
+( ichr[0..127] , idir[-8..7] , isz[0..15] --                  ) 
+:  GDPCHR    X1 ! Y1 ! Z1 !  Z1 Y1 X1 (GDPCHR) ;
+
+
+( y koordinate , x koordinate --                             )
+( einzelne pixel koennen geschrieben werden                  )
+:  GDPDOT    Y1 ! X1 ! X1 Y1 (GDPDOT)  ; 
+
+( zeichnen von linien von aktuelle cursor pos bis y , x      )
+( y koordinate , x koordinate --                             )
+:  GDPLIN     Y1 ! X1 ! X1 Y1 (GDPLIN) ; ( X1 Y1   ---       )
+
+
+( Mit dieser Routine wird der Schriebmodus festgelegt, d.h.  )
+( ob eine Schreibaktivitaet setzend, komplementierend oder   )
+( austauschend durchgefuehrt wird .                          )
+( 1=komplementierend 2=loeschend 3=setzend                   )
+( n1 -- )
+:  GDPMOD      X1 ! X1 (GDPMOD) ;
+
+       
+END-OF-FILE
+
