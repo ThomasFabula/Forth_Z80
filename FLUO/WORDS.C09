@@ -1,0 +1,760 @@
+                 ( +++++++++++++++++++++++++++++ )
+                 ( +++   DATEI : WORDS.C09   +++ )
+                 ( +++   Stand : 07.03.86    +++ )
+		             ( +++   Dokumentation: tf   +++ )
+                 ( +++++++++++++++++++++++++++++ )
+
+
+( Diese Datei enthaelt alle FORTH-Worte des FLUO1-Programms von W.Kress    )
+( Die FORTH-Woerter werden kurz erklaert und eventuelle STACK-             )
+( Manipulationen dokumentiert.                                             ) 
+
+( ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+( DATEI : FLUO0.SL2 )
+
+
+( E8 CONSTANT CHANCW  = CTC   )
+( E1 CONSTANT SIOA    = SIO-A )
+
+( OPEN-SIOA  : counter, 9600 baud, channel reset , interrupt disabled    )
+(              interrupt vector , rx 8 bits , x16 clock,1 stop,no parity )
+(              rts on , OPEN-SIOA eroeffnet die SIO-A	                 )
+
+( VARIABLE KEO	= Hilfsvariable		)
+
+( KEYO : erwartet ein Zeichen von der SIO-A mit kurzer Warteschleife.	)
+(      Wird kein Zeichen empfangen --> n = 0 sonst ASCII-Zeichen	)
+(  -->  n )
+
+( KEYA : erwartet ein Zeichen von der SIO-A mit endloser Warteschleife	)
+(  -->  n )
+
+( EMITA :  sendet ein Zeichen n aus der SIO-A  [ --> n ]  )
+
+( *************************** Graphikroutinen **************************** )
+( siehe GLIB								   )
+
+( VARIABLE X1,Y1,Z1 )
+
+(  GDPBLK   :  X1 -->	     )
+(  GDPMOD   :  X1 -->	     )
+(  SETCUR   :  X1 Y1  -->    )
+(  CLRDIS   :  X1 -->	     )
+(  GDPCHR   :  Z1 Y1 X1 -->  )
+(  GDPPAN   :  X1 Y1 -->     )
+(  GDPDOT   :  X1 Y1 -->     )
+(  GDPLIN   :  X1 Y1 -->     )
+(  GDPCI    :  X1 Y1 -->     )
+
+( ******************* Arithmetic Processor Am 9511A ********************** )
+
+( VARIABLE E, F  )
+
+( BUSY   : f=1 wenn Bit 7 = 0		)
+( ARI16! : nn --> ARI DATA		) 
+( ARI!   : nn --> ARI DATA mit BUSY	)
+( ARI!!  : nn nn --> ARI	DATA mit BUSY	)
+( ARI16@ : ARI DATA --> nn		)  
+( ARI@   :                              )
+( ARI@@  : ARI DATA --> nn nn 		)
+( ARIC   : Gibt Komando an ARI		)
+( SIGN?  : ARI-Vorzeichen ? )
+( DUPP   : DUP ARISTACK )
+( DROPP  : DROP TOS	)
+( SWAPP  : SWAP ARISTACK )
+( DSUB   : NOS-TOS-->TOS )
+( MUL/DIV multipliziert bzw.dividiert die Zahl auf TOP of ARI-stack	)
+( 	  mit n.Das Ergebnis befindet sich auf TOP of ARI-stack		)
+
+( ***************** Progamm fuer Blocktransfer zum Mops ******************** )
+
+( VARIABLE F =  Fehlerzaehler 	)
+	
+( READSEQ : read sequential	)
+
+( BLOCK : Gibt FFH und DMA-Bereich aus. )
+
+( VERG  : Zeichenvergleich vom Stack mit DMA )
+
+( TEST  : Daten einlesen und VERG    )
+
+( TRAN  : Datei lesen		     )
+
+( MFCB  : FCB fuer MOPS.COM          )
+ 
+( TRANS : Reset	, Datei eroeffnen   )
+
+( CBLOCK transferiert das Maschinenprogramm MOPS.COM zum Z80-Laser-	)
+(	 interface.Anschliessend wird der Datensatz ueberprueft.In	)
+(	 Variable ist der Fehlerkode enthalten.				)
+
+( ********************************************************************* )
+
+( Datei : FLUO1.SL2 )
+ 
+( HEX - Konstanten : )
+0106 CONSTANT BUFM	( Zeichenbuffer 				)
+0104 CONSTANT BUFE	(	"					)
+01BA CONSTANT FENA	( Zahl der Messzyklen bis Fensteranfang		)
+01BC CONSTANT FENB	( Zahl der Messzyklen innerhalb des Fensters	)
+01BE CONSTANT SSTOP	( Gesamtzahl der Messzyklen des Scans		)
+01C0 CONSTANT ZYKN	( n+1,n = Anzahl der Eichmarken/Zyklus	[MN5]	)
+01C1 CONSTANT TSTOP	( 1 = Terminalstop				)
+01B8 CONSTANT ZAEHL 	( Zykluszaehler					)
+0120 CONSTANT ZYKA	( Speicherbereich fuer Zyklusfolgen,Kanal A	) 
+014A CONSTANT ZYKB	(         "        "         "     ,Kanal B	) 
+0174 CONSTANT ZYKC	(         "        "         "     ,Kanal C	)
+019C CONSTANT TIME	( Teiler fuer Timer				)
+01A5 CONSTANT TIMEA	( Speicherbereich fuer Zykluszeiten,Kanal A	)
+01AB CONSTANT TIMEB	(         "        "         "     ,Kanal B	)  
+01B1 CONSTANT TIMEC	(         "        "         "     ,Kanal C	)
+019D CONSTANT TEIL	( Nachteiler bzw. Vorteiler s.TIMERK		) 
+0118 CONSTANT BLAF	( aktueler 16 K-Block fuer FLUO,s.TIMERK	)
+0119 CONSTANT BLZAF	( aktuelle Adr. fuer Fluoreszenszaehlrate	)
+011B CONSTANT BLAD	( aktueller 16K-Block fuer Graphik		) 
+01C2 CONSTANT BLADR	( enthaelt aktuellen 16 K-Block			)
+01C3 CONSTANT BLZAE	( Adresse fuer aktuelle Eichmarkenzaehlrate	)
+01C5 CONSTANT LEER	( temporaler Speicherplatz fuer die Anzahl	)
+01C6 CONSTANT VOLL	( der Eichmarken die unterhalb bzw. oberhalb	)
+			( des Untergrund liegen				)
+01C7 CONSTANT LEERA	( aktuelle Adresse fuer den endgueltigen 	)
+01C9 CONSTANT VOLLA	( Speicherplatz der Leerschritte bzw. der	)
+			( Anzahl der hintereinander aufgenommenen Eich- )
+			( markenzaehlraten				)
+01CB CONSTANT UNTE	( Untergrund					)
+01CD CONSTANT ANFE	( 0= 1.Eichmarkenzaehlrate liegt unter dem	)
+			( Untergrund [ s. Interruptroutine ]		)
+
+( VARIABLE HFD, HFE, HFF, HV, HA = Hilfsvariable			)
+
+0 VARIABLE TEILER  	( Teilungsfaktor fuers Graphikdisplay		)
+0 VARIABLE MHZA 	( Anfangswert der aktuellen Frequenzachse	)
+0 VARIABLE MHZP		( Differenz zweier Frequenzwerte [ Graphik ]	)
+0 VARIABLE OEXP 	( Exponent der Ordinaten			)
+0 VARIABLE OMAN 	( Mantisse der Ordinaten			)
+0 VARIABLE XZAE 	( Flouoreszenspunktzaehler Graphik		)
+0 VARIABLE FLOU@        ( akt. Speicherplatz auszugebender Messwerte    )
+0 VARIABLE MN1 		( Scanweite Laser / 10	[ MHz ]			)
+0 VARIABLE MN2 		( Scanweite Messung / 10 [ MHz ]		)
+0 VARIABLE MN3 		( Startwert des Scans fuer Menuetafel		)
+0 VARIABLE MN4 		( Flouoreszenszeit / 10 [ msec ]		)
+0 VARIABLE MN5 		( Schrittweite * 2 [ MHz ]			)
+0 VARIABLE MN6 		( Verzoegerungszeit [ msec ]			)
+0 VARIABLE MN7 		( Fensteranfang / 100 [ MHz ]			)
+0 VARIABLE MN8		( Fensterweite / 100 [ MHz ]			)
+0 VARIABLE M@1 		( Hilfsvariable fuer M@				)
+0 VARIABLE MOP1 	( Integrationskonstante fuers Laserinterface	)
+0 VARIABLE MOP2		( Startwert fuers Laserinterface		)
+0 VARIABLE MA1		( Anzahl der Zeichen vor der Maske		)
+0 VARIABLE MA2		( Anzahl der Maskenzeichen			)
+0 VARIABLE MAZ		( Zaehler fuer Cursorstand			)
+0 VARIABLE COR		( Hilfsvariable fuer Rueckschritt im Menue	)
+0 VARIABLE ZRK		( Hilfsvariable fuer Cursor { --> }		) 
+
+( KOM1 - KOM6, KOMS : Kommentare )
+
+( ZR steuert die Cursortaste { --> }					)
+
+(  n1 -->		)
+( Z! speichert gueltige ASCII-Zeichen im entsprechenden Buffer ab	)
+( n1 = ASCII-Zeichen							)
+
+( ZL steuert die Cusortaste { <-- }					)
+
+( NULL belegt den Eingabebuffer mit ASCII {48}				)
+
+( CORI speichert 0 nach COR						)
+
+( n1 n2 --> f		)
+( Z@ ist der Verteiler fuer die Cursormaske.Die Tastatur wird abge-	)
+( fragt und nach entsprechenden Steuerzeichen verzweigt.n1=Anzahl der 	)
+( Maskenzeichen ,n2 Anzahl der Zeichen vor der Maske			)
+( ASCII {48 -->57} --> Z! ; ASCII {8} --> ZL ; ASCII {13} --> NULL	)
+( ASCII {12} --> ZR ; ASCII {11} --> CORI				)
+( wenn f=1 ist,befinden sich die Eingabewerte im entsprechenden Buffer	)
+  
+( n1 n2 --> [n3] [n4] f	) 
+( M@ ist ene Cursormaske fuer die Tastaturabfrage.n1=Anzahl der Zeichen,)
+( die uebersprungen werden muessen[Maske].n2=Anzahl der Zeichen vor der	)
+( Maske.1 Zeichen kann hinter der Maske gelesen werden.f=1 Zeichen ok,	)
+( kein Rueckschritt im Menue . f=0 Wert fuer Rueckschritt im Menue	)
+( n3 und n4 werden dann nicht auf den Stapel abgelegt.			)
+( n4 = Wert hinter Maske,wenn n1>0 sonst Wert vor Maske			)
+( n3 = Wert vor der Maske,wenn n1>0	Beispiel einer Maske:		)  
+( n1=5,n2=4 --> {Maske=5 Zeichen}            ____Maske_			)
+
+( n1 n2 -->		)
+( CURS setzt den Cursor n1 = Zeile , n2 = Spalte			)
+
+( MNW gibt eine Warnung durch Bel und Display aus			)
+( MHZD gibt das Wort MHz an den Bildschirm aus				)
+( MSECD gibt das Wort msec an den Bildschirm aus			)
+( DEL loescht n1 Zeilen	 [ n1 -->   ]                                   )
+
+( MTEST sorgt fuer rechtsbuendige Darstellung im Menue , n1 = Zahl	)
+
+( DELW loescht Kommentar Displaywarnung	)
+
+( SCAWL fragt die Scanweite des Lasers ab , MN1 = Scanweite L./10	)
+( Fehlermeldung : 2500 MHz > MN1 > 30000 MHz,Anzeige in der Menuetafel	)
+
+( ANZ2 gibt den eingegebenen Wert neu ans Display aus			) 
+
+( SCAW fragt die Scanweite der Messung  ab MN2 = Scanweite / 10		) 
+( Fehlermeldung : MN2 > MN1 , MN2 <= 0 , MN2 > 30000 MHz		)
+( Anzeige in der Menuetafel						)
+
+(  n1 --> 		)
+( MOPS2 ermittelt den moeglichen Startwert MN3 fuers Display und den 	)
+( Startwert fuer den MOPS MOP2. n1 = Eingabewert 			)
+( MOP2 = n1 * 4096 / MN1              { Integer }			)
+( MN3 = MOP2 * MN1 * 10 / 4096	      { Integer }			)
+
+( ANZ3 gibt den eingebenen Wert neu ans Display aus			)
+
+( SCST fragt den Startwert der Messung ab , siehe MOPS2			) 
+( Fehlermeldung : MN3 >= MN1-MN2 , Anzeige in Menuetafel		)
+
+( ANZ4,5,0 geben die Eingabewerte neu ans Display aus			)
+
+( FEN1 fragt die Fensterweite ab , MN8 = Fensterweite/100 gueltige	)
+( Werte sind : Scanweite - Fensteranfang > Fensterweite			)
+( sonst Fehlermeldung , Anzeige in Menuetafel				)
+
+( FEN2 fragt den Fensteranfang ab , MN7 = Fensteranfang/100 gueltige	)
+( Werte sind : Scanweite - 100 Mhz > Fensteranfang sonst Fehlermeldung	)
+( Anzeige in Menuetafel							)
+
+( ANZ6 gibt den Eingabewert neu ans Display aus				)
+
+( SCSC fragt die Schrittweite in MHz ab.Gueltige Werte sind 0.5 MHz bis	)
+( 9,5 Mhz in 0.5 MHz Schritten.30000 Messpunkte sind das Limit.	An-     )
+( scliessend erfolgt Anzeige in der Menuetafel				)
+
+( ANZ7 gibt den Eingabewert neu ans Display aus				)
+
+( SCZEI fragt die Floureszenszeit in msec ab.Gueltigkeitsbereich ist :	)
+( 10 - 990 msec sonst Fehlermeldung , Anzeige in der Menuetafel		)
+
+( MOPS1 berechnet die Integrationskonstante fuer das Laserinterface	)
+( MOP1 = 2048 * 5000 / {Scanbereich Laser}				)
+
+( VERZ ermittelt die Verzoegerungszeit [ msec ] --> MN6			)
+( Fluoreszenszeit : 10 - 200 msec --> MN6 = 1				)
+( 210 - 400 msec --> MN6 = 2 , 410 - 990 msec --> MN6 = 5		)
+
+( SCWEI berechnet die Gesamtzzahl der Messzyklen des Scans		)
+
+( KOORD gibt ein Koordinatensystem an den Bildschirm aus		)
+  
+( YTESTN sorgt fuer rechtsbuendige Beschriftung,n1 = Stringanzahl	)
+
+( n1 -->		)
+( YCHR wandelt n in ASCII-Zeichen um und gibt sie an Graphikschirm aus	)
+( n1 = auszugebene Zahl							)
+
+( n1 --> n1 n2 n3 n4 n5	) 
+( YDIV erzeugt alle Countunterteilungen	fuer die Ordinate n1 bis n5	)
+
+( n1 n2  -->		)
+( YDISA gibt Ordinatenkopf aus ; n1 = Mantisse ; n2 = Exponent 		)
+
+( n1 -- n5 -->		)
+( YDISB gibt 5 Werte und die Null an die Ordinate aus			)
+
+( n1 n2 -->		)
+( YDIS2 gibt alle Ordinatenwerte auf Graphigschirm aus			)
+( n1 = Mantisse, n2 = Exponent						)
+
+( ANZ8 gibt den Eingabewert neu ans Display aus				)
+
+( TESTDISM ermittelt die moeglichen Ordinatenwerte und sorgt dafuer,	)
+( 	   dass alle Stellen [ max 4 ] ausgenutzt werden.		)
+ 
+( n1 n2 --> f		)
+( T6MIL testet die Eingabe n1,n2 [ Mantisse,Exponent] und ermittelt	)
+(	den Teiler							)
+
+( YDIS1 erwartet Mantisse u. Exponent ueber Tastatur 			)
+( Gueltigkeitsbereich: 200 - 6000000					)
+( sonst Fehlermeldung , Anzeige in der Menuetafel			)
+
+(  --> n1.....n7	)
+( XPLUS erzeugt alle Abzissenwerte n1 bis n7				)
+
+( XTEST testet die Stringanzahl n1 u. setzt den Cursor entsprechend	)
+
+( n1 n2 -->		)
+( XCHR gibt Zahl n1 mittenzentriert auf Graphikschirm aus { n1<=30000 }	)
+( n2 = Cursorposition							)
+
+( XDIS gibt die Abzissenwerte n1 bis n7 auf Graphikschirm aus und	)
+( legt die naechste jeweilige Anfangsposition in MHZA ab		)
+
+( DISP setzt Koordinatensystem mit Anfangsparametern			)
+
+( n1...n4 --> 		) 
+( ARIDIV liest n1 bis n4 { 32 Bit Zahl} in den Aritmethikprozessor ein	)
+( und dividiert sie durch TEILER					)
+
+(  --> n1 n2 n3		) 
+( ZAEHL@ liest Flouoreszenzzaehler aus n1 = low Byte ,n2,n3		)
+
+( -->  {n1} f		)
+( DIVTEST testet das Divisionsergebnis E , 0 <= E <= 200 --> n1 1	)
+( sonst --> 0								)
+
+( XNEW initialisiert das Display neu					)
+ 
+( BLOCKF schaltet auf den naechsten 16 K Block um			)
+
+( FLOUD verwaltet die Messwertausgabe und steuert die Blockumschaltung 	)
+( und die Displayumschaltung						)
+
+( DISP? ruft nur dann FLOUD auf wenn aktuelle Messergebnisse vorliegen	)
+ 
+( FENW n1 = Anzahl der Fensterzyklen					)
+
+( FEN3 berechnet die Anzahl der Messpunkte bis Fensteranfang --> FENA	)
+( ist kein Fenster gewaehlt FFFFH --> FENA, Displaykorrektur		)
+
+( FEN4 berechnet die Anzahl der Messzyklen innerhalb des Fensters	)
+( --> FENB ,ist kein Fenster gewaehlt FFFFH --> FENB,Displaykorrektur	) 
+
+( SCW1 korrigiert die Scanweite in der Menuetafel			)
+
+( MZEIT ermitelt die Messzeit des Scans und zeigt sie im Menue an.	)
+( T = Messzeit, SC = Anzahl der gesamten Messzyklen [ SSTOP ]	 	)
+( N = Anzahl der Eichmarken zwischen 2 Flouoreszenspunkten  N = S/0,5	)
+( FZ = Fluoreszenszeit [ MN4 * 10 ] , EZ = 10 msec			)
+( VZ = Verzoegerungszeit [ MN6 ] , FW = Fensterweite { FENW }		)
+( T = SC*{ FZ+N*EZ+{ N+1 }*VZ }-FW*{ N*EZ+{ N+2 }*VZ }			) 
+
+( PARA1 setzt alle Vorteiler auf 1					)
+( PARA2 speichert die Verzoegerungszeit in alle Kanaele			)
+( PARA3 ermittelt die Zyklusfolge fuer Kanal 1				)
+( PARA4 ermittelt die Zyklusfolge fuer Kanal 2				)
+( PARA5 speichert Zyklusfolge fuer Kanal 3 ab				)
+( PARA6 1 msec ist kleinste Zeitaufloesung	)
+
+(  --> n1		)
+( ZEIT@ n1 = Teiler fuer Flouoreszenszeit					)
+
+( ZEIT1-ZEIT3 berechnen die Zykluszeiten aller Kanaele und speichern	)
+( diese in die entsprechenden Zeitregister .				)
+
+( MESSF setzt Graphikanfangsparameter u.Messdatenbloecke u.TSTOP	)
+
+( -16384=C000H )
+( -12288=D000H )
+( MESSE setzt Eichmarkenbloecke u. Voll-bzw.Leerschrittadressen		)
+
+( FEN5 setzt Fensterparameter fuer Graphikneuaufbau bei Fenstermitte	)
+
+( PARAMET bereitet alle Parameter fuer den Scan vor			)
+
+( DISF baut Graphik bei Fensterende neu Auf				)
+ 
+( BREAKS setzt Parameter fuer Scanabbruch 				) 
+
+( RESTART setzt Parameter fuer Scanneustart				)
+
+( DISPMAX gibt das darauffolgende Spektrum mit neuen Dislaymaxwert aus	)
+
+( BREAK steuert Scanstopp,Neustart und Displaymaxaenderung		)
+
+( DDIS steuert Grafikausgabe,Scanende u.Scanstopp			)
+ 
+( EICHENDE korigiert den Eichmarkenparametersatz fuer Scanende		)
+
+( GO setzt die Parameter fuer den Scan ,startet den Scan,steuert die 	)
+(    Graphik,beendet den Scan und korigiert den Eichmarkenparametersatz )
+
+( DISP1 aendert das Koordinatensystem auf aktuelle Schrittweite 	) 
+
+( AEND1 fragt die Tastatur ab und arbeitet die gewuenschte Aenderung	)
+(	im Menue ab.							)
+
+( AEND steuert die Aenderungsabfrage und korrigiert Parameter,		)
+(      die sich aus der gewuenschten Aenderung ergeben.			)
+
+( INVERSE : Invertierungskommando s.u.	)
+( NORMAL  : Normalmodus fuer Televideo	)
+
+( R2 , RN : Display-Maskensteuerung )
+
+( DISPLAY baut die Menuemaske auf siehe auch Televideobeschreibung	)
+
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+( DATEI : FLUO2.SL2 )
+
+0 VARIABLE EICHZAEHL		( Speicherplatz der aktuelen Eichmarke  )
+0 VARIABLE EICHTEILER		( Eichmarkenteiler			)
+0 VARIABLE EXZAE		( Kursorposition fuer Eichmarken	)
+0 VARIABLE EICHTESTV		( Summe der Vollschritte aktuell	)
+0 VARIABLE EICHTESTL		( Summe der Leerschritte aktuell	)
+0 VARIABLE VOLLZAE		( Adr. der aktuellen Vollschritte	)
+0 VARIABLE LEERZAE		( Adr. der aktuellen Leerschritte	)
+0 VARIABLE LOV			( Hilfsvariable 0= -> leer ; 1= -> voll	)
+
+( VORBE	: Vorbereitung )
+
+( TESTSUB1 : n1 --> n2 f		)
+( Test auf gewuenschten Startwert ; n1 = Startwert [MHz] * 2		)
+( n2 = voezeichenbehafteter Voll-bzw.Leerschritteuebertrag,		)
+( f = 1 -> Uebertrag , Operation wird doppelt genau durchgefuehrt	)
+
+( TESTSUB0 : n1 --> n2 f		)
+( siehe TESTSUB1							)
+
+( n1 --> n2		)
+( EICHAUS! setzt die Parameter EICHTESTV , VOLLZAE und n2		)
+( n1 = vorzeichenbehafteter Vollschritteuebertrag , n2 = Uebertrag	)
+
+( n1 --> n2		)
+( EICHAUS0 setzt die Parameter n2 = Leerschritteuebertrag und		)
+( LEERZAE , n1 = vorzeichenbehafteter Leerschritteuebertrag		)
+
+( EICHSUCH1 : n1 --> n2 n3		)
+( n1 = virtueller Eichmarkenpunkt = [ HFE * 2 ]				)
+( n2 = Anzahl der ersten Leer-bzw.Vollschritte				)
+( n3 = 0 --> n2 = Leerschritte o. n3 = 1 --> n2 = Vollschritte		)
+
+( EICHSUCH0 : n1 --> n2 n3		)
+( n1 = virtueller Eichmarkenpunkt = [ HFE * 2 ]				)
+( n2 = Anzahl der ersten Leer-bzw.Vollschritte				)
+( n3 = 0 --> n2 = Leerschritt o. n3 = 1 --> n2 = Vollschritt		)
+
+(  --> n1 n2		)
+( EICHSUCH ermittelelt die Anzahl der ersten anzuzeigenden Leer-bzw.	)
+(	   Vollschritte n1 = Anzahl der Leer-bzw.Vollschritte		)
+(    	   n2 = 0 --> n1 = Leerschritte o. n2 = 1 --> n1 = Vollschritte )
+(	   die darauffolgenden Leer-bzw.Vollschritte werden durch die	)
+(	   Adresse in VOLLZAE bzw. LEERZAE bestimmt. EICHTESTV * 2 +	)
+(	   32768 enthaelt die Adresse der naechsten Eichmarkenrate.	)  
+
+( EBANK : Bankumschaltung fuer Eich	)
+
+( EICHZAE@2 holt die aktuelle Eichmarkenzaehlrate n auf den Stack	)
+
+( EICHZAE@1 ermittelt den Speicherplatz der aktuellen Eichmarkenanzeige )    
+
+( EICHDIV : teilt den Stackinhalt durch EICHTEILER )
+
+( EDISV bringt den ersten Eichmarkenteil zur Anzeige			)
+
+( EDISPV bringt die volstaendigen Eichmarken zur Anzeige		)
+ 
+( EDISPL zeigt einen vollstaendigen Leerbereich zwischen 2 Eichmarken an )
+
+( EICH0 baut den Rest des Eichmarkenspektrums beginnend mit 		)
+(  	Leerschritten auf.						)
+
+( EICH1 baut den Rest des Eichmarkenspektrums beginnend mit		)
+(	Vollschritten auf.						)
+
+( EICHDIS steuert das gesamte Eichmarkendisplay.			)
+
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+( Datei : FLUO3.SL2  --- SPEKTRUMANALYSE )
+
+0 VARIABLE TEILERZ	( Teiler fuer Zoom				)
+
+( ARIOFFDIV teilt Zaehlrate durch Teiler unter Beruecksichtigung	)
+(	    des gewaehlten Offsets.Ergebnis -- TOP of ARI-stack		)
+
+0 VARIABLE SUMFL	( Summe der aufgenomenen Fluoreszenspunkte	)
+0 VARIABLE ADD		( Offset fuers Display				)
+0 VARIABLE ABST		( Abstand der Abszissenwerte			)
+0 VARIABLE OMANA	( Mantisse alt					)
+0 VARIABLE OEXPA	( Exponent alt					)
+0 VARIABLE MN5ALT	( Schrittweite alt				)
+0 VARIABLE EIN		( Eichmarkendisplay ein/aus			)
+
+(  --->   [n1]   f		) 
+( OFFDIVTEST testet das Divisionsergebnis mit entsprechendem Offset	)
+(	     0 <= Ergenis <= 200 --> Ergenis,1 sonst --> 0		)
+
+( FLDIS bringt den durch die Parameter festgelegten Messpunkt zur	)
+(       Anzeige . Parameter sind : ADD,FLOU@,XZAE,BLAD .		)
+(	Gegebenenfalls wird der naechste Speicherblock eingeblendet	)
+
+( n1 n2 -->		)
+( DOT	bringt die moegliche Anzahl der Messpunkte zur Anzeige .	)
+(	n1 = entsprechender Messwert					)
+(	n2 = Scanende [ZAEHL] oder Fensteranfang/ende [FENA,FENB]	)
+
+( n -->			)
+( DOTH	ermittelt den Speicherplatz des gewuenschten Startwertes	)
+(       und schaltet den entsprechenden Speicherblock ein		)
+(       n = entsprechender Messwert					)
+
+( DOTA  :     n --> n		)
+( DOTB  :       --> 		)
+( DOTC 	:     n --> n		)
+( DOTA  = Speicherplatz des Messwertes vor oder ohne einem Fenster 	)
+( DOTB 	=        "	 "	"      hinter einem Fenster		)
+( DOTC  =        "       "      "      im Ueberlap eines Fensters	)
+(	n = entsprechender Messwert					) 
+
+( n1 --> n2		)
+( XDOT bestimmt den Anfang n1 [Mhz] des Displays fest			)
+(      n2 = entsprechender Messwert					)
+
+( ZAEHLMAX --> ARI )
+
+( ACHSTEIL : ACHSENTEILEINHEIT --> ARI )
+
+( ABSTAND ermittelt den Abszissenabstandswert -- ABST			)
+
+( n -->			)
+( YDO@ erzeugt alle Ordinatenwerte fuer die Graphik,n=Mantisse		)
+
+( n1 -- n6 -->		)
+( YDIS! gibt alle Ordinatenwerte n an Graphik aus			) 
+
+VARIABLE FENH	  ( restliche Anzahl der anzuzeigenden FLUO-punkte	)
+
+( M*/ : n -->		)
+( M/* : n -->		)
+
+( n -->		)
+( FENSTER? setzt entsprechende Parameter [ XZAE ] fuer den Werte- 	)
+(	   bereich innerhalb eines Fensters und dessen Ueberlaps	)
+(	   n = entsprechender Messwert ohne Fenster			)
+
+( FENENDE zeigt die moeglichen Punkte hinter dem Fenster an.		)
+
+( n1 -->		)
+( DOT!  steuert die Messwertanalyse .Es werden nur Punkte angezeigt,	)
+(	die ausserhalb eines gewaehlten Fensters liegen und innerhalb	)
+(	des aufgenommenen Spektrums. n1=Startwert [Mhz] 		)
+
+( ANAD	: Menueaufbau )
+
+( EICH?DIS bestimmt,ob die Eichmarken angezeigt werden.			)
+
+( DISPM gibt das Spektrum mit neuen Dislaymaxwert aus			)
+		     
+( STRTW gibt das Spektrum ab gewuenschtem Startwert aus			)
+
+( n -->			)
+( LINSET zeichnet eine Linie an gewuenschter Position n, 0 <= n <= 200	)
+
+( BALKEN steuert den oberen Balken beim Zoom				)
+
+( OFFSE steurt den unteren Balken beim Zoom bzw.Offset.			)
+
+( Bild wird nur dann neu aufge-   )
+( baut,wenn kein Offset o. Zoom   )
+( im vorherigen Display angezeigt )
+( wurde. )
+(	TEILERZ = TEILER * [ HFD - HFF ] / 200				)
+( ZOOM steuert den Zoom beim Graphikaufbau				)
+
+( Bildneuaufbau siehe ZOOM	)
+( OFFSET steuert den Offset beim Graphikaufbau				)
+
+( VORSCHRITT blaettert das Display eine Seite weiter [ = 600 Punkte ]    )
+
+( RUECKSCHRITT blaettert das Display eine Seite zurueck [ = 600 Punkte ] )
+
+( EICHMARKEN steuert die Eichmarkenanziege und bereitet die Parameter vor )
+ 
+( EICHVOR belegt das Ende des Eichmarkensatzes mit Dummywerten um 	)
+(	  zu verhindern das alte Eichmarken angezeigt werden koennen.	)
+
+( ANALY steuert Displayprogramm ueber Tastatur & bereitet alle Parameter vor )
+
+( ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+( Datei : FLUO4.SL2  ---  Datenkonvertierungsprogramm )
+
+( VARIABLE ZAEHLH, ZAEHLC, SUV, BANK =  Hilfsvariablen siehe Programm	)
+
+0 VARIABLE DOSFLAG
+
+( ++++++++++++++++++++++++  NEUE WORTE ++++++++++++++++++++++++++++++++ )
+( +++                                                               +++ )
+( +++ herumgewurschtelt am 7.3.86 von : H.Roeder & T. Fabula        +++ )
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+( NOT   : logisches Verneinen )
+( BEEP  : WARNTON AUSGEBEN )
+( BLUP  : loescheen der Fehlermeldungszeile )
+( DFERR : Fehlermeldung    )
+
+(  -->  f )
+( WRSQ  : Write sequential )
+
+(  -->  f )
+( WRSQL  : Write sequential mit Verlassen einer DO...LOOP Schleife       )
+
+(  -->  f )
+( MKFL  : Make file )
+
+( n --> f )
+( FILEAB  : Datei ex. schon - Fehlermeldung )
+
+( NAMIN  : Dateinamen einlesen, B: default, BEEP bei ungueltigen )
+(          Steuerzeichen  )
+    
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+( SUMV ermittelt die Anzahl der abgespeicherten Eichmarkenzaehlraten	)
+
+( --> n		)
+( AVOLL/ALEER bestimmt die Anzahl n der abzuspeichernden Voll-bzw.Leer-	)
+(	      schritte eines Scans.					)
+ 
+( CONV2	: n -->			)
+( CONV3 : nn -->		)
+
+( ***  geaendertes Wort : )
+( n -->			)
+( DOS1! speichert n Sektoren ab Adresse 32768 sequentiell auf Diskette  )
+(       der DMA-Bereich wird dabei ueber das Datenfeld verschoben	)
+
+( n -->			)
+( DOS! siehe DOS1!							)
+
+( STOR1 speichert einen 16K-Block ab,wenn er voll ist			)
+
+( n1 n2 -->		)
+( STORE holt sich ab Adr.n1 die ASCII-Zeichen und speichert n2 Stueck   )
+(       ab.Jedes Zeichensequenz wird mit .CR abgesclossen.		)
+
+( BANKU	: Bankumschaltung		)
+
+( --> n1 n2		)
+( RATF@ holt den naechsten Fluoreszenswert und wandelt ihn in ASCII um	)
+( n1 = Startadresse des ASCII-Code  n2 = Anzahl der ASCII-Zeichen	)
+
+( DATAB speichert den Rest der Bank 24 auf Diskette			) 
+
+( n -->		)
+( STOR2 konvertiert die Zahl n und Speichert sie ab			)
+ 
+( --> n1 n2			)
+( FENST bestimmt die Fensterwerte n1 = Anzahl der Fluo-Leerschritte	)
+(	n2 = Anzahl der Messwerte bis Fensteranfang			)
+
+( *** geaendertes Wort : )
+( INHDAA speichert das Inhaltsverzeichnis auf Diskette.			)
+
+( FLUORES konvertiert und speichert alle FLUO-Zaehraten ab.		)
+
+( RATE@ konvertiert die entsprechenden Eichmarkenzaehlraten in ASCII	)
+
+( EICHMARK speichert alle Eichmarkenzaehlraten auf Diskette 		)
+
+( RATEV/L konvertiert die entsprechenden Voll-bzw.Leerschritte in ASCII	)
+(	  Code n1 = Startadresse des Code n2 = Anzahl der ASCII-Zeichen )
+
+( EICHV/L speichert alle Voll-bzw.Leerschritte auf Diskette		) 
+
+( DONE speichert den gesamten Datensatz auf Diskette ab.		)
+
+( *** geaendertes Wort : )
+( ASCI1 ist die Dateieroeffnungsprozedur fuer die ASCII-Datei		)
+
+( *** geaendertes Wort : )	
+( ASCI2 ist die Abschlussprozedur fuer die ASCII-Datei			)
+
+( CONVERT fasst die gesamte Konvertierungsroutine zusammen.		)
+
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+( Datei : FLUO5.SL2  ---> Dateisicherungsprogramm	)
+
+
+( FLB	: Anzahl der vollen Fluo-Bloecke )
+( FLZ	:    "   der restlichen Sektoren ) 
+( EIB   :    "   der vollen Eich-Bloecke )
+( EIZ	:    "   der restlichen Sektoren )
+( LEERZ	:    "   der Leerschrittsektoren )
+( VOLLZ	:    "   der Vollschrittsektoren )
+( Entsprechende Parameter werden dem Stack uebergeben.			 )
+
+(   -->  n1 n2...)
+( INHALT1 holt das Inhaltsverzeichnis fuer den Datenfile auf den Stack	  ) 
+
+( *** geaendertes Wort : )
+( n  -->   f     )
+( BLOCK! schreibt n Sektoren des eingeschalteten Blocks auf Diskette        )
+
+( n  -->	    )
+( BLOCK@ schreibt n Sektoren von Diskette in den durch BANK eingeschalteten )
+( 16 K-Block								    )
+
+( *** geaendertes Wort : )
+( FILE!2 speichert Messdaten ab auf Diskette )
+
+( --> n1 --- n24	)
+( INHALT2 holt Inhaltsverzeichnis aus dem DMA-Bereich			)
+
+( n1 --- n20 -->	)
+( INH@ speichert die entsprechenden Parameter ab oder bringt sie	)
+(      im Menue zur Anzeige.						)
+
+( FILE@2 : liest die Messdaten von Diskette ein )
+
+( FILEDIS ist Eroeffnungsprozedur fuer FILE.F1B				  )
+
+( *** geaendertes Wort : ) 
+(  -->   f  )
+( FILEFCB : Name ausgeben, FCB anlegen , Datei eroeffnen )
+
+( FILE!1 speichert den angemeldeten Datensatz auf Diskette		  ) 
+
+( DELTXT loescht Text im Speicher					  )
+
+VARIABLE ANACON
+
+( FILE@ liesst gewuenschte Datei in den Rechner ein			 )
+
+( TEXT ist fuer die Kommentarzeile zustaendig )
+
+0 VARIABLE DAT
+
+( DATSAVE steuert die gesamte Dateisicherungsroutine.			)
+
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+( Datei : FLUO6.SL2 )
+
+( INITFL eroeffnet Port 1 und bereitet den FLUO-Zaehler vor.		)
+( INITEI eroeffnet Port 2 und bereitet den Eichmarkenzaehler vor.	)
+
+
+( SCMENUE : Aufbau des Untermenues )
+
+( *** geaendertes Wort : )
+( VORMENUE : Aufbau des Hauptmenues )
+	   	
+( VARIABLE IST = Hilfsvariable s.u.	)
+
+( SUMFLUO berechnet die Anzahl der aufgenommenen FLUO-Zaehlraten.	)
+
+( MOPS-> waehlt das Integrationsprogramm C092 des Z80-Laserinterfaces	)
+(	 an und uebergibt die Scanparameter.				)
+
+( SCANN ist die Scanneustartprozedur					)
+
+( SCAN steuert den ersten Scan nach Auswahl der Menueroutine SCAN.	)
+
+( MENUE2 steuert Menue 2 , siehe Anwender Flussdiagramm	  		)
+
+( INTFACE steuert den Programmtransfer zum Z80-Laserinterface.		)
+ 
+( UNTERG ziegt den aktuellen Eichmarkenuntergrund an und ermoeglicht	)
+(	 Aenderungen.							)
+
+( MENUE1 steuert das Startmenue,siehe Anwenderflussdiagramm		)
+
+( *** geaendertes Wort : )
+( RUN ist Start des ganzen Programms.					)
+ 
