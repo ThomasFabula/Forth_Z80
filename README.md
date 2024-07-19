@@ -1,6 +1,6 @@
 # Forth_Z80
 
-## Experimentelle Messprogramme für HF & LASER Spektroskopie
+## Messprogramme für HF & LASER Spektroskopie
 -  FLUO: Meßprogramme optische Laser-Spektroskopie Z80/CPM3 (früher C09-Programm DEC PDP-8)
 -  HF-FLUO: Meßprogramme RABI-ABMR Hochfrequenz-Spektroskopie Z80/CPM3 (früher C08-Programm DEC PDP-8)
 -  PC-FLUO: Meßprogramme optische Laser-Spektroskopie PC/DOS (mit Z80-Subsystem)
