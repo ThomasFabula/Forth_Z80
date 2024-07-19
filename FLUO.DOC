@@ -1,0 +1,30 @@
+******************************
+****                      ****
+****   Datei : FLUO.DOC   ****
+****                      ****
+******************************
+
+Diese Datei enthält die Dokumentation zu den Programmen
+des Subdirectories   C:\FLUO\
+
+
+
+Programm       :  Meßprogramm für die optische Laser-Spektroskopie
+                  ( früher C09-Programm auf DEC PDP-8 )
+
+Beschreibung   :  Laserfluorezenzspektroskopie, Aufzeichnung von
+                  Fluoreszenz- und Eichsignal, Ansteuerung des
+                  Farbstoff-Lasers über MOPS-Einplatinencomputer
+                  ( Schnittstelle RS-232C )
+
+Autor          :  Wolfram Kreß
+                  Diplomarbeit 1985, IAP-Uni Bonn, Wegelerstr. 8
+
+Rechnerumgebung:  Z80-ECB System (Janich & Klass)
+
+Betriebssystem :  CP/M 3.0 (Digital Research)
+
+Sprache        :  Z80-FORTH  (Ver. F2.COM)
+                  Z80-Assembler
+
+ 
