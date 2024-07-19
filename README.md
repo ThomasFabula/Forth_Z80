@@ -5,10 +5,10 @@
 -  HF-FLUO: Meßprogramme RABI-ABMR Hochfrequenz-Spektroskopie Z80/CPM3 (früher C08-Programm DEC PDP-8)
 -  PC-FLUO: Meßprogramme optische Laser-Spektroskopie PC/DOS (mit Z80-Subsystem)
 
-## Experimental Measurements programs for high-frequency & LASER spectroscopy
-FLUO: Measuring programs optical laser spectroscopy Z80/CPM3 (formerly C09 program DEC PDP-8)
-HF-FLUO: Measuring programs RABI-ABMR high frequency spectroscopy Z80/CPM3 (formerly C08 program DEC PDP-8)
-PC-FLUO: Measuring programs optical laser spectroscopy PC/DOS (with Z80 subsystem)
+## Programs for high-frequency & LASER spectroscopy
+- FLUO: Measuring programs optical laser spectroscopy Z80/CPM3 (formerly C09 program DEC PDP-8)
+- HF-FLUO: Measuring programs RABI-ABMR high frequency spectroscopy Z80/CPM3 (formerly C08 program DEC PDP-8)
+- PC-FLUO: Measuring programs optical laser spectroscopy PC/DOS (with Z80 subsystem)
                   
 ## FORTH
 Forth code for: 
