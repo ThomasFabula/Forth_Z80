@@ -1,0 +1,35 @@
+.Z80
+PUBLIC	LINKE
+EXT	NEXT,LINKX9,TIMER
+;
+	DB	86H
+	DC	'MESSEN'	; ruft das Messprogrammm auf
+	DW	LINKX9-9	; MASCHINENPROGRAMM:
+LINKXA:	DW	$+2		; TIMER
+	PUSH	AF
+	PUSH	BC
+	PUSH	DE
+	PUSH	HL
+	CALL	TIMER
+	POP	HL
+	POP	DE
+	POP	BC
+	POP	AF
+	JP	NEXT
+;
+LINKE:	DB	84H
+	DC	'STOP'
+	DW	LINKXA-9
+LINKXB: DW	$+2
+	PUSH	AF
+	PUSH	BC
+	PUSH	DE
+	PUSH	HL
+	CALL	STOP
+	POP	HL
+	POP	DE
+	POP	BC
+	POP	AF
+	JP	NEXT	
+END
+
