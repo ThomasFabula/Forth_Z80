@@ -897,4 +897,3 @@ SCANE:	LD	HL,(ALTI)
 	CALL	OUTS
 	RET
 	END	TAB
-
