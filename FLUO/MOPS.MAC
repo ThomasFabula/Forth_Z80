@@ -1,0 +1,349 @@
+.Z80
+ASEG
+.PHASE 08000H
+;
+;	SYMBOLS
+;	-----------
+;
+ADC	EQU	062EH		; siehe Unterprogramme !
+OUT	EQU	0607H		;	"
+OUTS	EQU	060EH		;	"
+READ	EQU	05F1H		;	"
+SCAN0	EQU	05BCH		;	"
+SCANI	EQU	0672H		;	"
+WRITE	EQU	05FBH		;	"
+ZEITA	EQU	0622H		;	"
+ZEITI	EQU	061DH		;	"
+INTE	EQU	05B2H		;	"
+INTD	EQU	05A9H		;	"	
+AUS	EQU	054AH		; DAC und Display-Ausgabe
+AUS1	EQU	055CH		; Displayausgabe
+ALT	EQU	9FFEH		; (ALT) enthaelt aktuellen DAC Wert
+ALTI	EQU	9FFCH		; (ALTI)    "	   " Integratorwert
+DUMMI	EQU	0467H		; Adr. DUMMI
+SIOD	EQU	080H		; SIO-Data
+SIOC	EQU	081H		; SIO-Control
+DA1A	EQU	08CH		; Portadressen	
+DA2A	EQU	088H
+DA1B	EQU	08DH
+DA2B	EQU	089H
+PORT1	EQU	9FFBH		; Adr.der aktuellen Werte
+PORT2	EQU	9FFAH		; fuer AUS1
+VARIF	EQU	9FF6H		; Integrationskonstante (Stand)
+;______________________________________________________________________________
+;
+START:	JP	(IY)
+	NOP
+	JP	C091
+   	JP	C092
+	JP	C093
+	JP	C094
+	JP	ETEST
+
+;*************************************************************************!
+;			Programm C091					  !
+;*************************************************************************!
+;
+;	Durch C091 koennen die DAC-Setzphasen ueber den Timer
+;	( Interrupt NMI ) gesteuert werden.Die ersten zwei 
+;	Byte,die nach Aufruf des Programms empfangen werden
+;	( DART ),legen die Schrittweite des DAC-16 fest.
+;	Die naechsten zwei Byte bestimmen den Scanstartwert.
+;	Der DAC-16 wird dabei langsam auf den Startwert ge-
+;	fahren.Ist dieser erreicht,erfolgt eine OK-Meldung
+;	an den Hauptrechyner durch Senden von FFH.Wird irgend 
+;	ein Zeichen waehrend des Scans empfangen,wird dieser
+;	abgebrochen und es erfolgt ein Ruecksprung ins DUMMI.
+;
+;**************************************************************************   
+;
+C091:	LD	A,60H			; Vorbereitung fuer AUS1
+	LD	(PORT1),A		; alle LED's aus
+	LD	A,70H
+	LD	(PORT2),A
+	LD	HL,0C091H		; C092 wird aufs Dislay
+	CALL	AUS1			; ausgegeben
+	CALL    INTD
+	LD	IY,NMI1			; alle NMI verzweigen nach
+	CALL	READ			; NMI1 !
+	LD	B,A
+	CALL	READ
+	LD	C,A
+	CALL	READ
+	LD	D,A
+	CALL	READ
+	LD	E,A
+	CALL	SCAN0			; Startwert setzen
+	LD	A,0FFH			; OK-Meldung
+	CALL 	WRITE
+DUM1:	CALL	READ
+	CALL	INTE			; Interrupt enable
+	JP 	DUMMI
+;
+NMI1:	CALL	AUS			; Ausgabe von (HL)-->DAC
+	CALL	AUS1			; Displayausgabe
+	OR	A
+	ADC	HL,BC			; HL=HL+BC
+	CALL	C,NSTEP			; Falls Uebertrag
+	RETN				; Aufruf von  NSTEP
+NSTEP:	OR A
+	LD	HL,(ALT)		; (ALT) --> HL
+	RET
+;
+;
+;*************************************************************************!
+;			Programm C092					  !
+;*************************************************************************!
+;
+;  	Durch C092 koennen die Integrationsphasen ueber 
+;	den TIMER ( Interrupt NMI ) gesteuert werden.
+;	Die ersten zwei Byte,die nach Aufruf des Programms
+;	empfangen werden (DART),legen die Integrationsge-
+;	schwindigkeit fest.Die naechsten zwei Byte bestimmen
+;	den Scanstartwert.Der Integrator wird dabei langsam
+;	auf den Startwert gefahren.Ist dieser erreicht,erfolgt
+;	eine OK-Meldung an den Hauptrechner durch Senden von
+;	FFH.Waehrend des Betriebs wird die Integrationsspannug
+;	immer daraufhin kontrolliert,dass sie nicht +5V ueber-
+;	schreitet.Ist dies der Fall,wird die Integration abge-
+;	brochen,und DAC 1 auf +5V gesetzt.Wird irgend eine Zeichen 
+;	empfangen,so wird der Scan abgebrochen.Der aktuelle Inte-
+;	grationswert wird ermittelt und an DAC 1 ausgeben.Danach 
+;	erfolgt OK-Meldung durch Senden von FFH bzw. 1,wenn +5V 
+;	waehrend des Scans erreicht wurden.Anscliessend erfolgt 
+;	Sprung ins DUMMI.	   
+;*************************************************************************
+;
+;
+					; Reservierung von Speicher-
+VARIE:	DS	2			; platz fuer Integrations-
+INFO:	DS	1			; konstanten
+;
+C092:	LD	A,60H			; Vorbereitung fuer AUS1
+	LD	(PORT1),A		; alle LED's aus	
+	LD	A,70H
+	LD	(PORT2),A
+	LD	HL,0C092H
+	CALL 	AUS1
+	LD	A,0FFH
+	LD	(INFO),A
+	CALL	INTD			; Interrupt disable
+	LD	HL,0000H		; 0V (Stand)-
+	LD	(VARIF),HL		; Integrationskonstante 
+	LD	IY,NMI2			; NMI verzweigt nach NMI2
+	CALL 	READ
+	LD	L,A
+	CALL	READ
+	LD	H,A
+	LD	(VARIE),HL		; Eichmarkenintegrations 
+	CALL 	READ			; konstante --> (VARIE)
+	LD	E,A
+	CALL	READ
+	LD	D,A
+	CALL	SCANI			; Startwert setzen
+	LD	HL,(VARIF)		; DAC 2 <-- (VARIF)
+	CALL	OUT
+	LD	A,50H
+	OUT	(DA2A),A
+	LD 	A,0F0H			; Umschaltung auf
+	OUT	(DA2A),A		; Integration (Stand)
+	LD	HL,0FFFFH		; DAC 1 auf +5V setzen
+	CALL	OUT			; (Komperator)
+	LD	A,0B0H
+	OUT	(DA2A),A
+	LD	A,0F0H
+	OUT	(DA2A),A
+	LD	A,0FFH			; OK-Meldung
+	CALL	WRITE
+	LD	IX,NMIE			; erster NMI verzweigt nach
+DUMI:	IN	A,(DA2B)		; NMIE
+	BIT	4,A			; Abfrage des Komperators
+	CALL	NZ,C5V
+	OR	A
+	IN	A,(SIOC)		; Abfrage nach empfangenen
+	RRA				; Zeichen
+	JP	NC,DUMI
+	IN	A,(SIOD)
+	CALL	ADC			; Aufruf von ADC
+	LD	A,(INFO)		; OK-Meldung durch INFO
+	CALL	WRITE
+	CALL	INTE
+	JP	DUMMI
+C5V:	LD 	IX,NMID
+	LD	HL,0FFFFH		; DAC 1 auf +5V setzen
+	CALL	OUT
+	LD	A,30H
+	OUT	(DA2A),A
+	LD	A,70H
+	OUT	(DA2A),A
+	LD	(ALTI),HL		; aktuellen DAC-Wert 
+	LD	A,1			; --> (ALTI)
+	LD	(INFO),A
+	RET
+NMI2:	EX	AF,AF'			; AF <--> AF'
+	JP	(IX)			; Sprung --> (IX)
+NMIF:	LD	HL,(VARIF)		; (VARIF) --> Integrator
+	CALL	OUT
+	LD	A,0D0H
+	OUT	(DA2A),A		; Start der Integration
+	LD	A,0F0H
+	OUT	(DA2A),A
+	LD	IX,NMIE			; NMIE --> IX
+	EX	AF,AF'			; AF <--> AF'
+	RETN
+NMIE:	LD	HL,(VARIE)		; (VARIE) --> Integrator
+	CALL	OUT
+	LD	A,0D0H
+	OUT	(DA2A),A		; Start der Integration
+	LD	A,0F0H
+	OUT	(DA2A),A
+	LD	IX,NMIF			; NMIF --> IX
+	EX	AF,AF'			; AF <--> AF'
+	RETN
+NMID:	EX	AF,AF'
+	RETN
+	
+;
+;*************************************************************************!
+;			Programm C093					  !
+;*************************************************************************!
+;
+;	Durch C093 wird der DAC-16 direkt durch den Hauptrechner
+;	gesteuert.Es muss vor jedem neuen 16-Bit Wert ein FFH
+;	empfangen werden,sonst erfolgt ein Ruecksprung ins
+;	DUMMI.Der DAC wird immer langsam auf den neuen Wert ein-
+;	gestellt.Anschliessend erfolgt jedesmal eine OK-Meldung 
+;	durch Senden von FFH.
+;*************************************************************************
+;
+C093:   CALL	INTD			; Interrupt disable
+	LD	A,60H			; Vorbereitung fuer AUS1
+	LD	(PORT1),A		; alle LED's aus
+	LD	A,70H
+	LD	(PORT2),A
+	LD	HL,0C093H		; C093-Displayausgabe
+	CALL	AUS1 
+AGAIN:	CALL	READ			; Werte einlesen
+	CP	0FFH			; Test auf FFH sonst
+	JP	NZ,BACK			; Sprung nach BACK
+	CALL	READ
+	LD	D,A
+	CALL	READ
+	LD	E,A			; Langsame
+	CALL    SCAN0			; Ausgabe von (HL) an DAC
+	LD	A,0FFH			; OK-Meldung
+	CALL	WRITE			
+	JP	AGAIN
+BACK:	LD	A,011H			; Intrrupt enable
+	OUT	(SIOC),A
+	LD	A,018H
+	OUT	(SIOC),A
+	JP	DUMMI			; Sprung nach DUMMI
+;
+;*************************************************************************!
+;			Programm C094					  !
+;*************************************************************************!
+;
+;	Durch C094 wird der DAC-12 direkt durch den Hauptrechner
+;	gesteuert.Es muss vor jedem neuen 16-Bit Wert ein FFH
+;	empfangen werden,sonst erfolgt ein Ruecksprung ins
+;	DUMMI.Der DAC wird immer langsam auf den neuen Wert ein-
+;	gestellt.Anschliessend erfolgt jedesmal eine OK-Meldung 
+;	durch Senden von FFH.
+;*************************************************************************
+;
+C094:   CALL	INTD			; Interrupt disable
+	LD	A,60H			; Vorbereitung fuer AUS1
+	LD	(PORT1),A		; alle LED's aus
+	LD	A,70H
+	LD	(PORT2),A
+	LD	HL,0C094H		; C094-Displayausgabe
+	CALL	AUS1 
+AGAINI:	CALL	READ			; Werte einlesen
+	CP	0FFH			; Test auf FFH sonst
+	JP	NZ,BACKI		; Sprung nach BACKI
+	CALL	READ
+	LD	D,A
+	CALL	READ
+	LD	E,A			; Langsame
+	CALL    SCANI			; Ausgabe von (HL) an DAC
+	LD	A,0FFH			; OK-Meldung
+	CALL	WRITE			
+	JP	AGAINI
+BACKI:	LD	A,011H			; Intrrupt enable
+	OUT	(SIOC),A
+	LD	A,018H
+	OUT	(SIOC),A
+	JP	DUMMI			; Sprung nach DUMMI
+;
+ZAEHLL:	DS	1
+ZAEHLV:	DS	1
+EAUS:	DS	2	
+ETEST:	CALL	INTD
+	LD	HL,0FFFFH
+	CALL	AUS1
+	LD 	A,0
+	LD 	(ZAEHLL),A
+	LD 	(ZAEHLV),A
+	LD 	HL,7FFFH
+	LD	(EAUS),HL
+	LD	IY,NMIT
+DUMT:	CALL	READ
+	CALL	INTE
+	JP	DUMMI
+NMIT:	EX	AF,AF'
+	EXX	
+	LD	HL,(EAUS)
+	CALL	AUS
+	CALL	AUS1
+	LD 	HL,ZAEHLL
+ 	INC	(HL)
+	LD	A,(HL)
+	CP	99
+	CALL	Z,EICHA
+	EX	AF,AF'
+	EXX	
+	RETN
+EICHA:	LD	IY,NMIE2
+	LD	A,0
+	LD	(ZAEHLL),A
+	LD	(ZAEHLV),A
+	RET
+NMIE1:	EX	AF,AF'
+	EXX	
+	LD	HL,(EAUS)
+	LD	DE,500H
+	OR	A
+	ADC	HL,DE
+	LD	(EAUS),HL
+	CALL	AUS
+	CALL	AUS1
+	LD	IY,NMIE2
+	LD	HL,ZAEHLV
+	INC	(HL)
+	LD	A,(HL)
+	CP	12
+	CALL	Z,EICHB
+	EX	AF,AF'
+	EXX	
+	RETN
+EICHB:	LD	IY,NMIE3
+	LD	HL,7FFFH
+	LD	(EAUS),HL
+	RET
+NMIE2:	EX	AF,AF'
+	LD	IY,NMIE1
+	EX	AF,AF'
+	RETN
+NMIE3:	EX	AF,AF'
+	LD	IY,NMIT
+	EX	AF,AF'
+	RETN
+;
+	.DEPHASE
+	END START
+
+
+
+
+
