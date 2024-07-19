@@ -126,11 +126,10 @@ DECIMAL
 	UNTIL ;
 ( MENUE1 steuert das Startmenue,siehe Anwenderflussdiagramm		)
 
-( *** geaenderter Wort : )
+( *** geaendertes Wort : )
 : RUN  DECIMAL DISPLAY 160 EICHTEILER !			( -->		)
        900 UNTE ! VORMENUE MENUE1 
        CLS INVERSE 1 1 CURS ." F  O  R  T  H :" NORMAL CR ;
 ( RUN ist Start des ganzen Programms.					)
  
 END-OF-FILE 
-
