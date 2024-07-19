@@ -1,0 +1,900 @@
+;*****************************************************************************!
+;		Programm fuer Einplatinencomputer MOPS  		      !
+;_____________________________________________________________________________!
+;_____________________________________________________________________________!
+;									      !
+	.Z80		;ERZEUGE Z80 MASCHINENCODE 			      !
+;									      !
+	ASEG		;ERZEUGE ABSOLUTEN CODE 			      !
+;									      !
+	ORG	0000H	;STATEMENT WEGEN ASEG NOTWENDIG GIBT DIE              !
+;			 STARTADDRESSE DES COMPILIERTEN CODES AN	      !
+;_____________________________________________________________________________!
+;	DEFINITION VON KONSTANTEN IM PROGRAMM				      !
+;_____________________________________________________________________________!
+;
+SIOD	EQU	080H		;SIO-DATA
+SIOC	EQU	081H		;SIO-CONTROL
+SIOI	EQU	083H		;SIO-INTERRUPT
+CTC	EQU	084H		;TIMER-COUNTER
+DA1A	EQU	08CH		;PORT 1A DATA
+DA1B	EQU	08DH		;  "  1B  "  
+DA2A	EQU	088H		;  "  2A  "
+DA2B	EQU	089H		;  "  2B  "
+KO1A	EQU	08EH		;PORT 1A CONTROL
+KO1B	EQU	08FH		;  "  1B   "
+KO2A	EQU	08AH		;  "  2A   "
+KO2B	EQU	08BH		;  "  2B   "
+ALLH	EQU	078H      	;(78H) PORTAUSGABE
+CSL	EQU	068H		;(68H)     "
+DAL	EQU	079H		;(79H)     "
+ALT	EQU	9FFEH		; Adr. aktueller DA-Wandler 
+				; Wert
+ALTI	EQU	9FFCH		; Adr.   "  Integrator
+PORT1	EQU	9FFBH		; Adr. fuer PORT1,PORT2   
+PORT2	EQU	9FFAH		; aktuelle Werte fuer AUS1
+INTEA	EQU	9FF8H		; aktueller Wert fuer die
+				; Integrationskonstante	
+VARIF	EQU	9FF6H		; Integrationskonstante C092
+INTED	EQU	9FF4H		; Integrationsdisplaywert 
+;______________________________________________________________________________
+;	Sprungadressen fuer Reset und Interrupt				      !
+;_____________________________________________________________________________!
+
+TAB:	JP	START		; Sprung nach START
+	NOP
+	DS	6
+	DW	STOPI4		; INT --> STOPI4
+	DW	TEST		; INT --> TEST
+	ORG	0066H		; naechster Befehl=Adr 0066H
+	JP	8000H		; Sprung nach C0-9 NMI !
+;*****************************************************************************!
+;			Initialisierung					      !
+;*****************************************************************************!
+;
+START:	LD	SP,9FF0H	; Stapeladresse auf 9FF0H
+;
+;        	      Initialisierung des Dart
+;                    --------------------------
+	LD	A,002H		; W-Register 2B
+	OUT	(SIOI),A
+        LD	A,00CH		; Interruptvektor untere Haelfte
+	OUT	(SIOI),A	; =0CH verzweigt nach TEST,wenn
+				; ein Zeichen empfangen wird (DART)
+	LD	A,018H		; Reset channel
+	OUT	(SIOC),A
+	LD	A,011H		; W-Register 1
+	OUT	(SIOC),A	; EXT. INT disable
+	LD	A,018H		; INT on all characters
+	OUT	(SIOC),A
+	LD	A,003H		; W-Register 3
+	OUT	(SIOC),A
+	LD	A,0C1H		; R* enable
+	OUT	(SIOC),A	; R*8 Bits/character
+	LD	A,004H		; W-Register 4
+	OUT	(SIOC),A
+	LD	A,044H		; 1 stop bit *16
+	OUT	(SIOC),A
+	LD	A,005H		; W-Register 5
+	OUT	(SIOC),A
+	LD	A,06AH		; T* enable
+	OUT	(SIOC),A	; T*8 Bits/characters
+;
+;		       Initialisierung des CTC
+;                     ------------------------- 
+	LD	A,055H		; Countermode
+	OUT	(CTC),A
+	LD	A,00DH		; Teiler=13/9600 Baud
+	OUT	(CTC),A
+;
+;		   Initialisierung des Interruptmodus
+;                 ------------------------------------  
+	IM	2		; Interruptmode 2
+	LD	A,000H		; Interruptvektor obere Haelfte
+	LD	I,A
+	EI			; Interrupt enable
+;
+;		        Initialisierung der Pios
+;                      --------------------------
+	LD	A,0CFH		; Modekontrollwort 3
+	OUT	(KO1A),A	
+	LD	A,000H		; Alle Bits = Ausgaenge
+	OUT	(KO1A),A	; Port 1A = Ausgang
+	LD	A,0CFH
+	OUT	(KO1B),A	
+	LD	A,000H
+	OUT	(KO1B),A	; Port 1B = Ausgang
+	LD	A,0CFH
+	OUT	(KO2A),A	
+	LD	A,000H
+	OUT	(KO2A),A	; Port 2A = Ausgang
+	LD	A,0CFH
+	OUT	(KO2B),A	
+	LD	A,0FFH
+	OUT	(KO2B),A	; Port 2B = Eingang
+	LD	A,ALLH		; Display und Datenselect
+	OUT	(DA2A),A	; werden vorbereitet
+	LD	HL,7FFFH	; HL-Register:7FFFH = 0V Dac
+	LD	(ALTI),HL	; Integratorwert --> (ALTI)
+	CALL	AUS		; Aufruf Unterprg. AUS
+	LD	A,38H		; Integrator = 0V setzen
+	OUT	(DA2A),A	; LED 2 an
+	LD	A,78H
+	OUT	(DA2A),A
+;
+;*****************************************************************************!
+;			Progamm Manuell 1				      !
+;*****************************************************************************!
+;									      !
+;	Durch Manuell 1 kann der DAC-16 durch die Tastatur 		      !
+;	gesetzt werden.							      !
+;_____________________________________________________________________________!
+;
+MANU1:	LD	HL,(ALT	)
+	LD	A,CSL		; Vorbereitung fuer AUS1
+	LD	(PORT1),A	; selektiert das erste LED	
+	LD	A,ALLH
+	LD	(PORT2),A
+	CALL	AUS
+	CALL	AUS1		; Displayausgabe
+	LD	BC,0001H	; Zaehler laden
+TAST:	IN	A,(DA2B)
+	BIT	6,A		; Taster 3 = 1 --> C095
+	JP	NZ,C095		
+				; Tast fragt Port 2B ab.
+	AND	0FH		; loescht obere 4 Bits
+	CP	01H		; Wird ein Taster gedrueckt,
+	JP	Z,S1		; so verzweigt Tast in die
+	CP	08H		; entsprechende Bedienungs-
+	JP	Z,S4		; routine.Wenn kein Taster
+	CP      02H		; gedrueckt ist,oder eine
+	JP	Z,S2		; unzulaessige kombination,
+	CP	04H		; verbleibt das Programm in
+	JP	Z,S5		; Routine Tast.
+	CP	03H
+	JP	Z,S3
+	CP	0CH
+	JP	Z,S6
+	JP	TAST		; S1 bis S6 bestimmen die
+S1:	LD	D,0FFH		; Laufzeiten
+	JP	ADD2		; S1: Vorlauf langsam
+S2:	LD	D,1		; S2: 	 "    mittel
+	JP	ADD2		; S3:    "    schnell
+S3:	JP	ADD1		; S4: Ruecklauf langsam	
+S4:	LD	D,0FFH		; S5:    "	mittel
+	JP	SUB2		; S6:    "	schnell
+S5:	LD	D,1
+	JP	SUB2
+S6:	JP	SUB1 
+ADD1:	OR	A		; HL=HL+1 
+	ADC	HL,BC
+	JP	C,OLDS		; Ist HL negativ > Sprung nach OLDS
+	CALL  	AUS		; Aufruf von AUS
+	CALL	AUS1		; Displayausgabe
+	JP	TAST		; Sprung nach TAST
+SUB1:	OR	A		; HL=HL-1
+	SBC	HL,BC
+	JP	C,OLDA		; Ist HL negativ > Sprung nach OLDA
+	CALL	AUS		; Aufruf von AUS
+	CALL	AUS1		; Displayausgabe
+	JP	TAST		; Sprung nach TAST
+ADD2:	OR	A		; HL=HL+1 
+	ADC	HL,BC
+	JP	C,OLDS		; Ist HL negativ > Sprung nach OLDS
+	CALL  	AUS		; Aufruf von AUS
+	CALL	AUS1		; Displayausgabe
+	LD	A,D		; Verzoegerung
+	CALL	ZEITA	
+	JP	TAST		; Sprung nach TAST
+SUB2:	OR	A		; HL=HL-1
+	SBC	HL,BC
+	JP	C,OLDA		; Ist HL negativ > Sprung nach OLDA
+	CALL	AUS		; Aufruf von AUS
+	CALL	AUS1		; Displayausgabe
+	LD	A,D		; Verzoegerung
+	CALL	ZEITA
+	JP	TAST		; Sprung nach TAST
+OLDS:	OR	A		; C-Flag wird zurueckgestzt
+	LD	HL,0FFFFH	; HL=FFFFH
+	CALL	AUS		; Ausgabe
+	CALL	AUS1		; Displayausgabe
+	JP	TAST		; Sprung nach TAST
+OLDA:	OR	A		; s.o.
+	LD	HL,0000H	; HL=0000H
+	CALL	AUS		; Ausgabe
+	CALL	AUS1		; Displayausgabe
+	JP	TAST
+;	
+;*****************************************************************************!
+;			Programm Manuell 2				      !
+;*****************************************************************************!
+;									      !
+;	Durch Manuell 2 kann der Integrator in verschiedenen		      !
+;	Zeiten gescaned werden.Mit Taster 3 wird das Programm                 !
+;	ausgewaehlt und die Integrationszeiten festgelegt.Mit		      !
+;	Taster 4 kann der Scan angehalten werden bzw.wieder	              !
+;	gestartet werden.Das Programm kann verlassen werden,		      !
+;	ohne dass der letzte Spanungswert verloren geht.		      !
+;_____________________________________________________________________________!
+;
+C095:	LD	A,64H			; Vorbereitung fuer AUS1
+	LD	(PORT1),A		; LED 3 an
+	LD	A,74H
+	LD	(PORT2),A
+	LD	HL,0C095H		; Displayausgabe von C095
+	CALL	AUS1
+	LD	A,002H			; Interruptvektor aendern !
+	OUT	(SIOI),A		; (DART)
+        LD	A,00AH			; Interruptvektor untere Haelfte
+	OUT	(SIOI),A		; =0AH verzweigt nach STOPI4,wenn
+					; ein Zeichen empfangen wird (DART)
+	LD	IX,TIME1		; Festlegung von TIME1
+C096:	LD	DE,0000H		; langsamer Scan nach -5V
+	CALL	SCANI
+C097:	LD	HL,0000H		; DAC 2 --> 0V 
+	CALL	OUT			; Integrationsstart
+	LD	A,54H			; ( Stand ) 
+	OUT	(DA2A),A
+	LD	A,0F4H
+	OUT	(DA2A),A
+	LD	HL,0FFFFH		; DAC 1 fuer Komperator
+	CALL	OUT			; auf +5V setzen 
+	LD	A,0B4H
+	OUT	(DA2A),A
+	LD	A,0F4H
+	OUT	(DA2A),A
+	LD	A,0E4H
+	LD	(PORT1),A		; Vorbereitung fuer AUS1
+	LD	A,0F4H			; LED 3 an
+	LD	(PORT2),A 
+TASTI:	IN	A,(DA2B)		; Abfrage von DA2B
+	BIT	5,A
+	JP	NZ,TIMES		; Taster 3 = 1 --> TIMES
+	BIT	6,A			; Taster 2 = 1 --> TIME
+	JP	NZ,TIME
+	BIT	7,A
+	JP	NZ,STOPI3		; Taster 1 = 1 --> STOPI3
+	AND	0FH			; Ist ein Displaytaster
+	CP	01H			; gedrueckt wird nach TESTA
+	JP	NC,TESTA		; verzweigt	
+	JP	TASTI
+TESTA:	LD	A,60H			; Vorbereitung fuer AUS1
+	LD	(PORT1),A		; alle LED's aus
+	LD	A,70H
+	LD	(PORT2),A
+	LD	HL,0000H		; Vorbereitung fuer ADC
+	LD	(VARIF),HL
+	CALL 	ADC 
+	CALL 	AUS1			; Displayausgabe
+	LD	BC,0010H		; s. ADDI u. SUBI
+TESTI:	IN	A,(DA2B)		
+	BIT	6,A			; Abfrage Taster 3
+	JP	NZ,C097			; --> C097
+	BIT	5,A			; Abfrage Taster 4
+	JP	NZ,WEITER		; --> WEITER
+					; TESTI fragt Port 2B ab.
+	AND	0FH			; loescht obere 4 Bits
+	CP	01H			; Wird ein Taster gedrueckt,
+	JP	Z,SI1			; so verzweigt TESTI in die
+	CP	08H			; entsprechende Bedienungs-
+	JP	Z,SI4			; routine.Wenn kein Taster
+	CP      02H			; gedrueckt ist,oder eine
+	JP	Z,SI2			; unzulaessige kombination,
+	CP	04H			; verbleibt das Programm in
+	JP	Z,SI5			; Routine TESTI.
+	CP	03H
+	JP	Z,SI3
+	CP	0CH
+	JP	Z,SI6
+	JP	TESTI			; SI1 bis SI6 bestimmen die
+SI1:	LD	D,0FFH			; Laufzeiten
+	JP	ADDI			; SI1: Vorlauf langsam
+SI2:	LD	D,10H			; SI2: 	 "    mittel
+	JP	ADDI			; SI3:    "    schnell
+SI3:	LD	D,1			; SI4: Ruecklauf langsam	
+	JP	ADDI			; SI5:    "	mittel
+SI4:	LD	D,0FFH			; SI6:    "	schnell
+	JP	SUBI
+SI5:	LD	D,10H
+	JP	SUBI
+SI6:	LD	D,1
+	JP	SUBI 
+ADDI:	OR	A			; HL=HL+BC 
+	ADC	HL,BC
+	JP	C,OLDIS			; Ist HL negativ > Sprung nach OLDIS
+	CALL  	OUTS			; Aufruf von OUTS
+	CALL	AUS1			; Displayausgabe
+	LD	A,D			; Verzoegerung
+	CALL	ZEITA	
+	JP	TESTI			; Sprung nach TESTI
+SUBI:	OR	A			; HL=HL-BC
+	SBC	HL,BC
+	JP	C,OLDIA			; Ist HL negativ > Sprung nach OLDIA
+	CALL	OUTS			; Aufruf von OUTS
+	CALL	AUS1			; Displayausgabe
+	LD	A,D			; Verzoegerung
+	CALL	ZEITA
+	JP	TESTI			; Sprung nach TESTI
+OLDIS:	OR	A			; C-Flag wird zurueckgestzt
+	LD	HL,0FFF0H		; HL=FFF0H
+	CALL	OUTS			; Ausgabe
+	CALL	AUS1			; Displayausgabe
+	JP	TESTI			; Sprung nach TESTI
+OLDIA:	OR	A			; s.o.
+	LD	HL,0000H		; HL=0000H
+	CALL	OUTS			; Ausgabe
+	CALL	AUS1			; Displayausgabe
+	JP	TESTI
+WEITER:	LD	HL,0000H		; DAC 2 --> 0V 
+	CALL	OUT			; Integrationsstart
+	LD	A,54H			; ( Stand ) 
+	OUT	(DA2A),A
+	LD	A,0F4H
+	OUT	(DA2A),A
+	LD	HL,0FFFFH		; DAC 1 fuer Komperator
+	CALL	OUT			; auf +5V setzen 
+	LD	A,0B4H
+	OUT	(DA2A),A
+	LD	A,0F4H
+	OUT	(DA2A),A
+	LD	A,0E4H
+	LD	(PORT1),A		; Vorbereitung fuer AUS1
+	LD	A,0F4H			; LED 3 an
+	LD	(PORT2),A 
+	LD	HL,(INTED)		; Displayausgabe des aktuellen
+	CALL	AUS1			; Integrationswertes
+	JP	STOPI2
+TIME:	JP	(IX)
+;
+;	Integrtionszeiten
+;     ---------------------
+;	Berechnet nach :		X = (50/T)*4095
+; 	X = 12 Bitwert
+;	T = Integrationszeit [sec]
+;    	
+TIME1:	LD	DE,0FFF0H		;   50 sec
+	LD	HL,0050H
+	LD	IX,TIME2
+	JP	TIMED
+TIME2:	LD	DE,8000H		;  100 sec
+	LD	HL,0100H
+	LD	IX,TIME3
+	JP	TIMED
+TIME3:	LD	DE,4000H		;  200 sec
+	LD	HL,0200H
+	LD	IX,TIME4
+	JP	TIMED
+TIME4:	LD	DE,2AB0H		;  300 sec
+	LD	HL,0300H
+	LD	IX,TIME5
+	JP	TIMED
+TIME5:	LD	DE,2000H		;  400 sec
+	LD	HL,0400H
+	LD	IX,TIME6
+	JP	TIMED
+TIME6:	LD	DE,19A0H		;  500 sec	
+	LD	HL,0500H
+	LD	IX,TIME7
+	JP	TIMED
+TIME7:	LD	DE,1110H		;  750 sec
+	LD	HL,0750H
+	LD	IX,TIME8
+	JP	TIMED
+TIME8:	LD	DE,0CD0H		; 1000 sec
+	LD	HL,1000H
+	LD	IX,TIME9
+	JP	TIMED
+TIME9:	LD	DE,0890H		; 1500 sec
+	LD	HL,1500H
+	LD	IX,TIME10
+	JP	TIMED
+TIME10:	LD	DE,0660H		; 2000 sec
+	LD	HL,2000H
+	LD	IX,TIME11
+	JP	TIMED
+TIME11:	LD	DE,0520H		; 2500 sec
+	LD	HL,2500H
+	LD	IX,TIME12
+	JP	TIMED
+TIME12:	LD	DE,0440H		; 3000 sec
+	LD	HL,3000H
+	LD	IX,TIME13
+	JP	TIMED
+TIME13:	LD	DE,0330H		; 4000 sec
+	LD	HL,4000H
+	LD	IX,TIME14
+	JP	TIMED
+TIME14:	LD	DE,0290H		; 5000 sec
+	LD	HL,5000H
+	LD	IX,TIME1
+	JP	TIMED
+TIMED:  LD	(INTED),HL		; Displaywert --> (INTED)	
+	CALL	AUS1			; Displayausgabe der
+	LD	H,D			; aktuellen Zeitkonstante
+	LD	L,E			; DE -->HL
+	LD	(INTEA),HL		; Retten der Zeitkonstanten
+	LD	A,0FFH			; Verzoegerung
+	CALL	ZEITA
+	JP	TASTI
+TIMES:	LD	HL,(INTEA)		; Integrationswert --> HL
+	CALL	OUT			; Integrationsbeginn
+	LD	A,0D6H			; LED 3 u. 4 an
+	OUT	(DA2A),A
+	LD	A,0F6H
+	OUT	(DA2A),A
+	LD	IY,STOPI1		; erste Stopvorbereitung
+	LD	A,0FFH			; Verzoegerung
+	CALL	ZEITA
+	LD	A,0FFH
+	CALL	ZEITA
+STAND:	IN	A,(DA2B)		; staendige Abfrage 
+	BIT	7,A			; 
+	JP	NZ,STOPI3		; von Taster 2 ,
+	BIT	6,A
+	JP	NZ,NEWSC		; Taster 3
+	BIT	5,A			; 
+	JP	NZ,STOPI 		; Taster 4 und
+	BIT	4,A			; des Komperators
+	JP	NZ,STAND0
+	AND	0FH			; Ist ein Displaytaster
+	CP	01H			; gedrueckt wird nach TESTI
+	JP	NC,TESTA		; verzweigt	
+	JP	STAND
+NEWSC:	LD	HL,0000H		; Neustart nach 
+	LD	(VARIF),HL		; Abbruch
+	CALL	ADC
+	JP	C096
+STAND0:	LD	HL,0FFF0H		; Umschaltung auf DAC 1
+	CALL	OUT			; +5V
+	LD	A,34H			; LED 3 an
+	OUT	(DA2A),A
+	LD	A,74H
+	OUT	(DA2A),A
+	LD	(ALTI),HL		; Retten des aktuellen
+STAND1:	IN	A,(DA2B)		; DAC 1 - Wertes
+	BIT	6,A			; Abfrage Taster 3
+	JP	NZ,C096			; = 1 --> C096
+	BIT	7,A			; Abfrage Taster 2
+	JP	NZ,STOPI3		; = 1 --> STOPI3		
+	JP	STAND1
+STOPI:	JP	(IY)			; entsprechende Verzweigung
+STOPI1:	LD	HL,0000H		; Integrationsstop
+	CALL	OUT			; LED 3 an
+	LD	A,0D4H
+	OUT	(DA2A),A
+	LD	A,0F4H
+	OUT	(DA2A),A
+	LD	IY,STOPI2
+	LD	A,0FFH			; Verzoegerung
+	CALL	ZEITA
+	LD	A,0FFH
+	CALL	ZEITA
+	JP	STAND
+STOPI2:	LD	HL,(INTEA)		; Neustart der
+	CALL	OUT			; Integration
+	LD	A,0D6H			; LED 3 u. 4 an
+	OUT	(DA2A),A
+	LD	A,0F6H
+	OUT	(DA2A),A
+	LD	IY,STOPI1
+	LD	A,0FFH			; Verzoegerung
+	CALL	ZEITA
+	LD	A,0FFH
+	CALL	ZEITA
+	JP	STAND
+STOPI3:	LD	HL,0000H		; 0000 --> (VARIF)
+	LD	(VARIF),HL
+	CALL	ADC			; ADC-Wandlung
+	LD	A,002H			; alter Interruptvektor 
+	OUT	(SIOI),A		; widerherstellen (DART) !
+        LD	A,00CH			; Interruptvektor untere Haelfte
+	OUT	(SIOI),A		; =0CH verzweigt nach TEST,wenn
+					; ein Zeichen empfangen wird 
+	JP 	MANU1
+STOPI4: LD	HL,0000H		; 0000 --> (VARIF)
+	LD	(VARIF),HL
+	CALL	ADC			; ADC-Wandlung
+	LD	A,002H			; alter Interruptvektor 
+	OUT	(SIOI),A		; widerherstellen (DART) !
+        LD	A,00CH			; Interruptvektor untere Haelfte
+	OUT	(SIOI),A		; =0CH verzweigt nach TEST,wenn
+					; ein Zeichen empfangen wird 
+	JP	TEST
+;
+;*****************************************************************************!
+;		       DUMMI-Programm					      !
+;*****************************************************************************!
+;									      !
+;	In dieses Programm wird immer dann verzweigt,wenn der 		      !
+; 	Hauptrechner den MOPS angesrochen hat (DART),und das                  !
+;	angewaehlte Programm beendet wurde.				      !
+;_____________________________________________________________________________!
+;
+DUMMI:	LD 	HL,0000H 
+	CALL	AUS1
+DUM:	IN	A,(DA2B)		; Abfrage der Tastatur
+	BIT	7,A			; Taster 2 = 1 --> MANU1
+	JP	NZ,MANU1
+	BIT	6,A			; Taster 3 = 1 --> C095
+	JP	NZ,C095
+	JP	DUM
+;
+;*****************************************************************************!
+;			Interruptprogramm TEST				      !
+;*****************************************************************************!
+;									      !
+;	Das Interruptprogramm bestehend aus TEST, INT1 bis                    !
+;	INT5,vergleicht das empfangene Zeichen und verzweigt  		      !
+;	entsprechend.Gueltige Zeichen sind:				      !
+;									      !
+;	  1	Spung  nach Adr.                      8003H		      !
+;	  2		"		              8006H		      !
+;	  3		"		              8009H	              !
+;	  4		"		              800CH		      !
+;	  5	        "			      800FH		      !
+;	  6             "    			      BLOCK		      !
+;	  Wird kein gueltiges Zeichen empfangen,erfolgt			      !
+;	  Fehlermeldung an Hauptrechner durch FFH.			      !
+;_____________________________________________________________________________!
+;
+TEST:	LD	A,60H		; Vorbereitung fuer AUS1
+	LD	(PORT1),A	; alle LED's aus
+	LD	A,70H
+	LD	(PORT2),A
+	IN	A,(SIOD)	; Zeichen aus DART lesen
+	CP	1		; Zeichenvergleich mit 1
+	JP	Z,INT1		; Srung nach INT1
+	CP	2		; Zeichenvergleich mit 2
+	JP	Z,INT2		; Sprung nach INT2
+	CP   	3		; Zeichenvergleich mit 3
+	JP	Z,INT3		; Sprung nach INT3
+	CP	4		; Zeichenvergleich mit 4
+	JP	Z,INT4		; Sprung nach INT4
+	CP	5		; Zeichenvergleich mit 5
+	JP	Z,INT5		; Sprung nach INT5
+	CP	6		; Zeichenvergleich mit 6
+	JP	Z,INT6		; Sprung nach INT6
+	LD 	A,0FFH		; Fehlermeldung an Haupt-
+	OUT	(SIOD),A	; rechner durch FFH
+	POP	HL		; Hole PC vom Stapel
+	LD	HL,DUMMI	; neue Ruecksprungadr.(DUMMI)
+	PUSH	HL		; auf den Stapel legen
+	EI			; Interupt enable
+	RETI			; Ruecksprung nach DUMMI
+INT1:	OUT     (SIOD),A        ; Ausgabe 1 an Hauptrechner   
+	POP	HL      	; Stackmanipulation:
+	LD	HL,8003H        ; Ruecksprung nach Adr.8003H
+	PUSH    HL
+	EI			; Interupt enable
+	RETI			; Ruecksrung 
+INT2:	OUT	(SIOD),A	; s.o.
+	POP	HL		; Ruecksprung nach Adr.8006H
+	LD	HL,8006H
+	PUSH	HL
+	EI
+	RETI
+INT3:	OUT	(SIOD),A	; s.o.
+	POP	HL		; Ruecksprung nach Adr.8009H
+	LD	HL,8009H
+	PUSH	HL
+	EI
+	RETI
+INT4:	OUT	(SIOD),A	; s.o.
+	POP	HL		; Ruecksprung nach Adr.800CH
+	LD	HL,800CH
+	PUSH	HL
+	EI
+	RETI
+INT5:   OUT	(SIOD),A	; s.o.
+	POP	HL		; Ruecksprung nach Adr.800FH
+	LD	HL,800FH
+	PUSH	HL
+	EI
+	RETI	
+INT6:   OUT	(SIOD),A	; Ausgabe 1 an Hauptrechner
+        LD	C,SIOD		; siehe INI oder OUTI
+	LD 	DE,0080H	; siehe SBC und ADC HL,DE
+	LD	A,001H		; INT disable
+	OUT	(SIOC),A
+	LD 	A,000H   
+	OUT     (SIOC),A
+	POP	HL		; Stackmanipulation:
+	LD	HL,BLOCK	; Ruecksprung nach Block
+	PUSH	HL		
+	LD	HL,8000H	;Startadresse RAM
+	EI
+   	RETI
+;
+;*****************************************************************************!
+;         		Programm Blocktransfer				      !
+;*****************************************************************************!
+;						          		      !
+;	Nach Auswahl dieses Programmteils durch das erste Byte 		      !
+;	0CH,wird durch das naechsste Byte angezeigt,dass ein 128 	      !
+;	Byte-Block zu uebernehmen ist. Zeichen=FFH.Jeder zu ueber-	      !
+;	nehmende Block setzt dieses Zeichen voraus.Ist ein 128  	      !
+;	Byte-Block uebernommen worden,so wird dieser  sofort zum 	      !
+;	Test zurueckgesendet.               				      !
+;_____________________________________________________________________________!
+;
+BLOCK:	LD	A,60H		; Vorbereitung fuer AUS1
+	LD	(PORT1),A	; alle LED's aus
+	LD	A,70H
+	LD	(PORT2),A
+	CALL	AUS1		; Displayausgabe von HL
+BLO0:	OR	A		; Testschleife:Liegt
+	IN	A,(SIOC)	; Zeichen an
+	RRA
+	JP	NC,BLO0
+	IN	A,(SIOD)	; Zeichentest auf FFH
+	CP	0FFH
+	JP	Z,BLO1		; Zeichen=FFH --> BLO1
+	JP	BLOE		; sonst BLOE
+BLO1:	LD	B,080H		; B=128 Bytes/Block
+BLO2:	OR	A
+	IN	A,(SIOC)	; Testschleife:Liegt
+	RRA			; Zeichen an?
+	JP	NC,BLO2
+	INI			; Blocktransfer HL=HL+1
+	JP	NZ,BLO2		; B=B-1 bis Blockende
+	OR      A
+	SBC	HL,DE		; HL=HL-128
+	LD	B,080H		; B=128 Bytes/Block
+BLO3:	OR	A
+	IN	A,(SIOC)	; Testschleife:Ist
+	BIT	2,A		; Sendepuffer leer?
+	JP	Z,BLO3
+	OUTI			; Blocktransfer HL=HL+1
+	JP	NZ,BLO3		; B=B-1
+	JP	BLOCK
+BLOE:	LD	A,011H		; INT enable
+	OUT	(SIOC),A
+	LD	A,018H
+	OUT	(SIOC),A
+	JP 	DUMMI          	; Sprung ins Dummi
+
+;*****************************************************************************!
+; 			UNTERPROGRAMME					      !
+;*****************************************************************************!
+;
+;					!***********************!
+;***************************************!  Unterprogramm AUS    !**************
+;					!***********************!
+;					( AF , HL		)
+;
+; AUS gibt die Werte,die sich im HL-Register befinden an die Ports
+; 1A,1B aus.Data-Latch erfogt dann durch Bit 1 von Port 2A.
+;
+AUS:	LD	A,L		; unteres Byte
+	OUT	(DA1A),A	
+	LD	A,H		; oberes Byte
+	OUT	(DA1B),A
+	LD	A,DAL		; Data-latch
+	OUT	(DA2A),A
+	LD	A,ALLH		; Daten sind in DAC gespeichert
+	OUT	(DA2A),A
+	LD	(ALT),HL	; aktuellen DA-Wert abspeichern
+	RET
+;					!***********************!
+;***************************************!  Unterprogramm AUS1   !**************
+;					!***********************!
+;					( AF , HL		)
+;
+; AUS1 gibt den Wert des HL-Registers an das Display aus
+;
+AUS1:	LD	A,L		; unteres Byte laden
+	AND	0FH		; loescht die oberen 4 Bits
+	OR	30H		; Digit 1 ist selektiert
+	OUT	(DA1A),A	; Ausgabe
+	LD	A,(PORT1)	; chipselect (Bit 5,Port 2A) ist
+	OUT	(DA2A),A	; low,Ausgabe
+	LD	A,(PORT2)	; Abspeichern von D1
+	OUT	(DA2A),A
+	LD	A,L		; wieder unteres Byte laden
+	RRCA			; 4 Bit nach rechts rotieren
+	RRCA
+	RRCA
+	RRCA
+	AND	0FH		; loescht obrere 4 Bits
+	OR	10H		; selektiert Digit 2 (D2)
+	OUT	(DA1A),A	
+	LD	A,(PORT1)	; chipselect ist low
+	OUT	(DA2A),A	; Ausgabe
+	LD	A,(PORT2)	; Abspeichern von D2
+	OUT	(DA2A),A
+	LD	A,H		; oberes Byte laden
+	AND	0FH		; loescht obere 4 Bits
+	OR	20H		; selektiert Digit 3 (D3)
+	OUT	(DA1A),A
+	LD	A,(PORT1)	; chipselect ist low
+	OUT	(DA2A),A	; Ausgabe
+	LD	A,(PORT2)	; Abspeichern von D3
+	OUT	(DA2A),A
+	LD	A,H		; wieder oberes Byte laden
+	RRCA			; 4 Bits nach rechts rotieren 
+	RRCA
+	RRCA
+	RRCA
+	AND	0FH		; loescht obere 4 Bits
+	OR	00H		; selektiert Digit 4 (D4)
+	OUT	(DA1A),A
+	LD	A,(PORT1)	; chipselect ist low
+	OUT	(DA2A),A	; Ausgabe
+	LD	A,(PORT2)	; Abspeichern von D4
+	OUT	(DA2A),A
+	RET             
+;
+;					!***********************!
+;***************************************! Unterprogramm INTD	!**************
+;					!***********************!
+;					( AF			)
+INTD:	LD	A,01H			; INTD disables interrupt
+	OUT	(SIOC),A
+	LD	A,00H
+	OUT	(SIOC),A
+	RET
+;					!***********************!
+;***************************************! Unterprogramm INTE	!**************
+;					!***********************!
+;					( AF			)
+INTE:	LD	A,01H			; INTE enables interrupt
+	OUT	(SIOC),A
+	LD	A,018H
+	OUT	(SIOC),A
+	EI
+	RET
+;					!***********************!
+;***************************************! Unterprogramm SCAN0   !**************
+;					!***********************!
+;					( AF , DE , HL		)  
+; SCAN0 faehrt den DAC 16 langsam vom aktuellen DAC-Wert (ALT) auf 
+; den neuen,der im DE-Register steht .
+;
+SCAN0:	LD	HL,(ALT)		; (ALT) --> HL
+	OR	A			; Test:
+	SBC	HL,DE			; HL=DE --> SCAN2 
+	JP	Z,SCAN2			; HL<DE --> HL=HL+1 
+	LD	A,010H			;	--> SCAN0
+	CALL	ZEITI			; HL>DE --> HL=HL-1
+	JP	C,SCAN1			;	--> SCAN0
+	LD	HL,(ALT)		; (ALT) --> HL
+	DEC	HL			; HL=HL-1
+	CALL	AUS			; Ausgage 
+	CALL	AUS1
+	JP	SCAN0 
+SCAN1:	LD	HL,(ALT)		; (ALT) --> HL
+	INC	HL			; HL=HL+1
+	CALL	AUS			; Ausgabe
+	CALL	AUS1
+	JP	SCAN0
+SCAN2:	LD	HL,(ALT)		; (ALT) --> HL
+	CALL	AUS			; Ausgabe
+	CALL	AUS1
+	RET				
+;					!***********************!
+;***************************************! Unterprogram READ	!**************
+;					!***********************!
+;					( AF			)
+; READ liesst ein Zeichen vom Hauptrechner
+;
+READ:	OR	A
+	IN	A,(SIOC)		; liegt Zeichen an ?
+	RRA
+	JP	NC,READ			; ja,Zeichen einlesen
+	IN	A,(SIOD)
+	RET
+;				        !***********************!	
+;***************************************! Unterprogramm WRITE	!**************
+;					!***********************!
+;					( AF , AF'		)	
+WRITE:	EX	AF,AF'			; gibt den Wert im 
+WRITE1:	IN	A,(SIOC)		; Register A ueber den
+	BIT	2,A			; DART aus
+	JP	Z,WRITE1
+	EX	AF,AF'
+	OUT	(SIOD),A
+	RET
+;					!***********************!
+;***************************************! Unterprogramm OUT	!**************
+;					!***********************!
+;					( AF , HL		)
+OUT:	LD	A,L			; gigt den Wert des
+	OUT	(DA1A),A		; HL-Register an die
+	LD	A,H			; Ports 1A u.1B aus
+	OUT	(DA1B),A
+	RET
+;					!***********************!
+;***************************************! Unterprogramm OUTS	!**************
+;					!***********************!	
+;					( AF , HL		)
+OUTS:	CALL	OUT			; gibt den Wert des 
+	LD	(ALTI),HL		; HL-Registers an die 
+	LD	A,30H			; Ports 1A u.1B aus
+	OUT	(DA2A),A		; und speichert sie im
+	LD	A,70H			; DAC 1 des Interators
+	OUT	(DA2A),A		; ab
+	RET
+;					!***********************!
+;***************************************! Unterprogramm ZEITI	!**************
+;					!***********************!
+;					( AF			)	
+ZEITI:  DEC	A			; Verzoegerungsschleife
+	JP	NZ,ZEITI		; fuer kurze Zeiten 
+	RET
+;					!***********************!
+;***************************************! Unterprogramm ZEITA	!**************
+;					!***********************!
+;					( AF , DE		)
+ZEITA:	LD	D,A			; Verzoegerungsschleife
+DEC2:	LD	E,0FFH			; Parameter wird durch
+DEC1:	DEC	E			; Register A uebergeben 
+	JP	NZ,DEC1
+	DEC	D
+	JP	NZ,DEC2
+	RET
+;					!***********************!
+;***************************************! Unterprogramm ADC	!**************
+;					!***********************!
+;					( AF , BC , HL		)	
+; Diese Routine ermittelt den aktuelen Spannungs wert des Inte-
+; grators und gibt diesen an DAC 1 aus .
+;	
+ADC:	LD	HL,(VARIF)		; Stop der Integration
+	CALL	OUT
+	LD	A,0D0H
+	OUT	(DA2A),A
+	LD	A,0F0H
+	OUT	(DA2A),A
+	LD	HL,0000H		; die Abtastung des zu
+	CALL 	OUT			; ermittelnden Spannungs-
+	LD	A,0B0H			; wertes mit Hilfe des
+	OUT	(DA2A),A		; Komperators beginnt mit
+	LD	A,0F0H			; dem Wert 0000H
+	OUT	(DA2A),A
+	LD	A,080H
+	CALL	ZEITA			; Anfangsverzoegerungs-
+	LD	BC,0010H		; zeit fuer Komperator
+ADC1:	CALL	OUT			; der DAC 1 wird in 12	
+	LD	A,0B0H			; Bit Schritten hochge-
+	OUT	(DA2A),A		; fahren bis der Komperator
+	LD	A,0F0H			; das erreichen der ge-
+	OUT	(DA2A),A		; suchten Spannung an-
+	IN	A,(DA2B)		; zeigt
+	BIT	4,A
+	JP	Z,ADC2
+	OR	A
+	ADC	HL,BC
+	JP	ADC1
+ADC2:	LD	A,70H			; nach Auffinden der ge-
+	OUT	(DA2A),A		; suchten Spannung wird
+	LD	(ALTI),HL		; der ermittelte Wert an
+	RET				; DAC 1 ausgegeben und
+					; nach (ALTI) gerettet	
+;
+;					!***********************!
+;***************************************!  Unterprogramm SCANI	!**************
+;					!***********************!	
+;					( AF , DE , HL	)
+; SCANI faehrt den DAC 1 langsam vom aktuelen DAC-Wert (ALTI) auf 
+; den neuen,der im DE-Register steht .
+;
+SCANI:	LD	HL,(ALTI)
+	LD 	A,020H			; Verzoegerung
+	CALL 	ZEITI
+	OR 	A
+	SBC	HL,DE  			; Vergleich: HL<=>DE ?
+	JP	Z,SCANE			; entsprechende Verzeigung
+	JP	C,SCANP
+	LD	HL,(ALTI)
+	DEC	HL
+	CALL	OUTS
+	JP	SCANI
+SCANP:	LD	HL,(ALTI)
+	INC	HL
+	CALL	OUTS
+	JP	SCANI
+SCANE:	LD	HL,(ALTI)
+	CALL	OUTS
+	RET
+	END	TAB
+

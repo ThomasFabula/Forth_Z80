@@ -1,0 +1,642 @@
+;************************************************************************
+; Datei TIMERK *          Programm Timer 				*
+;************************************************************************
+.Z80
+PUBLIC	TIMER,STOP
+EXT	ORIG
+;
+;*************************************************************************
+;	SPRUNGADDRESSEN FUER INTERRUPTS
+;
+	JP	ORIG
+	DS	10			; Programmbeginn bei 103H
+VECT1:	DW	INT1
+	DW	INT2
+	DW	INT3			
+	DW	INT2
+;
+;*************************************************************************
+;
+;
+;*************************************************************************
+;	Labels fuer Zyklusworte und Zeitkonsten
+;*************************************************************************
+;
+BLAF:	DS	1			; BLAF enthaelt die Nummer des
+					; aktuellen 16 K Blockes
+BLZAF:	DS	2			; BLZAF enthaelt die  Adresse des
+					; Speicherplatzes fuer die naechste
+					; Fluoreszenszaehlrate
+BLAD: 	DS	1			; s.o.jedoch fuer Display 
+BLZAD:	DS	2			; s.o.  "      "     "
+;
+ADR1:	DS	2			; ADR1 enthaelt die Adr.
+					; des naechsten Zyklusteils
+; (ZYKAX) enthaelt das  Wort des naechsten Zyklusteils
+; Gueltige Worte sind: 
+;
+ZYKA:	DS 	40			; 1 laed (TIMEA1) in CTCA(1-3)
+					; 2 laed (TIMEA2) in CTCA(1-3)	
+					; 3 laed (TIMEA3) in CTCA(1-3)
+					; 4 laed (TIMEA4) in CTCA(1-3)
+					; 5 laed (TIMEA5) in CTCA(1-3)
+;
+ADR2:	DS	2			; s.o.
+ZYKB:	DS	40
+;
+ADR3:	DS	2			; s.o.
+ZYKC:	DS	40
+;
+TIME:	DS	1			; Teiler fuer Timer
+;
+NACHT1:	DS	1			; Nachteiler des Timers
+NACHT2:	DS	1
+;
+TEILA1:	DS	1			; Vorteilerwerte der Kanaele
+TEILA2:	DS	1
+;
+TEILB1:	DS	1			; s.o.
+TEILB2: DS	1
+;
+TEILC1:	DS 	1			; s.o.
+TEILC2: DS	1
+;
+TIMEA0:	DS	1			; Startzeit
+TIMEA1:	DS	1			; TIMAX enthaelt Zeit-
+TIMEA2:	DS	1			; konstante (3 Bytes)
+TIMEA3:	DS	1			; 1. Byte --> Vorteiler 1
+TIMEA4:	DS	1			; 2. Byte --> Vorteiler 2
+TIMEA5:	DS	1			; 3. Byte --> Counter
+;
+TIMEB0:	DS	1
+TIMEB1:	DS	1			; s.o.
+TIMEB2:	DS	1
+TIMEB3:	DS	1
+TIMEB4:	DS	1
+TIMEB5:	DS	1
+;
+TIMEC0:	DS	1
+TIMEC1:	DS	1			; s.o.
+TIMEC2:	DS	1
+TIMEC3:	DS	1
+TIMEC4:	DS	1
+TIMEC5:	DS	1
+INTVEC: DS	1			; alter Interruptvector
+ZAEHL:	DS	2			; Anzahl der Floureszenzpunkte
+FENA:	DS	2			; Zahl der Floup.bis Fenster-
+					; anfang
+FENB:	DS	2			; Zahl der Schritte innerhalb
+					; des Fensters
+SSTOP:	DS	2			; Gesamtzahl aller Messschritte
+ZYKN:	DS	1			; Stelle an der TIMEB,C in
+					; ZYKB,C gespeichert wurde
+TSTOP:	DS	1			; Terminalstopbedingung
+					; (TSTOP)=1 --> Abbruch !
+BLADR:	DS	1			; BLADR enthaelt die Nummer des
+					; aktuellen 16 K Blockes
+BLZAE:	DS	2			; BLZAE enthaelt die  Adresse des
+					; Speicherplatzes fuer die naechste
+					; Eichmarkenzaehlrate
+LEER:	DS	1			; temporaler Speicherplatz
+					; fuer die Anzahl der nicht
+					; zuspeicherten Eichmarken
+VOLL:	DS	1			; temporaler Speicherplatz
+					; fuer die Anzahl der zu-
+					; speicherten Eichmarklen
+LEERA:	DS	2			; Adresse fuer den endgueltigen
+					; Speicherplatz der Leerschritte
+					; zwischen 2 Eichmarkenmitten
+VOLLA:	DS	2			; Adresse fuer den endgueltigen
+					; Speicherplatz der aufgenommenen
+					; Eichmarkenpunkte einer Resonanz
+UNTE:	DS	2			; Speicherplatz fuer den Unter-
+					; grund
+ANFE:   DS	1			; 0 = 1. Eichmarkenzaehlrate < 
+					; Untergrund 1 = > Untergrund
+EICHIX: DS	2			; Hilfsvariable fuer ANFE 
+;
+;*************************************************************************
+;	HAUPTPROGRAMM
+;*************************************************************************
+;
+TIMER:	IM	2
+	LD	A,I			; alten Interruptvector retten
+	LD 	(INTVEC),A
+	DI
+	LD	HL,LEERK2		; erster INT verzweigt ueber
+	LD	(EICHIX),HL		; LEERK2
+	LD	A,1			; Anfangswert von 
+	LD	(ANFE),A		; ANFE = 1
+	CALL	INI1			; Setzt alle Kanaele
+	CALL	INI2			; auf Zyklusanfang
+	CALL	INI3
+	LD	HL,VECT1		; untere Interruptvektor- 
+	LD	A,L			; haelften werden in die 
+	OUT	(CTCA2),A		; Counter geladen	
+	LD	A,H			; obere Interruptvektor-
+	LD	I,A			; haelfte wird nach I
+	LD	HL,TIMEA0
+	CALL	ZEIT1			; alle Counter erhalten
+	LD	HL,TIMEB0		; ihre Startzeiten
+	CALL	ZEIT2
+	LD	HL,TIMEC0
+	CALL	ZEIT3
+	LD	A,55H			; Timernachteiler 
+	OUT	(TIMER2),A		; erhalten ihre Werte
+	OUT	(TIMER3),A
+	LD	A,(NACHT1)
+	OUT	(TIMER2),A
+	LD	A,(NACHT2)
+	OUT	(TIMER3),A
+	LD	A,57H			; Countervorteiler
+	OUT	(CTCA0),A		; erhalten ihre Werte
+	OUT	(CTCA1),A
+	OUT	(CTCB0),A		
+	OUT	(CTCB1),A
+	OUT	(CTCC0),A
+	OUT	(CTCC1),A
+	LD	A,(TEILA1)
+	OUT	(CTCA0),A
+	LD	A,(TEILA2)
+	OUT	(CTCA1),A
+	LD	A,(TEILB1)
+	OUT	(CTCB0),A
+	LD	A,(TEILB2)
+	OUT	(CTCB1),A
+	LD	A,(TEILC1)
+	OUT	(CTCC0),A
+	LD	A,(TEILC2)
+	OUT	(CTCC1),A	
+	LD	A,17H			; Timer wird gestartet
+	OUT	(TIMER1),A		; im Timermode.
+	LD	A,(TIME)		; Vorteiler = 16
+	OUT	(TIMER1),A		; F= 250 Khz / (TIME)
+	LD	HL,TIMEA1
+	CALL	ZEIT1			; alle Counter erhalten
+	LD	HL,TIMEB1		; die Zeitkonstanten des
+	CALL	ZEIT2			; Zyklusbeginns
+	LD	HL,TIMEC1
+	CALL	ZEIT3
+	LD	HL,ADR1			; setzt (ADR1-3) fuer
+	INC	(HL)			; den ersten Interrupt
+	LD	HL,ADR2			; auf den zweiten
+	INC	(HL)			; Zyklusteil
+	LD	HL,ADR3
+	INC	(HL)
+	EI
+	RET
+
+;
+;*************************************************************************
+;	INTERRUPTROUTINE 1
+;*************************************************************************
+;
+INT1:	PUSH	AF			; Register :
+	PUSH	BC			; AF,BC,HL,IX
+	PUSH	DE			; werden gerettet
+	PUSH	HL			; (Stack)
+	PUSH 	IX
+ZYK1:	LD	HL,(ADR1)		; (ADR1) --> A
+	LD	A,(HL)
+	CP	0FFH			; Zeichenvergleich und
+	JP	Z,ZEITA0		; entsprechende Ver-
+	CP	1			; zweigung
+	JP	Z,ZEITA1
+	CP	2
+	JP	Z,ZEITA2
+	CP	3
+	JP	Z,ZEITA3
+	CP	4
+	JP	Z,ZEITA4
+	CP	5
+	JP	Z,ZEITA5
+RET1:   LD	HL,ADR1			; (ADR1)=(ADR1+1)
+	INC	(HL)	
+	POP	IX
+	POP	HL			; Wiederherstellung
+	POP	DE			; des Ausgangszustandes
+	POP	BC			
+	POP	AF
+	EI
+	RETI
+;
+ZEITA0: CALL	INI1			; Setzt Kanal 1 auf
+ 	JP	ZYK1			; Zyklusbeginn
+ZEITA1:	LD	HL,TIMEA1		; TIMEA1 --> HL
+	CALL	ZEIT1
+	JP	RET1
+ZEITA2: LD	HL,TIMEA2		; TIMEA2 --> HL
+	CALL	ZEIT1
+	JP	RET1
+ZEITA3:	LD	HL,TIMEA3		; TIMEA3 --> HL
+	CALL	ZEIT1	
+	JP	RET1
+ZEITA4:	LD	HL,TIMEA4		; TIMEA4 --> HL
+	CALL	ZEIT1
+	JP	RET1
+ZEITA5:	LD	HL,TIMEA5		; TIMEA5 --> HL
+	CALL	ZEIT1
+	JP	RET1	
+ZEIT1:	LD	A,0D5H
+	OUT	(CTCA2),A		; Vorbereitung des CTC's
+	LD	A,(HL)			; auf eine neue Zeit-
+	OUT	(CTCA2),A		; konstante
+	RET
+;
+;**************************************************************************
+;	INTERRUPTROUTINE 2
+;**************************************************************************
+;
+INT2:	PUSH	AF			; Siehe Routine 1
+	PUSH	BC
+	PUSH	DE
+	PUSH	HL
+	PUSH	IX
+ZYK2:	LD	HL,(ADR2)
+	LD	A,(HL)
+	CP	0FFH
+	JP	Z,ZEITB0
+	CP	1
+	JP	Z,ZEITB1
+	CP	2
+	JP	Z,ZEITB2
+	CP	3
+	JP	Z,ZEITB3
+	CP	4
+	JP	Z,ZEITB4
+	CP	5
+	JP	Z,ZEITB5
+RET2:   LD	HL,ADR2
+	INC	(HL)
+	POP 	IX
+	POP	HL
+	POP	DE
+	POP	BC
+	POP	AF
+	EI
+	RETI
+;
+ZEITB0: CALL	INI2
+	JP	ZYK2
+ZEITB1:	LD	HL,TIMEB1
+	CALL	ZEIT2
+	CALL	EICH			; Eichmarken einlesen
+	LD	HL,LEERK1		; naechster INT verzweigt
+	LD	(EICHIX),HL		; ueber LEERK1
+	JP	RET2
+ZEITB2:	LD	HL,TIMEB2
+	CALL	ZEIT2			
+	JP	RET2
+ZEITB3:	LD	HL,TIMEB3
+	CALL	ZEIT2
+	JP	RET2
+ZEITB4:	LD	HL,TIMEB4
+	CALL	ZEIT2
+	JP	RET2			
+ZEITB5:	LD	HL,TIMEB5
+	CALL	ZEIT2
+	JP	RET2
+ZEIT2:	LD	A,0D5H
+	OUT	(CTCB2),A
+	LD	A,(HL)
+	OUT	(CTCB2),A
+	RET
+;
+;*************************************************************************
+;	INTERRUPTROUTINE 3
+;*************************************************************************
+;
+INT3:	PUSH	AF			; Siehe Routine 1
+	PUSH	BC
+	PUSH	DE
+	PUSH	HL
+	PUSH	IX
+ZYK3:	LD	HL,(ADR3)
+	LD	A,(HL)
+	CP	0FFH
+	JP	Z,ZEITC0
+	CP	1
+	JP	Z,ZEITC1
+	CP	2
+	JP	Z,ZEITC2
+	CP	3
+	JP	Z,ZEITC3
+	CP	4
+	JP	Z,ZEITC4
+	CP	5
+	JP	Z,ZEITC5
+RET3:   LD	HL,ADR3
+	INC	(HL)
+	POP	IX
+	POP	HL
+	POP	DE
+	POP	BC
+	POP	AF
+	EI
+	RETI
+;
+ZEITC0: CALL	INI3
+	JP	ZYK3
+ZEITC1:	LD	HL,TIMEC1
+	CALL	ZEIT3
+	CALL	FLUO			; Fluoreszenszaehler auslesen
+	JP	RET3
+ZEITC2:	LD	HL,TIMEC2
+	CALL	ZEIT3			
+	JP	RET3
+ZEITC3:	LD	HL,TIMEC3		; diese Zeit wird im Fenster
+	CALL	ZEIT3			; benutzt
+	CALL	FENS
+	JP	RET3
+ZEITC4:	LD	HL,TIMEC4
+	CALL	ZEIT3
+	JP	RET3
+ZEITC5:	LD	HL,TIMEC5
+	CALL	ZEIT3
+	JP	RET3		
+ZEIT3:	LD	A,0D5H
+	OUT	(CTCC2),A
+	LD	A,(HL)
+	OUT	(CTCC2),A
+	RET
+;*************************************************************************
+;			Unterprogramm EICH
+;*************************************************************************
+;
+; 	Unterprogramm EICH liesst die Eichmarkenzaehlraten ein
+;	und ueberprueft,ob die Zaehlrate ober- oder unterhalb
+;	des Untergrundes liegt.Ist die Zaehlrate groesser als
+;	der Untergrund wird sie fortlaufend abgespeichert.Ge-
+;	gebenenfalls wird noch auf einen hoeheren 16 K Block
+;	umgeschaltet.Liegt die Zaehlrate jedoch unterhalb des 
+;	Untergrundes wird sie nicht abgespeichert.In beiden   
+;	Faellen wird die Anzahl der direkt hintereinander auf-
+;	genommenen Eichmarkenzaehlraten,und die Anzahl der direkt
+;	hintereinanderfolgenden Eichmarkenzaehraten,die unterhalb
+;	des Untergrundes lagen,fortlaufend ab Adresse LEERA bzw.
+;	VOLLA abgespeichert. 
+;*************************************************************************
+;
+EICH:	LD	A,99H			; Latch
+	OUT	(EICHK),A
+	LD	A,98H			; alt
+	OUT	(EICHK),A
+	LD	A,90H			; Enable low byte
+	OUT 	(EICHK),A
+	CALL	TNOP
+	IN	A,(EICHZ)		; Zaehlrate einlesen
+	LD	E,A
+	LD	A,98H			; alt
+	OUT	(EICHK),A
+	LD	A,88H			; Enable high byte
+	OUT	(EICHK),A
+	CALL	TNOP
+	IN	A,(EICHZ)		; Zaehlrate einlesen
+	LD	D,A
+	LD	A,9AH			; CLR Counter
+	OUT	(EICHK),A
+	LD	A,98H			; alt
+	OUT	(EICHK),A
+	LD	HL,(UNTE)		; Test mit Untergrund
+	OR	A
+	SBC	HL,DE
+	JP	NC,LEERK
+	LD	A,(BLADR)		; Einschalten des ent-
+	OUT	(0EEH),A		; sprechenden Blockes
+	LD	IX,(BLZAE)		; Abspeichern der Eich-
+	LD	(IX+0),E		; markenzaehrate
+	LD	(IX+1),D	
+	LD	HL,(BLZAE)
+	INC	HL			; (BLZAE)=(BLZAE)+2
+	INC	HL
+	LD	(BLZAE),HL		; wenn der aktuelle 16 K
+	LD	BC,0C000H		; Block voll ist wird ueber
+	OR	A
+	SBC	HL,BC			; BLOCKE der naechste einge- 	
+	CALL	Z,BLOCKE		; schaltet
+	JP	VOLLK
+LEERK:	LD	IX,(EICHIX)		; Entsprechende  
+	JP	(IX)			; Verzweigung
+LEERK1:	LD	HL,LEER			; (LEER)=(LEER)+1
+	INC	(HL)
+	LD	A,(VOLL)		; (VOLL)<>0 --> VOLLS
+	CP	0
+	JP	NZ,VOLLS
+	JP	EICHE
+LEERK2: LD	A,0			; Ist (ANFE)=0 so lag die erste
+	LD	(ANFE),A		; aufgenommene Eichmarkenzaehl-
+	JP 	LEERK1			; rate unter dem Untergrund
+VOLLS:	LD	HL,(VOLLA)		; (VOLL) --> ((VOLLA))
+	LD	(HL),A
+	INC	HL
+	LD	(VOLLA),HL
+	LD	A,0			; (VOLL)=0
+	LD	(VOLL),A
+	JP	EICHE
+VOLLK:	LD	HL,VOLL			; (VOLL)=(VOLL)+1
+	INC	(HL)
+	LD	A,(LEER)		; (LEER)<>0 --> LEERS
+	CP	0
+	JP	NZ,LEERS
+	JP	EICHE
+LEERS:	LD	HL,(LEERA)		; (LEER) --> ((LEERA))
+	LD	(HL),A
+	INC	HL
+	LD	(LEERA),HL
+	LD	A,0			; (LEER)=0	
+	LD	(LEER),A
+	JP	EICHE
+BLOCKE: LD	A,(BLADR)		; (BLADR)=(BLADR)+4 
+	ADD	A,4
+	LD	(BLADR),A
+	LD	HL,8000H		; (BLZAE)=8000H 
+	LD	(BLZAE),HL		 
+	RET
+EICHE:	LD	A,(BLAD)		; Displayblock wird 
+	OUT	(0EEH),A		; wieder hergestellt
+	RET
+;
+;***********************************************************************
+;		Unterprogramm FLUO
+;***********************************************************************
+;
+
+FLUO:	LD	A,(BLAF)		; Einschalten des ent-
+	OUT	(0EEH),A		; sprechenden Blockes
+	LD	IX,(BLZAF)		; (BLZAF) --> IX
+	LD	A,97H			; Latch
+	OUT	(FLUOK),A
+	LD	A,87H			; alt
+	OUT	(FLUOK),A
+	LD	A,86H			; Vorbereitung von(low)
+	OUT	(FLUOK),A		; Fluoreszenszaehler A
+	CALL	TNOP
+	IN	A,(FLUOZ)		; Fluoreszenszeahler A wird
+	LD	(IX+0),A		; eingelesen und abgespeichert
+	LD	A,87H			; alt
+	OUT	(FLUOK),A
+	LD	A,85H			; Vorbereitung von
+	OUT	(FLUOK),A		; Fluoreszenszaehler B
+	CALL	TNOP
+	IN 	A,(FLUOZ)		; Fluoreszenszaehler B wird
+	LD	(IX+1),A		; eingelesen und abgespeichert
+	LD	A,87H			; alt
+	OUT	(FLUOK),A
+	LD	A,83H			; Vorbereitung von (HIGH)
+	OUT	(FLUOK),A		; Fluoreszenszaehler C
+	CALL	TNOP
+	IN	A,(FLUOZ)		; Fluoreszenszaehler C wird
+	LD	(IX+2),A		; eingelesen und abgespeichert
+	LD	A,8FH			; CLR Zaehler
+	OUT	(FLUOK),A
+	LD	A,87H			; alt
+	OUT	(FLUOK),A
+	LD	HL,(BLZAF)
+	INC	HL			; (BLZAF)=(BLZAF)+3
+	INC	HL
+	INC	HL
+	LD	(BLZAF),HL		; wenn der aktuelle 16 K
+ 	LD	BC,0BFFFH		; Block voll ist wird ueber
+	OR	A			; -->	
+	SBC	HL,BC			; BLOCKE der naechste einge- 	
+ 	CALL	Z,BLOCKF		; schaltet
+	LD	A,(BLAD)		; der Displayblock wird
+	OUT	(0EEH),A		; wieder eingeschaltet
+	CALL 	FENS			; Test : Abbruch/Umschaltung
+	RET
+BLOCKF: LD	A,(BLAF)		; (BLAF)=(BLAF)+4 
+	ADD	A,4
+	LD	(BLAF),A
+	LD	HL,8000H		; (BLZAF)=8000H 
+	LD	(BLZAF),HL		 
+	LD	A,2AH
+	OUT	(SIOD),A
+	RET
+;*************************************************************************
+;			Unterprogramm FENS
+;************************************************************************
+;
+FENS:	LD	BC,(ZAEHL)		; ZAEHL=ZAEHL+1
+	INC	BC			
+	LD	(ZAEHL),BC		
+	LD	HL,(FENA)		; Test von ZAEHL
+	OR	A			; mit
+	SBC	HL,BC			; FENA 
+	CALL	Z,FENSA
+	LD	HL,(FENB)
+	OR	A			; mit
+	SBC	HL,BC			; FENB
+	CALL	Z,FENSB
+	LD	HL,(SSTOP)
+	OR	A			; mit
+	SBC	HL,BC			; SSTOP
+	CALL 	Z,STOP
+	LD	A,(TSTOP)
+	CP	1
+	CALL	Z,STOP
+	RET
+FENSA:	LD	A,3			; Austausch von TIMEC1
+	LD	HL,ZYKC			; durch TIMEC3
+	LD	(HL),A			; TIMEC4=3*Verzoegerungs-
+	LD	A,(ZYKN)		; zeit
+	LD	C,A
+	LD	B,0
+	LD	HL,ZYKB			; Speicherplatberechnung
+	ADD	HL,BC			; fuer TIMEA,TIMEB
+	LD	A,4
+	LD	(HL),A			; Austausch von TIMEA3
+	LD	HL,ZYKA			; durch TIMEA4
+	ADD	HL,BC			; Austausch von TIMEB3
+	LD	(HL),A			; durch TIMEB4
+	LD	HL,TIMEC3		; erste neue Zeitkonstante
+	CALL	ZEIT3			; fuer Kanal 3
+	RET				; Fensteranfang		
+FENSB:	LD	A,8FH			; CLR Zaehler
+	OUT	(FLUOK),A
+	LD	A,87H			; alt
+	OUT	(FLUOK),A 
+	LD	A,1			; Austausch von TIMEC3
+	LD	HL,ZYKC			; durch TIMEC1
+	LD	(HL),A
+	LD	A,(ZYKN)		; Speicherplatzberechnung
+	LD	C,A			; fuer TIMEA,TIMEB
+	LD	B,0
+	LD	HL,ZYKB
+	ADD	HL,BC
+	LD	A,3
+	LD	(HL),A			; Austausch von TIMEA4
+	LD	HL,ZYKA			; durch TIMEA3
+	ADD	HL,BC			; Austausch von TIMEB4
+	LD	(HL),A			; durch TIMEB3
+	LD	HL,TIMEC1		; erste alte Zeitkonstante 
+	CALL	ZEIT3			; fuer Kanal 3 
+	RET				; Fensterende	
+;*************************************************************************
+; 		        Unterprogramme INI
+;*************************************************************************
+;
+;	INI initialisiert alle Kanaele auf ihren Zyklusanfang
+;
+;*************************************************************************
+;
+INI1:	LD	HL,ADR1			; (ADR1)=ADR1+2
+	INC	HL			 
+	INC	HL
+	LD	(ADR1),HL
+	RET
+INI2:	LD	HL,ADR2			; (ADR2)=ADR2+2
+	INC	HL
+	INC	HL
+	LD	(ADR2),HL
+	RET
+INI3:	LD	HL,ADR3			; (ADR3)=ADR3+2
+	INC	HL
+	INC	HL
+	LD	(ADR3),HL
+	RET
+;
+TNOP:	NOP				; Verzoegerung 
+	RET
+;
+STOP:	LD	A,53H			; INT (CTC) disable
+	OUT	(TIMER1),A
+	OUT	(CTCA2),A		; und Softwarereset
+	OUT	(CTCB2),A
+	OUT	(CTCC2),A
+	LD	A,(INTVEC)
+	LD	I,A
+	LD	A,24			; alte Speicherbelegung
+	OUT	(0EEH),A		; wiederherstellen
+	EI
+	RET
+;
+;*************************************************************************
+; Tabelle fuer Timer/Counter:
+;*************************************************************************
+;
+TIMER1	EQU	30H		; Timer triggert Vorteiler 1
+TIMER2	EQU	31H		; Nachteiler 1 fuer Timer
+TIMER3	EQU	32H		; 	"    2  "     "	 
+CTCA0	EQU	34H		; Vorteiler 1 Kanal 0		
+CTCA1	EQU	38H		; Vorteiler 2 Kanal 0
+CTCA2	EQU	3CH		; Counter Kanal 0 u. Interuptvektor
+CTCB0	EQU	35H		; Vorteiler 1 Kanal 1
+CTCB1	EQU	39H		; Vorteiler 2 Kanal 1
+CTCB2	EQU	3DH		; Counter Kanal 1
+CTCC0	EQU	36H		; Vorteiler 1 Kanal 2
+CTCC1	EQU	3AH		; Vorteiler 2 Kanal 2
+CTCC2	EQU	3EH		; Counter Kanal 2
+EICHK	EQU	66H		; Eichmarkenkontrollport
+EICHZ	EQU	64H		; Eichmarkenzaehlerport
+FLUOK	EQU	62H		; Fluoreszenskontrollport
+FLUOZ	EQU	60H		; Fluoreszenszaehlerport
+SIOC	EQU	0E3H		; SIO-Control
+SIOD	EQU	0E2H		; SIO-Data
+ARIC	EQU 	89H		; Arithmeticcontrol
+ARID	EQU	88H		; Arithmeticdata
+;
+;*************************************************************************
+;
+	END	
+
+

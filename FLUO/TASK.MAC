@@ -1,0 +1,18 @@
+ext	LINKE,NEST,SEMIS
+public	TASK,INITDP
+
+;                                                       +---------------------+
+;                                                       !        TASK         !
+;                                                       +---------------------+
+	DB	84H
+	DC	'TASK'
+	DW	LINKE
+TASK:	DW	NEST
+	DW	SEMIS
+;                                                 +---------------------------+
+;                                                 !   Ende der Grundbefehle   !
+;                                                 +---------------------------+
+INITDP:	DB	0H
+ 
+END
+
