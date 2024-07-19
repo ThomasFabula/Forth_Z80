@@ -1,0 +1,200 @@
+                    ( ++++++++++++++++++++++++++++++ )
+                    ( +++   DATEI : FLUONEU.DOC  +++ )
+                    ( +++   Stand : 10.3.86      +++ )
+                    ( +++   Dokumentation : tf   +++ )
+                    ( ++++++++++++++++++++++++++++++ )
+
+( Diese Datei enthaelt alle Aenderungen, die an den FLUO-1 Programm-    )
+( Source-Listings [ FLUO4.SL2 - FLUO6.SL2 ] durchgefuehrt wurden.       )
+( Die Aenderungen bewirken im Wesentlichen folgendes :                  )
+(                                                                       )
+(    [1.]  Der Ausstieg aus dem FLUO-Programm erfolgt nicht mehr ins    )
+(          Betriebssystem CP/M, sondern ins FORTH.                      )
+(                                                                       )
+(          Vorteil: Bei versehentlichem Verlassen des Programms bleiben )
+(                   alle Mess-Daten u. Systemvariablen etc. erhalten,   )
+(                   und die einzelnen FORTH-Worte [z.B. DATASAVE] sind  )
+(                   noch exekutierbar, sodass alle Daten im Nachhinein  )
+(                   gerettet werden koennen.                            )
+(                   Ausserdem : Debug-Moeglichkeit bei Programmfehlfun- )
+(                   ktion im FORTH-Interpreter.                         )
+(                                                                       )
+(    [2.]  Bei der Datensicherung /sowohl ASCII, als auch BIN/ erfolgt  )
+(          jeweils eine Abfrage der zur Verfuegung stehenden leeren     )
+(          Disketten-Kapazitaet, sodass versehentlich  k e i n e  Daten )
+(          durch "Pseudo-Abspeicher-Operationen" verloren gehen koennen.)
+(          Sollte lediglich  n u r  das Inhaltsverzeichnis der Diskette )
+(          voll sein, so erfolgt ebenfalls eine Fehlermeldung.          )
+(                                                                       )
+(    [3.]  Beim Abspeichern von Mess-Dateien /ASCII u. BIN/ ist es  nun )
+(          n i c h t  mehr moeglich "namenlose" Dateien zu generieren,  )
+(          da dieses vom Programm bei der Dateinamensabfrage   NAMIN    )
+(          abgefangen wird.                                             )
+(                                                                       )
+(    Neueste FLUO-Program Version :  FLUO-2.COM                         )
+(                                                                       )
+(                                                                       )
+( ++++++++++++++++++++++++  NEUE WORTE ++++++++++++++++++++++++++++++++ )
+( +++                                                               +++ )
+( +++ herumgewurschtelt am 7.3.86 von : H.Roeder & T. Fabula        +++ )
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+( ++++++++++++++++++++++++   FLUO4.SL2  +++++++++++++++++++++++++++++++ )
+
+0 VARIABLE DOSFLAG 
+
+: NOT   01 XOR ;                                     (logisches "nicht" ) 
+: BEEP  07 EMIT ;                                    ( Warnton ausgeben )
+: BLUP  2´ ¶ CURS ± DEÌ BEEÐ 2´ ¶ CURS ;          (Cursorpositionierung )  
+
+: DFERR  BLUP ." DISKETTE VOLL ! - BITTE WARTEN " ;  ( Fehlermeldung    )
+
+(  -->  f )
+: WRSQ  21 FCB DOSCALL DUP IF DFERR ENDIF ;          ( Write sequential )
+
+(  -->  f )
+: WRSQL  WRSQ DUP IF LEAVE ENDIF ;     ( Write sequential mit Verlassen )
+                                       ( einer DO...LOOP Schleife       )
+(  -->  f )
+: MKFL  22 FCB DOSCALL 255 = DUP           ( Make file )
+        IF BLUP ." INHALTSVERZEICHNIS VOLL !" ENDIF NOT ;
+
+( FILEAB : Fehlermeldung )
+( n --> f )
+ : FILEAB  BLUP DROP ." DATEI EXESTIERT SCHON ! LOESCHEN (J/N) ? :  "
+	   0 KEY DUP EMIT 74 = IF DROP 1 ENDIF ;
+
+( NAMIN : Dateinamen Abfrage )
+ : NAMIN  BEGIN
+           22 1 CURS 2 DEL
+	   2 FCB C!					( B: default	  )
+	   23 6 CURS ." NAME DER DATEI ? :  " ?DATNAM 
+	   FCB 1+ C@
+           33 < DUP IF BEEP ENDIF   ( BEEP bei ungueltigen Steuerzeichen  )
+	   NOT 
+          UNTIL ;
+    
+
+( +++++++++++++++++++++++++++   geaenderte Worte  +++++++++++++++++++++++ )
+
+
+
+( ***  geaendertes Wort : )
+: DOS1!	32768 SWAP 0 DO 26 OVER DOSCALL 	( n -->			)
+	DROP WRSQL DOSFLAG ! 128 + LOOP ;
+( DOS1! speichert n Sektoren ab Adresse 32768 sequentiell auf Diskette  )
+(       der DMA-Bereich wird dabei ueber das Datenfeld verschoben	)
+
+
+( *** geaendertes Wort : )
+: INHDAA 
+       76 0 DO 
+            -10000 I + C@  STOR1	( 0. Kommentar -->		)
+	    DOSFLAG @ IF LEAVE ENDIF 
+       LOOP 
+       13 STOR1 10 STOR1
+       SUMFL @ STOR2			( 1. Anzahl der Fluo-Messwerte	)
+	SUMV STOR2	  		( 2. Anzahl der Eich-Messwerte	)
+	AVOLL STOR2			( 3. Anzahl der Vollschritte	)
+	ALEER STOR2			( 4. Anzahl der Leerschritte	)
+	ANFE C@ STOR2			( 5. Anfang Voll bzw. Leer	)
+	FENST STOR2 STOR2		( 5.6. Fensterwerte		)
+	MN1 @ 10 * STOR2		( 7. Scanweite Laser [MHz]	)
+	MN2 @ 10 * STOR2		( 8. Scanweite Messung [MHz]	)
+	MN3 @ STOR2			( 9. Startwert [MHz]		)
+	MN4 @ 10 * STOR2		( 10. Messzeit-Fluo [msec]	)
+	MN5 @ STOR2 ;			( 11. Schrittweite * 2 [MHz]	)
+( INHDAA speichert das Inhaltsverzeichnis auf Diskette.			)
+
+
+( *** geaendertes Wort : )
+: ASCI1 19 1 CURS 6 DEL 13 0 DOSCALL ( RESET ) DROP  20 6 CURS
+ 	." DATEI BENENNEN [ MAX 8 BUCHSTABEN ] .F1A WIRD GESETZT ! " 
+	21 6 CURS ." LAUFWERK B: ( DEFAULT ) " 
+	BEGIN  NAMIN 
+	       65 49 70 FCB 12 + FCB 9 + DO I C! LOOP	( FCB anlegen     )
+	       1 15 FCB DOSCALL 4 < 			( Datei eroeffnen )
+	       IF FILEAB ENDIF 
+	UNTIL ;
+( ASCI1 ist die Dateieroeffnungsprozedur fuer die ASCII-Datei		)
+
+
+
+( *** geaendertes Wort : )	
+: ASCI2 19 FCB DOSCALL DROP	( delete file )	   (  -->   	        )
+	MKFL    	        ( make file   )
+	IF OPEN DONE ENDIF 
+	16 FCB DOSCALL DROP     ( close file  ) 			
+	26 128 DOSCALL DROP ;	( DMA reset   )	
+( ASCI2 ist die Abschlussprozedur fuer die ASCII-Datei			)
+
+( +++++++++++++++++++++   FLUO5.SL2   +++++++++++++++++++++++++++++++++ )
+
+
+( *** geaendertes Wort : )
+: BLOCK! 32768 SWAP 0					( n  -->   f     )
+	DO DUP DMA 128 CMOVE WRSQL 
+        BANK @ 238 P!
+	128 + LOOP DROP ;
+( BLOCK! schreibt n Sektoren des eingeschalteten Blocks auf Diskette        )
+
+
+( *** geaendertes Wort : )
+: FILE!2 19 FCB DOSCALL DROP	( delete file )		(  -->		    )
+	MKFL                    ( make file   )
+	IF 
+          OPEN
+	  INHALT1 48 0 DO DMA I + ! 2 +LOOP ( Inhaltsverzeichnis --> Buffer   )
+	  WRSQL DROP	( write sequential )
+	  32 DUP 238 P! BANK !	       ( ersten FLUO-Block einschalten      )
+	  FLB DUP 0 > IF    	       ( Test auf Anzahl der Bloecke FLUO   )
+	  32 SWAP 0 DO DUP DUP 238 P!    ( volle FLUO-Bloecke abspeichern   )
+	  BANK ! 128 BLOCK! IF LEAVE ENDIF 4 + LOOP 
+	  DUP DUP 238 P! BANK !	       ( entsprechende bank einschalten     )
+	  ENDIF DROP 
+	  FLZ BLOCK! DROP		 	   ( FLUO -->		    )
+	  64 DUP 238 P! BANK !	       ( ersten Eichmarkenblock einschalten )
+	  EIB 0 >          	       ( Test auf Anzahl der Bloecke EICH   )
+	  IF 128 BLOCK! DROP 68 DUP 238 P!  ( gegebenenfalls ganzen Block --> )
+	  BANK ! ENDIF EIZ BLOCK! DROP     ( Eichmarken -->	    	    )
+	  -16384 LEERZ 0 DO                       ( Eichmarkenparameter LEERA )
+	  DUP DMA	128 CMOVE WRSQL DROP 
+	  128 + LOOP DROP 
+	  -12288 VOLLZ 0 DO 			( Eichmarkenparameter VOLLA )
+	  DUP DMA 128 CMOVE WRSQL DROP 
+	  128 + LOOP DROP 
+	  -10000 DMA 76 CMOVE WRSQ DROP  ( Kommentar -->   )
+	 ENDIF 16 FCB DOSCALL DROP ;	       ( close file  )	
+
+
+( *** geaendertes Wort : ) 
+(  -->   f  )
+: FILEFCB 
+         NAMIN 
+         4 39 CURS 8 0 DO FCB 1+ I + C@ EMIT LOOP 	( Name ausgeben   )
+         46 EMIT 70 EMIT 49 EMIT 66 EMIT 		( .F1B ausgeben   )
+         66 49 70 FCB 12 + FCB 9 + DO I C! LOOP	( FCB anlegen     )
+         1 15 FCB DOSCALL  ;  				( Datei eroeffnen )
+
+
+( +++++++++++++++++++++++++++  Datei : FLUO6.SL2  ++++++++++++++++++++++++ )
+
+( *** geaendertes Wort : )
+: VORMENUE 19 1 CURS 6 DEL 19 6 CURS			( -->		)
+	   ." DATEI EINLESEN       [1] " 20 6 CURS
+	   ." MESSDATENANALYSE     [2] " 21 6 CURS	
+	   ." ASCII-KONVERTIERUNG  [3] " 22 6 CURS
+	   ." SCAN                 [4] " 23 6 CURS
+	   ." UNTERGRUND           [5] " 24 6 CURS	
+	   ." F  O  R  T  H        [7] " 20 50 CURS ;   
+	   	
+
+( *** geaenderter Wort : )
+: RUN  DECIMAL DISPLAY 160 EICHTEILER !			( -->		)
+       900 UNTE ! VORMENUE MENUE1 
+       CLS INVERSE 1 1 CURS ." F  O  R  T  H :" NORMAL CR ;
+( RUN ist Start des ganzen Programms.					)
+ 
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+                                                            
