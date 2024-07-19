@@ -1,0 +1,163 @@
+(  Datei : FLUO5.SL2  ---  Dateisicherungsprogramm			)
+
+DECIMAL
+
+: FLB	BLAF C@ 32 - 4 / ;		( Anzahl der vollen Fluo-Bloecke )
+: FLZ	BLZAF @ 32768 - 128 / 1+ ;	(    "   der restlichen Sektoren ) 
+: EIB   BLADR C@ 64 - 4 / ;		(    "   der vollen Eich-Bloecke )
+: EIZ	BLZAE @ 32768 - 2 - 128 / 1+ ;	(    "   der restlichen Sektoren )
+: LEERZ	LEERA @ -16384 - 128 / 1+ ;	(    "   der Leerschrittsektoren )
+: VOLLZ	VOLLA @ -12288 - 128 / 1+ ;	(    "   der Vollschrittsektoren )
+( Entsprechende Parameter werden dem Stack uebergeben.			 )
+
+
+: INHALT1 VOLLZ LEERZ EIZ EIB FLZ FLB			(   -->  n1 n2...)
+	  VOLLA @ LEERA @ TEILER @ ANFE C@ 
+	  ZAEHL @ SUMFL @ SSTOP @ FENB @ FENA @ 
+	  OEXP @ OMAN @ MN8 @ MN7 @ 
+	  MN5 @ MN4 @ MN3 @ MN2 @ MN1 @ ;		
+( INHALT1 holt das Inhaltsverzeichnis fuer den Datenfile auf den Stack	  ) 
+
+( *** geaendertes Wort : )
+: BLOCK! 32768 SWAP 0					( n  -->   f     )
+	DO DUP DMA 128 CMOVE WRSQL SWAP
+        BANK @ 238 P!
+	128 + LOOP DROP ;
+( BLOCK! schreibt n Sektoren des eingeschalteten Blocks auf Diskette        )
+
+: BLOCK@ 32768 SWAP 0					( n  -->	    )
+	DO DUP 20 FCB DOSCALL DROP BANK @
+	238 P! DMA SWAP 128 CMOVE 128 +
+	LOOP DROP ; 	 
+( BLOCK@ schreibt n Sektoren von Diskette in den durch BANK eingeschalteten )
+( 16 K-Block								    )
+
+( *** geaendertes Wort : )
+: FILE!2 19 FCB DOSCALL DROP	( delete file )		(  -->		    )
+	MKFL                    ( make file   )
+	IF 
+          OPEN
+	  INHALT1 48 0 DO DMA I + ! 2 +LOOP ( Inhaltsverzeichnis --> Buffer   )
+	  WRSQL DROP	( write sequential )
+	  32 DUP 238 P! BANK !	       ( ersten FLUO-Block einschalten      )
+	  FLB DUP 0 > IF    	       ( Test auf Anzahl der Bloecke FLUO   )
+	  32 SWAP 0 DO DUP DUP 238 P!    ( volle FLUO-Bloecke abspeichern   )
+	  BANK ! 128 BLOCK! IF LEAVE ENDIF 4 + LOOP 
+	  DUP DUP 238 P! BANK !	       ( entsprechende bank einschalten     )
+	  ENDIF DROP 
+	  FLZ BLOCK! DROP		 	   ( FLUO -->		    )
+	  64 DUP 238 P! BANK !	       ( ersten Eichmarkenblock einschalten )
+	  EIB 0 >          	       ( Test auf Anzahl der Bloecke EICH   )
+	  IF 128 BLOCK! DROP 68 DUP 238 P!  ( gegebenenfalls ganzen Block --> )
+	  BANK ! ENDIF EIZ BLOCK! DROP     ( Eichmarken -->	    	    )
+	  -16384 LEERZ 0 DO                       ( Eichmarkenparameter LEERA )
+	  DUP DMA	128 CMOVE WRSQL DROP 
+	  128 + LOOP DROP 
+	  -12288 VOLLZ 0 DO 			( Eichmarkenparameter VOLLA )
+	  DUP DMA 128 CMOVE WRSQL DROP 
+	  128 + LOOP DROP 
+	  -10000 DMA 76 CMOVE WRSQ DROP  ( Kommentar -->   )
+	 ENDIF 16 FCB DOSCALL DROP ;	       ( close file  )	
+
+: INHALT2 -2 46 DO DMA I + @ -2 +LOOP ;		( --> n1 --- n24	)
+( INHALT2 holt Inhaltsverzeichnis aus dem DMA-Bereich			)
+
+: INH@  DUP MN1 ! 7 55 CURS 10 * MTEST . MHZD	( n1 --- n20 -->	)
+	MN2 ! ANZ2
+	MN3 ! ANZ3
+	MN4 ! ANZ7
+	MN5 ! ANZ6 
+	MN7 ! ANZ5
+	MN8 ! ANZ4 
+	OMAN ! OEXP ! ANZ8
+	FENA ! FENB ! SSTOP ! SUMFL !
+	ZAEHL ! ANFE C! TEILER ! 
+	LEERA ! VOLLA ! MZEIT ;
+( INH@ speichert die entsprechenden Parameter ab oder bringt sie	)
+(      im Menue zur Anzeige.						)
+
+: FILE@2 OPEN						( -->		)
+	20 FCB DOSCALL DROP	        ( read sequential )	
+	INHALT2 INH@
+	32 DUP 238 P! BANK !	        ( ersten FLUO-Block einschalten     )
+	DUP 0 > IF			( volle FLUO-Bloeckee abspeichern   )
+	32 SWAP 0 DO DUP DUP 238 P!
+	BANK ! 128 BLOCK@ 4 + LOOP 
+	DUP DUP 238 P! BANK !		( entsprechende Bank einschalten    )
+	ENDIF DROP
+	BLOCK@				( FLOU --> Bank			    )
+	64 DUP 238 P! BANK !	       ( ersten Eichmarkenblock einschalten )
+	0 >          	       	       ( Test auf Anzahl der Bloecke EICH   )
+	IF 128 BLOCK@ 68 DUP 238 P!    ( gegebenenfalls ganzen Block -->    )
+	BANK ! ENDIF 
+	BLOCK@		               ( Eichmarken -->	    		    )
+	-16384 SWAP 0 DO
+	DUP 20 FCB DOSCALL DROP
+	DMA SWAP 128 CMOVE 
+	128 + LOOP DROP
+	-12288 SWAP 0 DO
+	DUP 20 FCB DOSCALL DROP
+	DMA SWAP 128 CMOVE
+        128 + LOOP DROP	
+	20 FCB DOSCALL DROP		( Kommentar <--			    )
+	5 3 CURS 76 0
+	DO DMA I + C@ DUP -10000
+	   I + C! EMIT LOOP
+	16 FCB DOSCALL DROP ;		( close file )
+
+: FILEDIS 19 1 CURS 6 DEL 				( -->		  )
+	  13 0 DOSCALL ( RESET ) DROP 20 6 CURS 
+	  ." DATEI BENENNEN [ MAX 8 BUCHSTABEN ] .F1B WIRD GESETZT ! " 
+	  21 6 CURS ." LAUFWERK B: ( DEFAULT ) " ;
+( FILEDIS ist Eroeffnungsprozedur fuer FILE.F1B				  )
+
+( *** geaendertes Wort : ) 
+(  -->   f  )
+: FILEFCB 
+         NAMIN 
+         4 39 CURS 8 0 DO FCB 1+ I + C@ EMIT LOOP 	( Name ausgeben   )
+         46 EMIT 70 EMIT 49 EMIT 66 EMIT 		( .F1B ausgeben   )
+         66 49 70 FCB 12 + FCB 9 + DO I C! LOOP	( FCB anlegen     )
+         1 15 FCB DOSCALL  ;  				( Datei eroeffnen )
+
+: FILE!1 FILEDIS					( -->		  )
+	 BEGIN FILEFCB 4 < 
+	       IF FILEAB ENDIF
+	 UNTIL DELW ;
+( FILE!1 speichert den angemeldeten Datensatz auf Diskette		  ) 
+
+: DELTXT 80 0 DO 32 -10000 I + C! LOOP ;		( -->		  )
+( DELTXT loescht Text im Speicher					  )
+
+0 VARIABLE ANACON
+
+: FILE@  DELTXT  FILEDIS				( -->		  )
+	 BEGIN  FILEFCB 255 =
+	       IF 24 6 CURS DROP
+	       ." DATEI NICHT GEFUNDEN ! WEITER (J/N) ? :  "		       
+	       0 KEY DUP EMIT 74 = IF DROP 1 0 ANACON ! ENDIF 
+	       ELSE FILE@2 1 ANACON !
+	       ENDIF
+	 UNTIL DELW ;
+( FILE@ liesst gewuenschte Datei in den Rechner ein			 )
+
+
+: TEXT  DELTXT						( -->		)
+	19 1 CURS 6 DEL 20 6 CURS
+   	." KOMMENTAR EINGEBEN ! MAX 76 ZEICHEN,MIT [CR] QUITTIEREN . "
+	23 3 CURS 76 0 DO 45 EMIT LOOP
+	22 3  CURS -10000 76 EXPECT 
+	5 3 CURS 76 0 DO -10000 I + C@ EMIT LOOP ;
+( TEXT ist fuer die Kommentarzeile zustaendig.				)
+
+0 VARIABLE DAT
+
+: DATSAVE DAT @ IF  FILE!1 TEXT FILE!2  ENDIF ;		( -->		)
+( DATSAVE steuert die gesamte Dateisicherungsroutine.			)
+
+GET
+FLUO6
+
+END-OF-FILE
+
+

@@ -1,0 +1,701 @@
+(			DATEI FLUO1.SL2					)
+( ********************************************************************* )
+HEX
+0106 CONSTANT BUFM	( Zeichenbuffer 				)
+0104 CONSTANT BUFE	(	"					)
+01BA CONSTANT FENA	( Zahl der Messzyklen bis Fensteranfang		)
+01BC CONSTANT FENB	( Zahl der Messzyklen innerhalb des Fensters	)
+01BE CONSTANT SSTOP	( Gesamtzahl der Messzyklen des Scans		)
+01C0 CONSTANT ZYKN	( n+1,n = Anzahl der Eichmarken/Zyklus	[MN5]	)
+01C1 CONSTANT TSTOP	( 1 = Terminalstop				)
+01B8 CONSTANT ZAEHL 	( Zykluszaehler					)
+0120 CONSTANT ZYKA	( Speicherbereich fuer Zyklusfolgen,Kanal A	) 
+014A CONSTANT ZYKB	(         "        "         "     ,Kanal B	) 
+0174 CONSTANT ZYKC	(         "        "         "     ,Kanal C	)
+019C CONSTANT TIME	( Teiler fuer Timer				)
+01A5 CONSTANT TIMEA	( Speicherbereich fuer Zykluszeiten,Kanal A	)
+01AB CONSTANT TIMEB	(         "        "         "     ,Kanal B	)  
+01B1 CONSTANT TIMEC	(         "        "         "     ,Kanal C	)
+019D CONSTANT TEIL	( Nachteiler bzw. Vorteiler s.TIMERK		) 
+0118 CONSTANT BLAF	( aktueler 16 K-Block fuer FLUO,s.TIMERK	)
+0119 CONSTANT BLZAF	( aktuelle Adr. fuer Fluoreszenszaehlrate	)
+011B CONSTANT BLAD	( aktueller 16K-Block fuer Graphik		) 
+01C2 CONSTANT BLADR	( enthaelt aktuellen 16 K-Block			)
+01C3 CONSTANT BLZAE	( Adresse fuer aktuelle Eichmarkenzaehlrate	)
+01C5 CONSTANT LEER	( temporaler Speicherplatz fuer die Anzahl	)
+01C6 CONSTANT VOLL	( der Eichmarken die unterhalb bzw. oberhalb	)
+			( des Untergrund liegen				)
+01C7 CONSTANT LEERA	( aktuelle Adresse fuer den endgueltigen 	)
+01C9 CONSTANT VOLLA	( Speicherplatz der Leerschritte bzw. der	)
+			( Anzahl der hintereinander aufgenommenen Eich- )
+			( markenzaehlraten				)
+01CB CONSTANT UNTE	( Untergrund					)
+01CD CONSTANT ANFE	( 0= 1.Eichmarkenzaehlrate liegt unter dem	)
+			( Untergrund [ s. Interruptroutine ]		)
+DECIMAL
+0 VARIABLE HFD		( Hilfsvariabe					)
+0 VARIABLE HFE		(      "					)
+0 VARIABLE HFF		(      "					)
+0 VARIABLE HV		(      "					)
+0 VARIABLE HA		(      "					)
+
+0 VARIABLE TEILER  	( Teilungsfaktor fuers Graphikdisplay		)
+0 VARIABLE MHZA 	( Anfangswert der aktuellen Frequenzachse	)
+0 VARIABLE MHZP		( Differenz zweier Frequenzwerte [ Graphik ]	)
+0 VARIABLE OEXP 	( Exponent der Ordinaten			)
+0 VARIABLE OMAN 	( Mantisse der Ordinaten			)
+0 VARIABLE XZAE 	( Flouoreszenspunktzaehler Graphik		)
+0 VARIABLE FLOU@        ( akt. Speicherplatz auszugebender Messwerte    )
+0 VARIABLE MN1 		( Scanweite Laser / 10	[ MHz ]			)
+0 VARIABLE MN2 		( Scanweite Messung / 10 [ MHz ]		)
+0 VARIABLE MN3 		( Startwert des Scans fuer Menuetafel		)
+0 VARIABLE MN4 		( Flouoreszenszeit / 10 [ msec ]		)
+0 VARIABLE MN5 		( Schrittweite * 2 [ MHz ]			)
+0 VARIABLE MN6 		( Verzoegerungszeit [ msec ]			)
+0 VARIABLE MN7 		( Fensteranfang / 100 [ MHz ]			)
+0 VARIABLE MN8		( Fensterweite / 100 [ MHz ]			)
+0 VARIABLE M@1 		( Hilfsvariable fuer M@				)
+0 VARIABLE MOP1 	( Integrationskonstante fuers Laserinterface	)
+0 VARIABLE MOP2		( Startwert fuers Laserinterface		)
+0 VARIABLE MA1		( Anzahl der Zeichen vor der Maske		)
+0 VARIABLE MA2		( Anzahl der Maskenzeichen			)
+0 VARIABLE MAZ		( Zaehler fuer Cursorstand			)
+0 VARIABLE COR		( Hilfsvariable fuer Rueckschritt im Menue	)
+0 VARIABLE ZRK		( Hilfsvariable fuer Cursor { --> }		) 
+
+: KOM1 ."      2500 MHz <= Scanweite Laser <= 30000 MHz " ; 
+: KOM2 ."      0 < Scanweite <= Scanweite Laser " ;
+: KOM3 ."      0 <= Startwert <= [ Scanweite Laser - Scanweite ] " ;
+: KOM4A	."      Fensteranfang < Scanweite -100 MHZ " ;
+: KOM4B ."      Fensterweite < [ Scanweite - Fensteranfang - 100 MHZ ] " ;
+: KOM4 ."      0,5 MHz <= Schrittweite <= 9,5 MHz , in 0,5 MHz-Schritten " 
+    CR ."      Achtung ! 30000 Messpunkte sind die obere Grenze ! " ;
+: KOM5 ."      10 msec <= Floureszenszeit <= 990 msec " ;
+: KOM6 ."      200 E+0 <= Displaymax <= 6000 E+3 " ;
+: KOMS	." WENN DER SCAN GESTOPPT WERDEN SOLL [S] DRUECKEN ! " ; 
+
+: ZR 	MA1 @ MAZ @ > ZRK @ AND IF 48 BUFM 1 -	(     -->		)
+	MAZ @ + C! 32 EMIT 1 MAZ +! ENDIF ; 
+( ZR steuert die Cursortaste { --> }					)
+
+: Z!	0 ZRK ! DUP MAZ @ MA1 @ > IF BUFE C!   	(  n1 -->		)
+	EMIT 1 MAZ +! ELSE BUFM 1 - MAZ @ + 
+	C! EMIT 1 MAZ +! MAZ @ MA1 @ > IF MA2 
+	@ 0 DO 12 EMIT 1 MAZ +! LOOP ENDIF 
+	ENDIF ;
+( Z! speichert gueltige ASCII-Zeichen im entsprechenden Buffer ab	)
+( n1 = ASCII-Zeichen							)
+
+: ZL	MAZ @ DUP 1 = IF DROP 7 EMIT ELSE 	(    -->		)
+	MA1 @ > IF MA2 @ 1+ 0 DO 8 EMIT -1 
+	MAZ +! LOOP 95 EMIT 8 EMIT ELSE 8 
+	EMIT 95 EMIT 8 EMIT -1 MAZ +! ENDIF 
+	ENDIF MAZ @ 1 = IF 1 ZRK ! ENDIF ;
+( ZL steuert die Cusortaste { <-- }					)
+
+: NULL	MA1 @ 0 DO 0 BUFM I + C! LOOP 0 BUFE 	(    -->		)
+	C! MA1 @ MA2 @ + 2+ MAZ ! ;
+( NULL belegt den Eingabebuffer mit ASCII {48}				)
+
+: CORI  0 COR ! MA1 @ MA2 @ + 2+ MAZ ! ;	(    -->		)
+( CORI speichert 0 nach COR						)
+
+: Z@    MA1 ! MA2 ! MA1 @ 0 DO 95 EMIT		( n1 n2 --> f		)
+	LOOP MA2 @ 0 > IF MA2 @ 0 DO 12 
+	EMIT LOOP 95 EMIT MA1 @	MA2 @ + 
+	1+ 0 DO 8 EMIT LOOP ELSE MA1 @ 0 
+	DO 8 EMIT LOOP ENDIF 1 MAZ ! 1 COR 
+	! 1 ZRK ! BEGIN KEY DUP 58 < OVER 
+	47 > AND IF Z! ELSE DUP 8 = IF ZL 
+	ENDIF DUP 13 = IF NULL ENDIF DUP 
+	12 = OVER 32 = OR IF ZR ENDIF 11 
+	= IF CORI ENDIF	ENDIF MA1 @ MA2 @ 
+	+ 1+ MAZ @ < UNTIL 0 BUFE 1+ C! 0 
+	BUFM MA1 @ + C! COR @ ;
+( Z@ ist der Verteiler fuer die Cursormaske.Die Tastatur wird abge-	)
+( fragt und nach entsprechenden Steuerzeichen verzweigt.n1=Anzahl der 	)
+( Maskenzeichen ,n2 Anzahl der Zeichen vor der Maske			)
+( ASCII {48 -->57} --> Z! ; ASCII {8} --> ZL ; ASCII {13} --> NULL	)
+( ASCII {12} --> ZR ; ASCII {11} --> CORI				)
+( wenn f=1 ist,befinden sich die Eingabewerte im entsprechenden Buffer	)
+  
+: M@ 	Z@ IF 0 0 BUFM 1 - (NUMBER) DROP DROP  	( n1 n2 --> [n3] [n4] f	) 
+	MA2 @ 0 > IF 0 0 BUFE 1 - (NUMBER) 
+	DROP DROP ENDIF ENDIF COR @ ;
+( M@ ist ene Cursormaske fuer die Tastaturabfrage.n1=Anzahl der Zeichen,)
+( die uebersprungen werden muessen[Maske].n2=Anzahl der Zeichen vor der	)
+( Maske.1 Zeichen kann hinter der Maske gelesen werden.f=1 Zeichen ok,	)
+( kein Rueckschritt im Menue . f=0 Wert fuer Rueckschritt im Menue	)
+( n3 und n4 werden dann nicht auf den Stapel abgelegt.			)
+( n4 = Wert hinter Maske,wenn n1>0 sonst Wert vor Maske			)
+( n3 = Wert vor der Maske,wenn n1>0	Beispiel einer Maske:		)  
+( n1=5,n2=4 --> {Maske=5 Zeichen}            ____Maske_			)
+
+: CURS	31 + SWAP 31 + 27 EMIT 61 EMIT		( n1 n2 -->		)
+	EMIT EMIT ;
+( CURS setzt den Cursor n1 = Zeile , n2 = Spalte			)
+
+: MNW 	7 EMIT DROP 24 6 CURS 		(  -->				)
+." ************************ Falsche Eingabe ! ************************ " ;
+( MNW gibt eine Warnung durch Bel und Display aus			)
+
+: MHZD	77 EMIT  72 EMIT 122 EMIT ;		( -->			)
+( MHZD gibt das Wort MHz an den Bildschirm aus				)
+ 
+: MSECD	109 EMIT 115 EMIT 101 EMIT 99 EMIT ; 	(  -->			)
+( MSECD gibt das Wort msec an den Bildschirm aus			)
+
+: DEL 0 DO 27 EMIT 82 EMIT LOOP ;		(  n1 --> 		)
+( DEL loescht n1 Zeilen							)
+
+: MTEST	DUP 10000 < IF 32 EMIT ENDIF		(  n1 --> n1		)
+	DUP 1000 < IF 32 EMIT ENDIF 
+	DUP 100 < IF 32 EMIT ENDIF
+	DUP 10 < IF 32 EMIT ENDIF ; 
+( MTEST sorgt fuer rechtsbuendige Darstellung im Menue , n1 = Zahl	)
+
+: DELW 	20 1 CURS 5 DEL ; ( DELW loescht Kommentar Displaywarnung	)
+
+: SCAWL BEGIN 20 1 CURS KOM1 			(  -->			)
+	  7 59 CURS 48 EMIT 32 EMIT MHZD  
+	  7 55 CURS 0 4 M@ 
+	  IF DUP 249 > OVER 3001 < AND DUP HFE ! 
+	     IF MN1 ! DELW 
+	     ELSE MNW 
+	     ENDIF 
+	  ELSE 0 MNW 0 HFE ! 
+	  ENDIF HFE @
+	UNTIL 7 55 CURS MN1 @ 10 * MTEST . 
+	MHZD DELW ; 
+( SCAWL fragt die Scanweite des Lasers ab , MN1 = Scanweite L./10	)
+( Fehlermeldung : 2500 MHz > MN1 > 30000 MHz,Anzeige in der Menuetafel	)
+
+: ANZ2  8 55 CURS MN2 @ 10 * MTEST . MHZD ;	(  -->			)
+( ANZ2 gibt den eingegebenen Wert neu ans Display aus			) 
+
+: SCAW  BEGIN 20 1 CURS KOM2 			(  -->			)
+	  8 59 CURS 48 EMIT 32 EMIT MHZD 
+	  8 55 CURS 0 4 M@ 
+	  IF DUP 0 > OVER 3001 < AND OVER 
+	    MN1 @ 1+ < AND DUP HFE ! 
+	    IF MN2 ! 
+	    ELSE MNW 
+	    ENDIF ELSE ANZ2 DELW SCAWL 0 HFE ! 
+	  ENDIF HFE @ 
+	UNTIL 
+	ANZ2 DELW ;
+( SCAW fragt die Scanweite der Messung  ab MN2 = Scanweite / 10		) 
+( Fehlermeldung : MN2 > MN1 , MN2 <= 0 , MN2 > 30000 MHz		)
+( Anzeige in der Menuetafel						)
+
+: MOPS2	4096 MN1 @ */ DUP MOP2 !	 	(  n1 --> 		)
+	MN1 @ 10 * 4096 */ MN3 ! ;
+( MOPS2 ermittelt den moeglichen Startwert MN3 fuers Display und den 	)
+( Startwert fuer den MOPS MOP2. n1 = Eingabewert 			)
+( MOP2 = n1 * 4096 / MN1              { Integer }			)
+( MN3 = MOP2 * MN1 * 10 / 4096	      { Integer }			)
+
+: ANZ3	9 55 CURS MN3 @ MTEST . MHZD ;		(  -->			)
+( ANZ3 gibt den eingebenen Wert neu ans Display aus			)
+
+: SCST  BEGIN 20 1 CURS KOM3			(  -->			)
+	  9 59 CURS 48 EMIT 32 EMIT MHZD 
+	  9 55 CURS 0 4 M@ 
+	  IF DUP 3001 < OVER MN1 @ MN2 @ 
+	     - 1+ < AND DUP HFE ! 
+	    IF MOPS2 
+	    ELSE MNW 
+	    ENDIF ELSE ANZ3 DELW SCAW 0 HFE ! 
+	  ENDIF HFE @ 
+	UNTIL
+	ANZ3 DELW ;
+( SCST fragt den Startwert der Messung ab , siehe MOPS2			) 
+( Fehlermeldung : MN3 >= MN1-MN2 , Anzeige in Menuetafel		)
+
+: ANZ4  11 55 CURS MN8 @ 100 * MTEST . MHZD ;	(  -->			)
+: ANZ5  10 55 CURS MN7 @ 100 * MTEST . MHZD ;	(  -->			)
+: ANZ0	DUP MN7 ! DUP MN8 ! DUP 10 55 CURS 
+	MTEST . MHZD 11 55 CURS MTEST . MHZD ;
+( ANZ4,5,0 geben die Eingabewerte neu ans Display aus			)
+
+: FEN1	BEGIN  20 1 CURS KOM4B 			(  -->			) 
+	  11 58 CURS 48 EMIT 48 EMIT 32 EMIT 
+	  MHZD 11 55 CURS 0 3 M@ 
+	  IF DUP 10 * MN2 @ MN7 @ 10 * - < 
+	    OVER 0 > AND DUP HFE ! 
+	    IF MN8 ! ANZ4 
+	    ELSE MNW 
+	    ENDIF 1 HFD ! 
+	  ELSE 0 HFD ! ANZ4 1 HFE !
+	  ENDIF HFE @ 
+	UNTIL ;
+( FEN1 fragt die Fensterweite ab , MN8 = Fensterweite/100 gueltige	)
+( Werte sind : Scanweite - Fensteranfang > Fensterweite			)
+( sonst Fehlermeldung , Anzeige in Menuetafel				)
+
+: FEN2	BEGIN 20 1 CURS KOM4A			(  -->			)
+	  10 58 CURS 48 EMIT 48 EMIT 32 EMIT 
+	  MHZD 10 55 CURS 0 3 M@ 
+	  IF DUP 0= 
+	     IF ANZ0 1 HFF ! 1 HFD ! 
+	     ELSE DUP 10 * MN2 @ 10 - < DUP HFF ! 
+	       IF MN7 ! ANZ5 DELW FEN1 
+	       ELSE MNW 0 HFF ! 
+	       ENDIF 
+	     ENDIF ELSE  ANZ5 DELW SCST 0 HFF ! 
+	  ENDIF HFD @ HFF @ AND 
+	UNTIL DELW ;
+( FEN2 fragt den Fensteranfang ab , MN7 = Fensteranfang/100 gueltige	)
+( Werte sind : Scanweite - 100 Mhz > Fensteranfang sonst Fehlermeldung	)
+( Anzeige in Menuetafel							)
+
+: ANZ6	12 57 CURS MN5 @ 5 * 10 /MOD . 		(  -->			)
+	8 EMIT 44 EMIT . MHZD ;
+( ANZ6 gibt den Eingabewert neu ans Display aus				)
+
+: SCSC	BEGIN 20 1 CURS KOM4 			(  -->			)
+	  12 58 CURS  44 EMIT 32 EMIT 32 
+	  EMIT MHZD 12 57 CURS 1 1 M@ 
+	  IF SWAP 10 * + DUP 5 /MOD 0 > SWAP
+	     0 = AND OVER MN2 @ MN8 @ 10 * -
+	     SWAP / 301 < AND DUP HFE ! 
+	     IF 5 / MN5 ! ANZ6 
+	     ELSE MNW 
+	     ENDIF 
+	  ELSE ANZ6 DELW FEN2 0 HFE !
+	  ENDIF HFE @ 
+	UNTIL DELW ;
+( SCSC fragt die Schrittweite in MHz ab.Gueltige Werte sind 0.5 MHz bis	)
+( 9,5 Mhz in 0.5 MHz Schritten.30000 Messpunkte sind das Limit.	An-     )
+( scliessend erfolgt Anzeige in der Menuetafel				)
+
+: ANZ7	13 55 CURS MN4 @ 10 * MTEST 		(  -->			)
+	. MSECD ;
+( ANZ7 gibt den Eingabewert neu ans Display aus				)
+
+: SCZEI	BEGIN 20 1 CURS KOM5 			(  -->			)
+	  13 59 CURS 48 EMIT 32 EMIT MSECD 
+	  13 57 CURS 0 2 M@  
+	  IF DUP 0 > DUP HFE ! 
+	     IF MN4 ! ANZ7 
+	     ELSE MNW 
+	     ENDIF 
+          ELSE ANZ7 DELW SCSC 0 HFE ! 
+	  ENDIF HFE @ 
+	UNTIL DELW ;
+( SCZEI fragt die Floureszenszeit in msec ab.Gueltigkeitsbereich ist :	)
+( 10 - 990 msec sonst Fehlermeldung , Anzeige in der Menuetafel		)
+
+: MOPS1 2048 500 MN1 @ */ 1 - MOP1 ! ;		(  -->      		)
+( MOPS1 berechnet die Integrationskonstante fuer das Laserinterface	)
+( MOP1 = 2048 * 5000 / {Scanbereich Laser}				)
+
+: VERZ 	MN4 @ 10 * DUP 201 < 
+	IF 1 MN6 ! ENDIF  
+	DUP 200 > OVER 401 < AND
+	IF 2 MN6 ! ENDIF 
+	400 > 
+	IF 5 MN6 ! ENDIF ;
+( VERZ ermittelt die Verzoegerungszeit [ msec ] --> MN6			)
+( Fluoreszenszeit : 10 - 200 msec --> MN6 = 1				)
+( 210 - 400 msec --> MN6 = 2 , 410 - 990 msec --> MN6 = 5		)
+
+: SCWEI	MN2 @ 10 * 2 MN5 @ */ SSTOP ! ;		(  -->			)
+( SCWEI berechnet die Gesamtzzahl der Messzyklen des Scans		)
+
+: KOORD  					(    -->		)
+        2 CLRDIS 40 49 SETCUR 239 49 GDPLIN 239 700 GDPLIN 40 48 
+	GDPDOT 80 48 GDPDOT 120 48 GDPDOT 160 48 GDPDOT 200 48 
+	GDPDOT 241 50 GDPDOT 241 100 GDPDOT 241 150 GDPDOT 241
+	200 GDPDOT 241 250 GDPDOT 241 300 GDPDOT 241 350 GDPDOT
+	241 400 GDPDOT 241 450 GDPDOT 241 500 GDPDOT 241 550 GDPDOT
+	241 600 GDPDOT 241 650 GDPDOT 241 700 GDPDOT 242 650
+	GDPDOT 242 550 GDPDOT 242 450 GDPDOT 242 350 GDPDOT
+	242 250 GDPDOT 242 150 GDPDOT 242 50 GDPDOT  ;
+( KOORD gibt ein Koordinatensystem an den Bildschirm aus		)
+  
+: YTESTN DUP 2 < IF 32 2 0 GDPCHR ENDIF		( n1  --> n1     	)
+	 DUP 3 < IF 32 2 0 GDPCHR ENDIF
+	 DUP 4 < IF 32 2 0 GDPCHR ENDIF ;
+( YTESTN sorgt fuer rechtsbuendige Beschriftung,n1 = Stringanzahl	)
+
+: YCHR S->D <# #S #> YTESTN 0         		( n1 -->		)
+       DO DUP I + C@ 2 0 GDPCHR LOOP 
+       DROP ;			 
+( YCHR wandelt n in ASCII-Zeichen um und gibt sie an Graphikschirm aus	)
+( n1 = auszugebene Zahl							)
+
+: YDIV DUP DUP 8 10 */ SWAP DUP 6 10 */		( n1 --> n1 n2 n3 n4 n5	) 
+       SWAP DUP 4 10 */ SWAP  2 10 */ ; 
+( YDIV erzeugt alle Countunterteilungen	fuer die Ordinate n1 bis n5	)
+
+: YDISA 10 1 SETCUR 115 116 110 117 111 67	( n1 n2  -->		)
+	6 0 DO 2 0 GDPCHR LOOP 
+	26 1 SETCUR 48 49 32 42 
+	4 0 DO 2 0 GDPCHR LOOP 
+	21 14 SETCUR YCHR ;
+( YDISA gibt Ordinatenkopf aus ; n1 = Mantisse ; n2 = Exponent 		)
+
+: YDISB 204 1 SETCUR 				( n1 -- n5 -->		)
+	YCHR 164 1 SETCUR YCHR 124 1 SETCUR 
+	YCHR 84 1 SETCUR YCHR 44 1 SETCUR 
+	YCHR 244 25 SETCUR 48 2 0 GDPCHR ;
+( YDISB gibt 5 Werte und die Null an die Ordinate aus			)
+
+: YDIS2 YDISA YDIV YDISB ;			( n1 n2 -->		)
+( YDIS2 gibt alle Ordinatenwerte auf Graphigschirm aus			)
+( n1 = Mantisse, n2 = Exponent						)
+
+: ANZ8  14 55 CURS OMAN @ MTEST . 69 EMIT 	(         -->		)
+	43 EMIT OEXP @ . ; 
+( ANZ8 gibt den Eingabewert neu ans Display aus				)
+
+: TESTDISM BEGIN OEXP @ 0= OMAN @ 999 > OR 0=	(         -->		)
+	   WHILE OMAN @ 10 * OMAN ! -1 OEXP +!
+	   REPEAT 
+	   OEXP @ DUP 0=			
+	   IF OMAN @ 200 /MOD SWAP
+	      IF 1+ 200 * OMAN ! 1 ENDIF DROP	( Exponent = 0		)
+	   ENDIF DUP 1 =
+	   IF OMAN @ 20 /MOD SWAP
+	      IF 1+ 20 * OMAN ! 1 ENDIF DROP	( Exponent = 1		)
+	   ENDIF 2 =	
+	   IF OMAN @ 2 /MOD SWAP		
+	      IF 1+ 2 * OMAN ! 1 ENDIF DROP	( Exponent = 2		)
+	   ENDIF ;   
+( TESTDISM ermittelt die moeglichen Ordinatenwerte und sorgt dafuer,	)
+( 	   dass alle Stellen [ max 4 ] ausgenutzt werden.		)
+ 
+: T6MIL	OEXP ! OMAN ! TESTDISM 			( n1 n2 --> f		)
+	      OEXP @ 4 < OMAN @ OEXP @   	( Test auf 6000000	)
+	      * 18001 < AND OEXP @ 0=
+	      IF OMAN @ 199 > AND ENDIF
+	      IF OEXP @ DUP 0=			( Teiler wird ermittelt )
+	         IF DROP OMAN @ 200 / TEILER ! 
+	         ELSE 1 SWAP 0 DO 10 * LOOP	( Potenz bilden		)
+		      OMAN @ 200 */ TEILER ! 
+	         ENDIF 1 DELW
+	      ELSE 1 MNW 0
+	      ENDIF ;
+( T6MIL testet die Eingabe n1,n2 [ Mantisse,Exponent] und ermittelt	)
+(	den Teiler							)
+
+: YDIS1 BEGIN 20 1 CURS KOM6 14 60		(         --> 		)
+	      CURS 32 EMIT 69 EMIT 43 EMIT 
+	      14 56 CURS 3 4 M@ 
+	   IF T6MIL
+	   ELSE ANZ8 DELW SCZEI 0
+	   ENDIF  
+	   UNTIL ANZ8 DELW OMAN @ OEXP @ YDIS2 ;
+( YDIS1 erwartet Mantisse u. Exponent ueber Tastatur 			)
+( Gueltigkeitsbereich: 200 - 6000000					)
+( sonst Fehlermeldung , Anzeige in der Menuetafel			)
+
+: XPLUS MN5 @ 50 * MHZP ! MHZA @ DUP MHZP @ 	(  --> n1.....n7	)
+	+ DUP MHZP @ + DUP MHZP @ + DUP MHZP 
+	@ + DUP MHZP @ + DUP MHZP @ + ;
+( XPLUS erzeugt alle Abzissenwerte n1 bis n7				)
+
+: XTEST DUP 1 = IF ROT 254 SWAP SETCUR ENDIF	 ( n1 --> n1		) 
+    	DUP 2 = IF ROT 4 - 254 SWAP SETCUR ENDIF
+	DUP 3 = IF ROT 8 - 254 SWAP SETCUR ENDIF
+	DUP 4 = IF ROT 12 - 254 SWAP SETCUR ENDIF 
+	DUP 5 = IF ROT 16 - 254 SWAP SETCUR ENDIF ;
+( XTEST testet die Stringanzahl n1 u. setzt den Cursor entsprechend	)
+
+: XCHR  SWAP DUP 30001 < 			( n1 n2 -->		)
+	IF S->D <# #S #> XTEST 
+	   0 DO DUP I + C@ 2 0 GDPCHR LOOP 
+	   DROP 
+	ELSE DROP DROP 
+	ENDIF ;	
+( XCHR gibt Zahl n1 mittenzentriert auf Graphikschirm aus { n1<=30000 }	)
+( n2 = Cursorposition							)
+
+: XDIS  XPLUS 256 681 SETCUR 122 72 77 2 0 	(  -->			)
+	GDPCHR 2 0 GDPCHR 2 0 GDPCHR 645 
+	XCHR 548 XCHR 448 XCHR 348 XCHR 248 
+	XCHR 148 XCHR 48 XCHR MHZA @ 325
+	MN5 @ * + MHZA ! ;			 
+( XDIS gibt die Abzissenwerte n1 bis n7 auf Graphikschirm aus und	)
+( legt die naechste jeweilige Anfangsposition in MHZA ab		)
+
+: DISP 0 MHZA ! KOORD YDIS1 XDIS ;
+( DISP setzt Koordinatensystem mit Anfangsparametern			)
+
+HEX 
+
+: ARIDIV 88 P! 88 P! 88 P! 0 88 P! TEILER @	( n1...n4 --> 		) 
+	 ARI16! 0 0 88 P! 88 P! 2F 89 P! ;
+( ARIDIV liest n1 bis n4 { 32 Bit Zahl} in den Aritmethikprozessor ein	)
+( und dividiert sie durch TEILER					)
+
+DECIMAL
+
+: ZAEHL@ FLOU@ @ DUP C@ SWAP 1+ DUP C@ 		(  --> n1 n2 n3		) 
+	 SWAP 1+ C@ SWAP ROT ;
+( ZAEHL@ liest Flouoreszenzzaehler aus n1 = low Byte ,n2,n3		)
+
+: DIVTEST ARI@ 0= 				( -->  {n1} f		)
+	  IF ARI16@ DUP 201 < DUP 0= 
+	     IF SWAP DROP ENDIF  
+	  ELSE ARI16@ DROP 0 
+ 	  ENDIF ;  
+( DIVTEST testet das Divisionsergebnis E , 0 <= E <= 200 --> n1 1	)
+( sonst --> 0								)
+
+: XNEW 50 XZAE ! KOORD OMAN @ OEXP @ YDIS2 XDIS ;	( -->		)
+( XNEW initialisiert das Display neu					)
+ 
+: BLOCKF 32768 FLOU@ ! BLAD C@ 4 + BLAD C! ;		( -->		)
+( BLOCKF schaltet auf den naechsten 16 K Block um			)
+
+: FLOUD BLAD C@ 238 P! ZAEHL@ ARIDIV DIVTEST    	( -->		)
+	IF 240 SWAP - XZAE @ GDPDOT 
+	ELSE 39 XZAE @ GDPDOT				( Ueberlauf	)
+	ENDIF 	XZAE @ 1+ 
+	DUP XZAE ! 700 = 
+	IF XNEW ENDIF 
+	FLOU@ @ 3 + DUP FLOU@ ! 49150 > 
+	IF BLOCKF ENDIF ;
+( FLOUD verwaltet die Messwertausgabe und steuert die Blockumschaltung 	)
+( und die Displayumschaltung						)
+
+: DISP?  BLAD C@ BLAF C@ = 0= BLZAF @ FLOU@ @ > 	( -->		)
+	 OR IF FLOUD ENDIF ;
+( DISP? ruft nur dann FLOUD auf wenn aktuelle Messergebnisse vorliegen	)
+ 
+: FENW  MN8 @ 100 * 2 MN5 @ */ ;			(  --> n1	)
+( FENW n1 = Anzahl der Fensterzyklen					)
+
+: FEN3  MN7 @ DUP 0= 				        (  -->		)
+	IF DROP 65535 FENA !	
+ 	ELSE 100 * 2 MN5 @ */ DUP FENA !
+	MN5 @ 2 */ 10 55 CURS MTEST . MHZD 
+	ENDIF ;
+( FEN3 berechnet die Anzahl der Messpunkte bis Fensteranfang --> FENA	)
+( ist kein Fenster gewaehlt FFFFH --> FENA, Displaykorrektur		)
+
+: FEN4 	MN8 @ 0= 				(  -->			)
+	IF 65535 FENB ! 
+	ELSE FENW DUP FENA @ + FENB ! MN5 
+	     @ 2 */ 11 55 CURS MTEST . MHZD 
+	ENDIF ;
+( FEN4 berechnet die Anzahl der Messzyklen innerhalb des Fensters	)
+( --> FENB ,ist kein Fenster gewaehlt FFFFH --> FENB,Displaykorrektur	) 
+
+: SCW1 	SCWEI SSTOP @ MN5 @ 2 */ 8 55 CURS	( -->			)
+	MTEST . MHZD ; 
+( SCW1 korrigiert die Scanweite in der Menuetafel			)
+
+: MZEIT VERZ MN4 @ 10 * MN5 @ 10 * +
+	MN5 @ 1+ MN6 @ * + SSTOP @ FENW -
+	1000 */ MN5 @ 10 * MN5 @ 2+ MN6 @
+	* + FENW 1000 */ + 15 55 CURS MTEST 
+	. 115 EMIT 101 EMIT 99 EMIT 20 1 CURS ;
+( MZEIT ermitelt die Messzeit des Scans und zeigt sie im Menue an.	)
+( T = Messzeit, SC = Anzahl der gesamten Messzyklen [ SSTOP ]	 	)
+( N = Anzahl der Eichmarken zwischen 2 Flouoreszenspunkten  N = S/0,5	)
+( FZ = Fluoreszenszeit [ MN4 * 10 ] , EZ = 10 msec			)
+( VZ = Verzoegerungszeit [ MN6 ] , FW = Fensterweite { FENW }		)
+( T = SC*{ FZ+N*EZ+{ N+1 }*VZ }-FW*{ N*EZ+{ N+2 }*VZ }			) 
+
+: PARA1	1 TEIL C! 1 TEIL 1 + C! 1 TEIL 2 + C!  	(  -->			)
+      	1 TEIL 4 + C! 1 TEIL 6 + C! ;
+( PARA1 setzt alle Vorteiler auf 1					)
+
+: PARA2 MN6 @ DUP TEIL 3 + C! DUP TEIL 5 + C!	(  -->			)
+	TEIL 7 + C! ;				
+( PARA2 speichert die Verzoegerungszeit in alle Kanaele			)
+
+: PARA3 0 HV ! MN5 @ 1 - 			(  -->			)
+	0 DO 1 ZYKA HV @ + C! 2 ZYKA 
+	     HV @ 1+ + C! 2 HV +! 
+	  LOOP 1 ZYKA HV @ + C! 3 ZYKA 
+	HV @ 1+ + C! 255 ZYKA HV @ 2+ + C! ;
+( PARA3 ermittelt die Zyklusfolge fuer Kanal 1				)
+
+: PARA4 0 HV ! MN5 @ 1 - DUP 0 > 		(   -->			)
+	IF 0 DO 1 ZYKB HV @ + C! 2 ZYKB 
+		HV @ 1+ + C! 2 HV +! 
+	     LOOP 
+	ELSE DROP 
+	ENDIF 1 ZYKB HV @ + C! 3 ZYKB 
+	HV @ 1+ + C! 255 ZYKB HV @ 
+	2+ + C! ;
+( PARA4 ermittelt die Zyklusfolge fuer Kanal 2				)
+
+: PARA5	1 ZYKC C! 2 ZYKC 1+ C! 255 ZYKC 2+ C! ;	(  -->			)
+( PARA5 speichert Zyklusfolge fuer Kanal 3 ab				)
+
+: PARA6 250 TIME C! ;	(  --> ) (  1 msec ist kleinste Zeitaufloesung	)
+
+: ZEITH	MN4 @ 10 * MN6 @ / ;			(  --> n1		)
+( n1 = Teiler fuer Flouoreszenszeit					)
+
+: ZEIT1 1 TIMEA C! 10 MN6 @ / TIMEA 1+ C! 		(  -->		)
+	1 TIMEA 2+ C! ZEITH 2 + TIMEA 
+	3 + C! 3  TIMEA 4 + C! ;
+
+: ZEIT2 1 TIMEB C! 10 MN6 @ / TIMEB 1+ C! 		(  -->		)
+	1 TIMEB 2+ C! ZEITH 2 + TIMEB 3 + 
+	C! 3 TIMEB 4 + C! ;
+
+: ZEIT3	MN5 @ 10 * MN6 @ / MN5 @ 1+ +			( -->		)
+	DUP TIMEC C! TIMEC 2+ C! ZEITH 
+	TIMEC 1+ C! 1 TIMEC 3 + C! ;
+( ZEIT1-ZEIT3 berechnen die Zykluszeiten aller Kanaele und speichern	)
+( diese in die entsprechenden Zeitregister .				)
+
+: MESSF	50 XZAE ! 32768 DUP FLOU@ !		( -->			)
+	BLZAF ! 0 ZAEHL ! 32 DUP BLAD
+	C! BLAF C! MN5 @ 2 * 1 - ZYKN
+	C! 0 TSTOP ! ;
+( MESSF setzt Graphikanfangsparameter u.Messdatenbloecke u.TSTOP	)
+
+: MESSE 64 BLADR C! 32768 BLZAE ! 0 DUP		( -->		 	)
+	LEER C! VOLL C! -16384 LEERA ! 		( -16384=C000H )
+	-12288 VOLLA ! ;		        ( -12288=D000H )
+( MESSE setzt Eichmarkenbloecke u. Voll-bzw.Leerschrittadressen		)
+
+: FEN5	MN8 @ 0 = 				( -->			)
+	IF 65535 HV ! 
+	ELSE FENA @ FENW 2 / + HV ! 
+	ENDIF ;
+( FEN5 setzt Fensterparameter fuer Graphikneuaufbau bei Fenstermitte	)
+
+: PARAMET MESSF MESSE PARA1 PARA2 PARA3 PARA4 	(  -->			)
+	  PARA5 PARA6 ZEIT1 ZEIT2 ZEIT3 
+	  FEN5 ;
+( PARAMET bereitet alle Parameter fuer den Scan vor			)
+
+: DISF	FENA @ FENW + MN5 @ 2 */		( -->			)
+	MHZA ! XNEW ;
+( DISF baut Graphik bei Fensterende neu Auf				)
+ 
+: BREAKS 1 HA ! 20 1 CURS 3 DEL 20 6 CURS	( -->			)
+	 ." SCAN ABBRUCH ! " 0 HFE ! ;
+( BREAKS setzt Parameter fuer Scanabbruch 				) 
+
+: RESTART 0 TSTOP C! MESSEN 20 1 CURS 3 DEL	( -->			)
+	  20 6 CURS ." SCAN ONLINE ! " 22 6 CURS
+	  KOMS 0 HA ! ;
+( RESTART setzt Parameter fuer Scanneustart				)
+
+: DISPMAX 20 1 CURS 5 DEL			( -->			)
+	BEGIN 22 1 CURS KOM6 20 6 CURS
+	      ." DISPLAYMAX ?: " 20 59 CURS
+	      32 EMIT 69 EMIT 43 EMIT 20 56 
+	      CURS 3 4 M@ DROP T6MIL
+	UNTIL ANZ8 MHZA @ 650 MN5 @ 2 */ -	( alter Anfangswert	)
+	XZAE @ 50 - MN5 @ 2 */ + MHZA !		( + Offset --> MHZA	)
+	XNEW ;					( Bildneuaufbau		)
+( DISPMAX gibt das darauffolgende Spektrum mit neuen Dislaymaxwert aus	)
+
+: BREAK 1 TSTOP C! 20 1 CURS 3 DEL 20 6 CURS	( -->			)
+	." SCAN OUTLINE ! " 22 6 CURS 
+	." ABRUCH [A] / WEITER [W] / DISPLAYMAX [D] ? "
+	BEGIN KEY DUP 65 = 
+	IF BREAKS ENDIF DUP 87 = 
+	IF RESTART ENDIF DUP 68 =
+	IF DISPMAX RESTART ENDIF
+	DUP 65 = OVER 68 = ROT 87 = OR OR UNTIL ;
+( BREAK steuert Scanstopp,Neustart und Displaymaxaenderung		)
+
+: DDIS	1 HFE ! 0 HA ! 				( -->			)
+	BEGIN DISP? HV @ ZAEHL @ = 
+	  IF DISF ENDIF 
+	  ?TERMINAL 
+	  IF KEY 83 = 
+	     IF BREAK ENDIF 
+	  ENDIF SSTOP @ ZAEHL @ = HA @ OR 
+	UNTIL ;
+( DDIS steuert Grafikausgabe,Scanende u.Scanstopp			)
+ 
+: EICHENDE LEER C@ 0= 					( -->		)
+	   IF -1 LEERA +! VOLL C@		( [LEER] = 0  -->	)
+	      VOLLA @ !				(	 LEERA - 1	)
+	   ENDIF				( [VOLL] -> [VOLLA]	)
+	   VOLL C@ 0=				( [VOLL] = 0  -->	)
+	   IF -1 VOLLA +! LEER C@		(	 VOLLA - 1	)
+	      LEERA @ !				( [LEER] -> [LEERA]	)
+  	   ENDIF ;
+( EICHENDE korigiert den Eichmarkenparametersatz fuer Scanende		)
+
+: GO	PARAMET MESSEN DDIS EICHENDE		(	-->		)
+	HFE @ 					( Ende der Messung ?	)
+	IF DELW 20 6 CURS ." SCAN ENDE ! " 
+	ENDIF ;
+( GO setzt die Parameter fuer den Scan ,startet den Scan,steuert die 	)
+(    Graphik,beendet den Scan und korigiert den Eichmarkenparametersatz )
+
+: DISP1	0 MHZA ! KOORD OMAN @ OEXP @ YDIS2	(  -->			)
+	XDIS ;
+( DISP1 aendert das Koordinatensystem auf aktuelle Schrittweite 	) 
+
+: AEND1	22 6 CURS				( -->			)
+	." [ 0 = MENUE NEU ; CR = KEINE AENDERUNG ] "
+	21 6 CURS
+	." Nummer der gewuenschten Aenderung eingeben ! :   " 
+	BEGIN KEY 
+	DUP 48 = IF DELW SCAWL SCAW SCST FEN2 SCSC SCZEI DISP	ENDIF
+	DUP 49 = IF DELW SCAWL SCAW SCST MN7 @ 0 >
+		    IF FEN2 ENDIF				ENDIF
+	DUP 50 = IF DELW SCAW SCST MN7 @ 0 >
+		    IF FEN2 ENDIF				ENDIF
+	DUP 51 = IF DELW SCST       MN7 @ 0 >
+		    IF FEN2 ENDIF  				ENDIF
+	DUP 52 = IF DELW FEN2 					ENDIF
+	DUP 53 = IF DELW SCSC DISP1 0 HFF !			ENDIF
+	DUP 54 = IF DELW SCZEI 					ENDIF	
+	DUP 55 = IF DELW DISP 0 HFF !				ENDIF
+	DUP 47 > OVER 56 < AND SWAP 13 = OR 
+	UNTIL ;
+( AEND1 fragt die Tastatur ab und arbeitet die gewuenschte Aenderung	)
+(	im Menue ab.							)
+
+: AEND 	1 HFF ! BEGIN DELW 20 6 CURS 
+	." Aenderungen [J/N] ?:   " 0 
+	BEGIN DROP KEY DUP 74 = OVER 78 =  OR 
+	UNTIL DUP EMIT 74 = DUP 
+	IF AEND1 SCW1 FEN3 FEN4 MZEIT MOPS1 
+	ENDIF 0 =
+	UNTIL
+	DELW 20 6 CURS 
+	." SCAN ONLINE ! " 22 6 CURS KOMS ;
+( AEND steuert die Aenderungsabfrage und korrigiert Parameter,		)
+(      die sich aus der gewuenschten Aenderung ergeben.			)
+
+HEX
+: INVERSE 1B EMIT 47 EMIT 34 EMIT ;  ( Invertierungskommando s.u.	)
+: NORMAL 1B EMIT 47 EMIT 30 EMIT ;   ( Normalmodus fuer Televideo	)
+DECIMAL
+: R2 INVERSE 32 EMIT 32 EMIT NORMAL ;		( -->			)
+: RN 79 CURS R2 ;				( -->			)
+
+: DISPLAY INIGDC 26 EMIT 32 EMIT
+	INVERSE	76 0 DO 32 EMIT LOOP NORMAL INVERSE  
+	2 32 CURS  ." Messprogramm FLUO-1 " 4 2 CURS NORMAL 
+	4 79 CURS R2 5 79 CURS INVERSE CR CR 
+	32 EMIT NORMAL 
+	8 0 DO 7 I + RN LOOP 15 79 CURS INVERSE CR CR 
+	NORMAL 
+	4 32 CURS ." NAME:  ________.F1B "
+	7 10 CURS  ." [1]  SCANWEITE LASER : "
+	8 10 CURS  ." [2]  SCANWEITE       : "
+	9 10 CURS  ." [3]  STARTWERT       : "
+	10 10 CURS ." [4]  FENSTER ANFANG  : "
+	11 10 CURS ."              WEITE   : "
+	12 10 CURS ." [5]  SCHRITTWEITE    : "
+	13 10 CURS ." [6]  FLUORESZENSZEIT : "
+	14 10 CURS ." [7]  DISPLAYMAX      : "
+	15 10 CURS ."      MESSZEIT        : " ; 
+( DISPLAY baut die Menuemaske auf siehe auch Televideobeschreibung	)
+
+END-OF-FILE
+
+
+
+
+
+

@@ -1,0 +1,136 @@
+
+(			Datei FLUO6.SL2					)
+HEX
+
+: INITFL		( FLUOZAEHLER PORT 1	   ) ( -->		)
+	CF 61 P!	( MODE 3 )
+	FF 61 P!	( EINGAENGE )
+	CF 63 P!	( AUSGAENGE )
+	0  63 P!	
+	87 62 P!	( CLR COUNTER UND FLIPFLOP )
+	0F 62 P!
+	87 62 P! ;
+( INITFL eroeffnet Port 1 und bereitet den FLUO-Zaehler vor.		)
+
+: INITEI		( EICHMARKENZAEHLER PORT 2 )  ( -->		)
+	CF 65 P!
+	FF 65 P!
+	CF 67 P!
+	00 67 P!
+	98 66 P!	( CLR COUNTER UND FLIPFLOP )
+	1A 66 P!
+	98 66 P! ;	
+( INITEI eroeffnet Port 2 und bereitet den Eichmarkenzaehler vor.	)
+
+DECIMAL
+
+: SCMENUE 19 1 CURS 6 DEL 19 6 CURS			( -->		)
+	  ." DATEI EINLESEN        [1] " 20 6 CURS
+	  ." MESSDATENANALYSE      [2] " 21 6 CURS
+	  ." MESSDATEN SICHERN     [3] " 22 6 CURS
+	  ." ASCII-KONVERTIERUNG   [4] " 23 6 CURS
+	  ." NEUER SCAN            [5] " 24 6 CURS
+	  ." ENDE                  [8] " 20 50 CURS ;
+
+( *** geaendertes Wort : )
+: VORMENUE 19 1 CURS 6 DEL 19 6 CURS			( -->		)
+	   ." DATEI EINLESEN       [1] " 20 6 CURS
+	   ." MESSDATENANALYSE     [2] " 21 6 CURS	
+	   ." ASCII-KONVERTIERUNG  [3] " 22 6 CURS
+	   ." SCAN                 [4] " 23 6 CURS
+	   ." UNTERGRUND           [5] " 24 6 CURS	
+	   ." F  O  R  T  H        [7] " 20 50 CURS ;   
+	   	
+0 VARIABLE IST					( Hilfsvariable s.u.	)
+
+: SUMFLUO BLAF C@ 32 - 4 / 5461 *			( -->		)
+	  BLZAF @ 32768 - 3 / + SUMFL ! ;
+( SUMFLUO berechnet die Anzahl der aufgenommenen FLUO-Zaehlraten.	)
+
+: MOPS-> 2 EMITA KEYA DROP				( -->		)
+	 MOP1 @ 16 * 1 - IST ! IST C@		( Integrationskonstante )
+	 EMITA IST 1+ C@ EMITA
+	 MOP2 @ DUP 0=
+	 IF IST !
+	 ELSE 16 * 1 - IST ! 
+	 ENDIF
+	 IST C@					( Startwert	)
+	 EMITA IST 1+ C@ EMITA
+	 KEYA DROP ;  
+( MOPS-> waehlt das Integrationsprogramm C092 des Z80-Laserinterfaces	)
+(	 an und uebergibt die Scanparameter.				)
+
+: SCANN	4 32 CURS ." NAME:  ________.F1B "		( -->		)
+	5 3 CURS 76 0 
+	DO 32 EMIT LOOP			( Text in Display loeschen	)
+	INITFL INITEI 			( HFF =1 --> Bildneuaufbau	)
+	19 1 CURS 6 DEL AEND 
+	MOPS-> HFF @ IF DISP1 ENDIF 
+	GO SUMFLUO 
+	1 EMITA	KEYO 1 =
+	IF 7 EMIT 7 EMIT ENDIF ;	( MOPS --> DUMMY )
+( SCANN ist die Scanneustartprozedur					)
+
+: SCAN	INITFL INITEI 					( -->		)
+	DISPLAY SCAWL SCAW SCST FEN2 		( siehe entsprechende	)
+	SCSC SCZEI MOPS1 DISP SCW1 FEN3 FEN4 	( Routinen		)
+	MZEIT AEND 
+	MOPS-> GO SUMFLUO				
+	1 EMITA	KEYO 1 =
+	IF 7 EMIT 7 EMIT ENDIF ;	( MOPS --> DUMMY )
+( SCAN steuert den ersten Scan nach Auswahl der Menueroutine SCAN.	)
+
+: MENUE2 SCMENUE 					( -->		)
+	BEGIN KEY DUP 49 =
+	  IF FILE@ 0 DAT !   	ENDIF DUP 50 =
+	  IF ANALY	 	ENDIF DUP 51 =
+	  IF DATSAVE	   	ENDIF DUP 52 =
+	  IF CONVERT 0 DAT !	ENDIF DUP 53 =
+	  IF SCANN 1 DAT ! 	ENDIF 
+	  SCMENUE 56 =
+	UNTIL ;	
+( MENUE2 steuert Menue 2 , siehe Anwender Flussdiagramm	  		)
+
+: INTFACE BEGIN 19 1 CURS 6 DEL				( -->		)
+	CBLOCK F @ 0=			( Datentransfer zum Mops	)
+        IF SCAN  1 DAT ! MENUE2 1
+        ELSE 20 6 CURS 
+	     ." FEHLER IN DER DATENUEBERTRAGUNG ! " 21 6 CURS
+	     ." NEUER VERSUCH [J/N] ?           : "
+	     1 KEY DUP EMIT 74 = IF DROP 0 ENDIF
+	ENDIF
+      UNTIL ;
+( INTFACE steuert den Programmtransfer zum Z80-Laserinterface.		)
+ 
+: UNTERG 19 1 CURS 6 DEL 19 6 CURS			( -->		)
+	 ." UNTERGRUND =  " UNTE @ . 21 6 CURS
+	 ." NEUER UNTERGRUND : "  21 55 CURS 0 4 M@
+	 DROP UNTE ! ;
+( UNTERG ziegt den aktuellen Eichmarkenuntergrund an und ermoeglicht	)
+(	 Aenderungen.							)
+
+: MENUE1 1 DAT !					( -->		)
+	BEGIN KEY DUP 49 =
+	  IF FILE@ 0 DAT !			ENDIF DUP 50 =
+	  IF DAT @ 
+	     IF FILE@ ANACON @
+	        IF 0 DAT ! ANALY ENDIF 	
+	     ELSE ANALY	ENDIF			ENDIF DUP 51 =
+	  IF DAT @ 
+	     IF FILE@ ANACON @ 
+		IF 0 DAT ! CONVERT ENDIF
+	     ELSE CONVERT ENDIF			ENDIF DUP 52 =
+	  IF INTFACE				ENDIF DUP 53 =
+	  IF UNTERG				ENDIF	
+	  VORMENUE 55 =
+	UNTIL ;
+( MENUE1 steuert das Startmenue,siehe Anwenderflussdiagramm		)
+
+( *** geaenderter Wort : )
+: RUN  DECIMAL DISPLAY 160 EICHTEILER !			( -->		)
+       900 UNTE ! VORMENUE MENUE1 
+       CLS INVERSE 1 1 CURS ." F  O  R  T  H :" NORMAL CR ;
+( RUN ist Start des ganzen Programms.					)
+ 
+END-OF-FILE 
+

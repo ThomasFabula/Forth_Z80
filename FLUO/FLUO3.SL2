@@ -1,0 +1,296 @@
+(		 SPEKTRUMANALYSE					)
+
+HEX
+
+0 VARIABLE TEILERZ	( Teiler fuer Zoom				)
+
+: ARIOFFDIV HFF @ ARI! 0 ARI!			( -->			)
+	    TEILER @ MUL BEGIN BUSY UNTIL
+	    88 P! 88 P! 88 P! 0 88 P!
+	    SWAPP DSUB TEILERZ @ DIV ;
+( ARIOFFDIV teilt Zaehlrate durch Teiler unter Beruecksichtigung	)
+(	    des gewaehlten Offsets.Ergebnis -- TOP of ARI-stack		)
+
+DECIMAL
+
+0 VARIABLE SUMFL	( Summe der aufgenomenen Fluoreszenspunkte	)
+0 VARIABLE ADD		( Offset fuers Display				)
+0 VARIABLE ABST		( Abstand der Abszissenwerte			)
+0 VARIABLE OMANA	( Mantisse alt					)
+0 VARIABLE OEXPA	( Exponent alt					)
+0 VARIABLE MN5ALT	( Schrittweite alt				)
+0 VARIABLE EIN		( Eichmarkendisplay ein/aus			)
+
+
+: OFFDIVTEST ARI@ 0=				(  --> {n1} f		) 
+	     IF ARI@ DUP 201 < 
+	        IF 1 ELSE DROP 0 ENDIF
+	     ELSE ARI@ DROP 0 1
+	     ENDIF ;			
+( OFFDIVTEST testet das Divisionsergebnis mit entsprechendem Offset	)
+(	     0 <= Ergenis <= 200 --> Ergenis,1 sonst --> 0		)
+
+: FLDIS ZAEHL@ ARIOFFDIV OFFDIVTEST		( -->			)
+	IF 240 SWAP - XZAE @ GDPDOT
+	ELSE 39 XZAE @ GDPDOT 
+	ENDIF MN5ALT @ MN5 @ /
+	XZAE +! 3 FLOU@ +! 
+	FLOU@ @ 49150 >	IF BLOCKF ENDIF ;
+( FLDIS bringt den durch die Parameter festgelegten Messpunkt zur	)
+(       Anzeige . Parameter sind : ADD,FLOU@,XZAE,BLAD .		)
+(	Gegebenenfalls wird der naechste Speicherblock eingeblendet	)
+
+: DOT	SWAP - DUP 650 MN5 @ MN5ALT @ */ >	( n1 n2 -->		)
+	IF DROP 650 MN5 @ MN5ALT @ */
+	0 DO FLDIS LOOP
+	ELSE 0 DO FLDIS LOOP
+	ENDIF ;
+( DOT	bringt die moegliche Anzahl der Messpunkte zur Anzeige .	)
+(	n1 = entsprechender Messwert					)
+(	n2 = Scanende [ZAEHL] oder Fensteranfang/ende [FENA,FENB]	)
+
+: DOTH	5461 /MOD 4 * 32 + DUP BLAD C!		( n -->			)
+	238 P! 3 * 32768 + FLOU@ ! ;
+( DOTH	ermittelt den Speicherplatz des gewuenschten Startwertes	)
+(       und schaltet den entsprechenden Speicherblock ein		)
+(       n = entsprechender Messwert					)
+
+: DOTA  DUP DOTH ;				( n --> n		)
+: DOTB  FENA @ 1+ DOTH ;			(   --> 		)
+: DOTC 	DUP FENB @ FENA @ - - DOTH ;		( n --> n		)
+( DOTA  = Speicherplatz des Messwertes vor oder ohne einem Fenster 	)
+( DOTB 	=        "	 "	"      hinter einem Fenster		)
+( DOTC  =        "       "      "      im Ueberlap eines Fensters	)
+(	n = entsprechender Messwert					) 
+
+: XDOT  MN5 @ / MN5 @ *				( n1 --> n2		)
+	DUP MHZA ! 2 MN5ALT @ */
+	50 XZAE ! XDIS ;
+( XDOT bestimmt den Anfang n1 [Mhz] des Displays fest			)
+(      n2 = entsprechender Messwert					)
+
+: ZAEHLMAX OMAN @ ARI! 0 ARI! OEXP @ DUP             ( ZAEHLMAX --> ARI )
+           IF 0 DO 10 MUL LOOP 1 
+	   ENDIF DROP ;
+
+: ACHSTEIL TEILERZ @ ARI! 0 ARI! 40 MUL ; ( ACHSENTEILEINHEIT --> ARI )
+
+: ABSTAND ACHSTEIL 					( -->		)
+	BEGIN DUPP ZAEHLMAX SWAPP DSUB SIGN? DUP
+	      IF DROPP 10 DIV ENDIF 0= 
+	UNTIL 
+	DROPP 
+	OEXP @ DUP IF 0 DO 10 DIV LOOP 1
+	           ENDIF DROP
+	ARI@ DROP ARI@ ABST ! ;
+( ABSTAND ermittelt den Abszissenabstandswert -- ABST			)
+
+: YDO@ DUP 5 0 DO ABST @ - DUP LOOP DROP ; 	( n -->			)
+( YDO@ erzeugt alle Ordinatenwerte fuer die Graphik,n=Mantisse		)
+
+: YDIS! OMAN @ OEXP @ YDISA 			( n1 -- n6 -->		)
+	ABSTAND YDO@
+	244 1 SETCUR YCHR	
+	204 1 SETCUR YCHR
+	164 1 SETCUR YCHR
+	124 1 SETCUR YCHR
+	 84 1 SETCUR YCHR
+	 48 1 SETCUR YCHR ;
+( YDIS! gibt alle Ordinatenwerte n an Graphik aus			) 
+
+0 VARIABLE FENH	  ( restliche Anzahl der anzuzeigenden FLUO-punkte	)
+
+: M*/ MN5ALT @ MN5 @ */ ;				( n -->		)
+: M/* MN5 @ MN5ALT @ */ ;				( n -->		)
+
+: FENSTER? FENB @ ZAEHL @ <				( n -->		)
+	   IF FENB @ OVER - DUP DUP FENH !  		   
+	      M*/ 50 + XZAE ! + ZAEHL @ SWAP -
+	      DUP 651 FENH @ - M/* <
+	      IF 0 DO FLDIS LOOP
+	      ELSE 650 FENH @ - M/* 
+		   0 DO FLDIS LOOP
+	      ENDIF
+	   ENDIF ;			
+( FENSTER? setzt entsprechende Parameter [ XZAE ] fuer den Werte- 	)
+(	   bereich innerhalb eines Fensters und dessen Ueberlaps	)
+(	   n = entsprechender Messwert ohne Fenster			)
+
+: FENENDE FENB @ DUP FENA @ - M*/ XZAE +!		( -->		)
+	  BEGIN DUP ZAEHL @ > XZAE @ DUP 0 < 
+	      	SWAP 701 > OR OR 0=
+	  WHILE FLDIS 1+
+	  REPEAT DROP ;
+( FENENDE zeigt die moeglichen Punkte hinter dem Fenster an.		)
+
+: DOT!  KOORD YDIS! XDOT  			( n1 -->		)
+	FENA @ -1 =
+	IF DOTA ZAEHL @ DOT 
+	ELSE DUP FENA @ 1+ <
+	     IF DOTA FENA @ ZAEHL @ MIN DOT 
+		FENENDE
+	     ELSE DUP FENB @ >
+	          IF DOTC ZAEHL @ DOT 
+	          ELSE DUP 650 M/* + FENB @ >
+		       IF DOTB FENSTER? 1 ENDIF DROP
+	          ENDIF 
+	     ENDIF 
+	ENDIF ;
+( DOT!  steuert die Messwertanalyse .Es werden nur Punkte angezeigt,	)
+(	die ausserhalb eines gewaehlten Fensters liegen und innerhalb	)
+(	des aufgenommenen Spektrums. n1=Startwert [Mhz] 		)
+
+: ANAD	19 1 CURS 6 DEL 19 6 CURS
+	." DISPLAYMAX   : [1] " 20 6 CURS
+	." STARTWERT    : [2] " 21 6 CURS
+	." ZOOM         : [3] " 22 6 CURS
+	." OFFSET       : [4] " 23 6 CURS
+	." EICHMARKEN   : [5] " 24 6 CURS
+	." ENDE         : [9] " 20 50 CURS ;
+
+: EICH?DIS EIN @ IF EICHDIS ENDIF ;		( -->			)
+( EICH?DIS bestimmt,ob die Eichmarken angezeigt werden.			)
+
+: DISPM	19 1 CURS 6 DEL				(  -->			)
+	BEGIN 22 1 CURS KOM6 20 6 CURS
+	      ." DISPLAYMAX ?: " 20 55 CURS
+	      32 EMIT 69 EMIT 43 EMIT 20 51 
+	      CURS 3 4 M@ DROP T6MIL
+	      TEILER @ TEILERZ ! 
+	UNTIL 0 DUP ADD ! HFF ! HFE @		( Parameter setzen	)
+	OMAN @ OMANA ! OEXP @ OEXPA ! 
+	ANZ8  DOT! EICH?DIS ANAD ;
+( DISPM gibt das Spektrum mit neuen Dislaymaxwert aus			)
+		     
+: STRTW 19 1 CURS 6 DEL				(	-->		) 
+	BEGIN 20 6 CURS
+	      ." STARWERT ?: " 20 56 CURS 
+	      MHZD 20 50 CURS 0 5 M@ DROP
+	      DUP 20 50 CURS MTEST . MHZD
+	      DUP ZAEHL @ MN5ALT @ 2 */ < 
+	      IF ADD @ HFF ! DUP HFE ! DOT! 1 DELW 
+	      ELSE MNW 0 
+	      ENDIF 
+	UNTIL EICH?DIS ANAD ;
+( STRTW gibt das Spektrum ab gewuenschtem Startwert aus			)
+
+: LINSET 240 SWAP - DUP 50 SETCUR 700 GDPLIN ;	( n -->			)
+( LINSET zeichnet eine Linie an gewuenschter Position n, 0 <= n <= 200	)
+
+: BALKEN 19 1 CURS 6 DEL 20 6 CURS			( -->		)
+	." CURSORSTEUERUNG ONLINE !   " 21 6 CURS
+	." GEWUENSCHTE POSITION MIT [CR] QUITTIEREN ! "
+	1 GDPMOD 150 DUP HFD ! LINSET
+	 BEGIN KEY DUP 11 =
+	       IF 1 HFD +! HFD @ DUP 201 <	 
+		 IF DUP 1 - LINSET LINSET
+		 ELSE DROP -1 HFD +!		
+		 ENDIF 
+	       ENDIF DUP 22 =
+	       IF -1 HFD +! HFD @ DUP 0 >
+		 IF DUP 1+ LINSET LINSET
+		 ELSE DROP 1 HFD +!
+		 ENDIF
+	       ENDIF 13 =			( CR ? )
+	       IF HFD @ HFF @ >
+	       ELSE 0 ENDIF	
+	UNTIL ; 	        	
+( BALKEN steuert den oberen Balken beim Zoom				)
+
+: OFFSE  19 1 CURS 6 DEL 20 6 CURS			( -->		)
+	." CURSORSTEUERUNG ONLINE !   " 21 6 CURS
+	." GEWUENSCHTEN OFFSET MIT [CR] QUITTIEREN ! "
+	 1 GDPMOD 75 DUP HFF ! LINSET
+	 BEGIN KEY DUP 11 =
+	       IF 1 HFF +! HFF @ DUP 200 <	 
+		 IF DUP 1 - LINSET LINSET
+		 ELSE DROP -1 HFF +!		
+		 ENDIF 
+	       ENDIF DUP 22 =
+	       IF -1 HFF +! HFF @ DUP -1 >
+		 IF DUP 1+ LINSET LINSET
+		 ELSE DROP 1 HFF +!
+		 ENDIF
+	       ENDIF 13 =			( CR ? )
+	UNTIL ; 
+( OFFSE steurt den unteren Balken beim Zoom bzw.Offset.			)
+
+: ZOOM 	OMAN @ OMANA @ OMAN !				( -->		)
+	OEXPA @ OEXP !
+	HV @ ADD @ 0= 0= OR		( Bild wird nur dann neu aufge-   )
+	IF HFE @ 0 HFF ! DOT! ENDIF	( baut,wenn kein Offset o. Zoom   )
+	BEGIN OFFSE 			( im vorherigen Display angezeigt )
+	BALKEN TEILER @ 		( wurde. )
+	HFD @ HFF @ - 200 */ DUP 0 >
+	IF TEILERZ ! OMAN @ HFD @ 200 
+	   */ OMAN ! HFE @ DOT! TEILER @ 
+	TEILERZ ! 1 HV ! ANAD 1
+	ELSE DROP ANAD 23 40 CURS
+	     ." ACHTUNG TEILER < 1 !  "
+	     7 EMIT 20 50 CURS 0
+	     HFF @ LINSET HFD @ LINSET
+	ENDIF 
+	UNTIL OMAN ! EICH?DIS ;
+(	TEILERZ = TEILER * [ HFD - HFF ] / 200				)
+( ZOOM steuert den Zoom beim Graphikaufbau				)
+
+: OFFSET OMANA @ OMAN ! OEXPA @ OEXP !			( -->		)
+	 HV @ ADD @ 0= 0= OR		( Bildneuaufbau siehe ZOOM	)
+	 IF HFE @ 0 HFF ! DOT! ENDIF
+	 OFFSE HFF @ DUP ADD ! OMANA @ 200
+	 */ OMAN @ + DUP 10000 <
+	 IF OMAN ! 
+	 ELSE 10 / OMAN ! 1 OEXP +!
+	 ENDIF HFE @ DOT! EICH?DIS ANAD ;
+( OFFSET steuert den Offset beim Graphikaufbau				)
+
+: VORSCHRITT MHZA @ MN5 @ 50 2 */ - 		(     -->        	)
+	     DUP DUP ZAEHL @ MN5ALT @ 2 */ 1+ <
+	     IF HFE ! ADD @ HFF ! DOT!		( alter Offset --> HFF	)
+	     EICH?DIS
+	     ELSE DROP DROP  
+	     ENDIF 0 HV ! ;
+( VORSCHRITT blaettert das Display eine Seite weiter [ = 600 Punkte ]    )
+
+: RUECKSCHRITT MHZA @ MN5 @ 1250 2 */ - DUP	(	-->		 )
+	       DUP -1 >
+	       IF HFE ! ADD @ HFF ! DOT!
+	       ELSE DROP DROP 0 DUP HFE !
+		    ADD @ HFF ! DOT!
+	       ENDIF 0 HV ! EICH?DIS ; 	
+( RUECKSCHRITT blaettert das Display eine Seite zurueck [ = 600 Punkte ] )
+
+: EICHMARKEN EIN @ 					( -->		 )
+	     IF MN5ALT @ MN5 ! 0 EIN ! 
+	        ADD @ HFF ! HFE @ DOT!
+	     ELSE 1 MN5 ! 1 EIN ! ADD @
+	          HFF ! HFE @ DOT! EICHDIS
+	     ENDIF 20 50 CURS 32 EMIT 20 50 CURS ;
+( EICHMARKEN steuert die Eichmarkenanziege und bereitet die Parameter vor )
+ 
+: EICHVOR 255 DUP DUP LEERA @ 1+ C! LEERA @ 2+ C!  	( -->		)
+	  LEERA @ 3 + C!
+	  1 DUP DUP VOLLA @ 1+ C! VOLLA @ 2+ C! 
+	  VOLLA @ 3 + C! ;
+( EICHVOR belegt das Ende des Eichmarkensatzes mit Dummywerten um 	)
+(	  zu verhindern das alte Eichmarken angezeigt werden koennen.	)
+
+: ANALY	0 DUP DUP DUP HFE ! HFF ! ADD ! HV !	        (  -->		)
+	EICHVOR TEILER @ TEILERZ ! MN5 @ 
+	MN5ALT ! 0 DOT! ANAD 0 EIN !
+	OMAN @ OMANA ! OEXP @ OEXPA !		( Vorbereitung aller	 )
+	BEGIN KEY 20 50 CURS DUP 49 =		( Parameter		 )
+	  IF DISPM	  ENDIF DUP 50 =	( 1= -> DISM		 )
+	  IF STRTW 	  ENDIF DUP 51 =	( 2= -> STRTW		 )
+	  IF ZOOM  	  ENDIF DUP 52 =	( 3= -> ZOOM		 )
+	  IF OFFSET 	  ENDIF DUP 12 =	( 4= -> OFFSET		 )
+	  IF VORSCHRITT   ENDIF DUP 8 =		( --> -> VORSCHRITT	 )
+	  IF RUECKSCHRITT ENDIF	DUP 53 =	( <-- -> RUECKSCHRITT	 )
+	  IF EICHMARKEN   ENDIF			( 5= -> EICHMARKEN	 )
+	  57 =					( ENDE ? )
+	UNTIL MN5ALT @ MN5 ! ;  
+( ANALY steuert das Displayprogramm ueber Tastatur			 )
+
+END-OF-FILE
+	
+

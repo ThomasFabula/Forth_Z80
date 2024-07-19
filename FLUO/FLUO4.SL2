@@ -1,0 +1,180 @@
+(			Datenkonvertierungsprogramm			)
+
+
+DECIMAL
+
+0 VARIABLE ZAEHLH	( Hilfsvariablen siehe Programm			)
+0 VARIABLE ZAEHLC
+0 VARIABLE SUV
+0 VARIABLE BANK
+
+0 VARIABLE DOSFLAG
+
+( ++++++++++++++++++++++++  NEUE WORTE ++++++++++++++++++++++++++++++++ )
+( +++                                                               +++ )
+( +++ herumgewurschtelt am 7.3.86 von : H.Roeder & T. Fabula        +++ )
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+: NOT   01 XOR ;                                      ( logisches "nicht" )
+: BEEP  07 EMIT ;                                      ( Warnton ausgeben )
+
+: BLUP  24 6 CURS 1 DEL BEEP 24 6 CURS ;          ( CURSOR POSITIONIERUNG )
+: DFERR  BLUP ." DISKETTE VOLL ! - BITTE WARTEN " ;    ( Fehlermeldung    )
+
+(  -->  f )
+: WRSQ  21 FCB DOSCALL DUP IF DFERR ENDIF ;          ( Write sequential )
+
+(  -->  f )
+: WRSQL  WRSQ DUP IF LEAVE ENDIF ;     ( Write sequential mit Verlassen )
+                                       ( einer DO...LOOP Schleife       )
+(  -->  f )
+: MKFL  22 FCB DOSCALL 255 = DUP           ( Make file )
+        IF BLUP ." INHALTSVERZEICHNIS VOLL !" ENDIF NOT ;
+
+( n --> f )
+: FILEAB  BLUP DROP ." DATEI EXESTIERT SCHON ! LOESCHEN (J/N) ? :  "
+	  0 KEY DUP EMIT 74 = IF DROP 1 ENDIF ;
+( FILEAB : Fehlermeldung )
+
+: NAMIN  BEGIN
+           22 1 CURS 2 DEL
+	   2 FCB C!					( B: default	  )
+	   23 6 CURS ." NAME DER DATEI ? :  " ?DATNAM 
+	   FCB 1+ C@
+           33 < DUP IF BEEP ENDIF   ( BEEP bei ungueltigen Steuerzeichen  )
+	   NOT 
+         UNTIL ;
+( NAMIN : Dateinamen einlesen )
+    
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+: SUMV 0 SUV ! VOLLA @ -12288 - 1+			( -->		)
+       0 DO -12288 I + C@ SUV +! LOOP
+       SUV @ ;
+( SUMV ermittelt die Anzahl der abgespeicherten Eichmarkenzaehlraten	)
+
+: AVOLL VOLLA @ -12288 - 1+ ;				( --> n		)
+: ALEER LEERA @ -16384 - 1+ ;				( --> n		)
+( AVOLL/ALEER bestimmt die Anzahl n der abzuspeichernden Voll-bzw.Leer-	)
+(	      schritte eines Scans.					)
+: CONV2 0 <# #S #> ;      ( N -->  )
+: CONV3 <# #S #> ;
+( ***  geaendertes Wort : )
+: DOS1!	32768 SWAP 0 DO 26 OVER DOSCALL 	( n -->			)
+	DROP WRSQL DOSFLAG ! 128 + LOOP ;
+( DOS1! speichert n Sektoren ab Adresse 32768 sequentiell auf Diskette  )
+(       der DMA-Bereich wird dabei ueber das Datenfeld verschoben	)
+
+: DOS!	DOS1! DROP 32768 DUP ZAEHLC ! ;		( n -->			)
+( DOS! siehe DOS1!							)
+
+: STOR1	ZAEHLC @ DUP 49152 =			(  -->			)
+	IF DROP 128 DOS! ENDIF C! 1 ZAEHLC +! ;
+( STOR1 speichert einen 16K-Block ab,wenn er voll ist			)
+
+: STORE	24 238 P! 0 DO DUP C@ STOR1 1+		( n1 n2 -->		)
+	LOOP DROP 46 STOR1 13 STOR1 
+	10 STOR1 ;
+( STORE holt sich ab Adr.n1 die ASCII-Zeichen und speichert n2 Stueck   )
+(       ab.Jedes Zeichensequenz wird mit .CR abgesclossen.		)
+
+: BANKU	4 BANK +! 32768 ZAEHLH ! ;	( Bankumschaltung		)
+
+: RATF@	BANK @ 238 P! ZAEHLH @ @		( --> n1 n2		)
+	ZAEHLH @ 2+ C@ CONV3 3 
+	ZAEHLH +! ZAEHLH @ 49150 >
+	IF BANKU ENDIF ;
+( RATF@ holt den naechsten Fluoreszenswert und wandelt ihn in ASCII um	)
+( n1 = Startadresse des ASCII-Code  n2 = Anzahl der ASCII-Zeichen	)
+
+: DATAB	26 ZAEHLC @ C! 1 ZAEHLC +!			( -->		)
+	ZAEHLC @ 32768 - 128 / 1+ 
+	DOS! DROP ;
+( DATAB speichert den Rest der Bank 24 auf Diskette			) 
+
+: STOR2 CONV2 STORE ;			 		( n -->		)
+( STOR2 konvertiert die Zahl n und Speichert sie ab			)
+ 
+: FENST FENA @ -1 =			( --> n1 n2			)
+	IF 0 0 				( kein Fenster			)
+	ELSE FENB @ FENA @ - FENA @	( Fensterwerte			)
+	ENDIF ;
+( FENST bestimmt die Fensterwerte n1 = Anzahl der Fluo-Leerschritte	)
+(	n2 = Anzahl der Messwerte bis Fensteranfang			)
+
+( *** geaendertes Wort : )
+: INHDAA 
+       76 0 DO 
+            -10000 I + C@  STOR1	( 0. Kommentar -->		)
+	    DOSFLAG @ IF LEAVE ENDIF 
+       LOOP 
+       13 STOR1 10 STOR1
+       SUMFL @ STOR2			( 1. Anzahl der Fluo-Messwerte	)
+	SUMV STOR2	  		( 2. Anzahl der Eich-Messwerte	)
+	AVOLL STOR2			( 3. Anzahl der Vollschritte	)
+	ALEER STOR2			( 4. Anzahl der Leerschritte	)
+	ANFE C@ STOR2			( 5. Anfang Voll bzw. Leer	)
+	FENST STOR2 STOR2		( 5.6. Fensterwerte		)
+	MN1 @ 10 * STOR2		( 7. Scanweite Laser [MHz]	)
+	MN2 @ 10 * STOR2		( 8. Scanweite Messung [MHz]	)
+	MN3 @ STOR2			( 9. Startwert [MHz]		)
+	MN4 @ 10 * STOR2		( 10. Messzeit-Fluo [msec]	)
+	MN5 @ STOR2 ;			( 11. Schrittweite * 2 [MHz]	)
+( INHDAA speichert das Inhaltsverzeichnis auf Diskette.			)
+
+: FLUORES 32 BANK ! 32768 ZAEHLH ! 
+	  SUMFL @ 0 
+	  DO RATF@ STORE LOOP ;
+( FLUORES konvertiert und speichert alle FLUO-Zaehraten ab.		)
+
+: RATE@ BANK @ 238 P! ZAEHLH @ @
+	CONV2 2 ZAEHLH +! ZAEHLH @
+	49152 = IF BANKU ENDIF ;
+( RATE@ konvertiert die entsprechenden Eichmarkenzaehlraten in ASCII	)
+
+: EICHMARK 64 BANK ! 32768 ZAEHLH !			( -->		)
+	   SUV @ 0 DO RATE@ STORE 
+	   LOOP ; 
+( EICHMARK speichert alle Eichmarkenzaehlraten auf Diskette 		)
+
+: RATEV/L ZAEHLH @ C@ CONV2 1 ZAEHLH +! ;
+( RATEV/L konvertiert die entsprechenden Voll-bzw.Leerschritte in ASCII	)
+(	  Code n1 = Startadresse des Code n2 = Anzahl der ASCII-Zeichen )
+
+: EICHV/L -12288 ZAEHLH ! AVOLL 0			( -->		)
+	  DO RATEV/L STORE LOOP
+	  -16384 ZAEHLH ! ALEER 0
+	  DO RATEV/L STORE LOOP ;
+( EICHV/L speichert alle Voll-bzw.Leerschritte auf Diskette		) 
+
+: DONE 32768 ZAEHLC ! INHDAA				( -->		)
+       FLUORES EICHMARK EICHV/L DATAB ;
+( DONE speichert den gesamten Datensatz auf Diskette ab.		)
+
+( *** geaendertes Wort : )
+: ASCI1 19 1 CURS 6 DEL 13 0 DOSCALL ( RESET ) DROP  20 6 CURS
+ 	." DATEI BENENNEN [ MAX 8 BUCHSTABEN ] .F1A WIRD GESETZT ! " 
+	21 6 CURS ." LAUFWERK B: ( DEFAULT ) " 
+	BEGIN  NAMIN 
+	       65 49 70 FCB 12 + FCB 9 + DO I C! LOOP	( FCB anlegen     )
+	       1 15 FCB DOSCALL 4 < 			( Datei eroeffnen )
+	       IF FILEAB ENDIF 
+	UNTIL ;
+( ASCI1 ist die Dateieroeffnungsprozedur fuer die ASCII-Datei		)
+
+( *** geaendertes Wort : )	
+: ASCI2 19 FCB DOSCALL DROP	( delete file )	   (  -->   	        )
+	MKFL    	        ( make file   )
+	IF OPEN DONE ENDIF 
+	16 FCB DOSCALL DROP     ( close file  ) 			
+	26 128 DOSCALL DROP ;	( DMA reset   )	
+( ASCI2 ist die Abschlussprozedur fuer die ASCII-Datei			)
+
+: CONVERT ASCI1 ASCI2 ;					( -->		)
+( CONVERT fasst die gesamte Konvertierungsroutine zusammen.		)
+
+GET
+FLUO5
+
+END-OF-FILE
+

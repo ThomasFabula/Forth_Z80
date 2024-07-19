@@ -1,0 +1,133 @@
+
+(  			     DATEI FLUO0.SL2   				    )
+
+HEX
+
+E8 CONSTANT CHANCW  ( CTC )
+E1 CONSTANT SIOA    ( SIO-A )
+
+: OPEN-SIOA  4D CHANCW P!     			( counter ) 
+             0D CHANCW P!     			( 9600 baud )
+             18 SIOA P!       			( channel reset )
+             1 SIOA P! 0 SIOA P!    		( interrupt disabled )
+             2 SIOA P! 0 SIOA P!    		( interrupt vector )
+             3 SIOA P! C1 SIOA P!   		( rx 8 bits )
+             4 SIOA P! 44 SIOA P!   		( x16 clock,1 stop,no parity )
+             5 SIOA P! 6A SIOA P! ;  		( rts on )
+( OPEN-SIOA eroeffnet die SIO-A						     )
+
+0 VARIABLE KEO					( Hilfsvariable		)
+
+: KEYO	0 KEO !					(  --> n		)
+	BEGIN SIOA P@ 01 AND 
+	      1 KEO +! KEO @ 1000 = OR
+	UNTIL KEO @ 1000 < 
+	IF SIOA 1 - P@  ELSE 0 ENDIF ;
+( KEYO erwartet ein Zeichen von der SIO-A mit kurzer Warteschleife.	)
+(      Wird kein Zeichen empfangen --> n = 0 sonst ASCII-Zeichen	)
+
+: KEYA 	BEGIN                 			(  --> n		)
+             SIOA P@ 01 AND 
+        UNTIL
+  	SIOA 1 - P@  ;
+( KEYA erwartet ein Zeichen von der SIO-A mit endloser Warteschleife	)
+
+: EMITA	BEGIN					(  --> n		)
+              SIOA P@ 04 AND   
+        UNTIL
+  	SIOA 1 - P!   ;
+( EMITA sendet ein Zeichen n aus der SIO-A				)
+
+
+( *************************** Graphikroutinen **************************** )
+( siehe GLIB								   )
+
+0 VARIABLE X1
+0 VARIABLE Y1
+0 VARIABLE Z1
+
+:  GDPBLK   X1 ! X1 (GDPBLK) ;  			( X1 -->	)
+
+:  GDPMOD   X1 ! X1 (GDPMOD) ;				( X1 -->	)
+
+:  SETCUR   Y1 ! X1 !   X1 Y1 (SETCUR) ;  		( X1 Y1  -->    )
+
+:  CLRDIS    X1 !  X1 (CLRDIS)  ;         		( X1 -->	)
+
+:  GDPCHR    X1 ! Y1 ! Z1 !  Z1 Y1 X1 (GDPCHR) ; 	( Z1 Y1 X1 -->  )
+
+:  GDPPAN    Y1 ! X1 ! X1 Y1 (GDPPAN)  ; 		( X1 Y1 -->     )
+
+:  GDPDOT    Y1 ! X1 ! X1 Y1 (GDPDOT)  ; 		( X1 Y1 -->     )
+
+:  GDPLIN     Y1 ! X1 ! X1 Y1 (GDPLIN) ; 		( X1 Y1 -->     )
+
+:  GDPCI      Y1 ! X1 ! Y1 X1 (GDPCI)  ; 		( X1 Y1 -->     )
+
+       
+( ******************* Arithmetic Processor Am 9511A ********************** )
+
+HEX
+
+10 VARIABLE E
+10 VARIABLE F
+
+: BUSY 89 P@ 80 AND 0= ;		( f=1 wenn Bit 7 = 0		)
+: ARI16! E ! E C@ 88 P! E 1+ C@ 88 P! ;	( nn --> ARI DATA		) 
+: ARI! BEGIN BUSY UNTIL ARI16! ;	( nn --> ARI DATA mit BUSY	)
+: ARI!! SWAP BEGIN BUSY UNTIL
+	ARI16! ARI16! ;			( nn nn --> ARI	DATA mit BUSY	)
+: ARI16@ 88 P@ F 1+ C! 88 P@ F C! F @ ;	( ARI DATA --> nn		)  
+: ARI@ BEGIN BUSY UNTIL ARI16@ ;
+: ARI@@ BEGIN BUSY UNTIL
+	ARI16@ ARI16@ ;		        ( ARI DATA --> nn nn 		)
+
+: ARIC BEGIN BUSY UNTIL 89 P! ;		( Gibt Komando an ARI		)
+: SIGN? 89 P@ 40 AND ;	( ARI-Vorzeichen ? )
+: DUPP 37 ARIC ;	( DUP ARISTACK )
+: DROPP 18 ARIC ;	( DROP TOS	)
+: SWAPP 39 ARIC ;	( SWAP ARISTACK )
+: DSUB 2D ARIC ;	( NOS-TOS-->TOS )
+
+DECIMAL
+
+: MUL ARI! 0 ARI! 46 ARIC ;		( n -->	)
+: DIV ARI! 0 ARI! 47 ARIC ;		( n --> )
+( MUL/DIV multipliziert bzw.dividiert die Zahl auf TOP of ARI-stack	)
+( 	  mit n.Das Ergebnis befindet sich auf TOP of ARI-stack		)
+
+( ***************** Progamm fuer Blocktransfer zum Mops ******************** )
+
+10 VARIABLE F					( F=Fehlerzaehler 	)
+	
+: READSEQ 20 FCB DOSCALL ;			( read sequential	)
+
+: BLOCK 255 EMITA 128 0 DO DMA I + C@ EMITA	( Gibt FFH und DMA-Bereich   )
+	LOOP ;    				( aus.			     )
+
+: VERG  0 128 DO DMA I 1 - + C@ = 0= IF F @ 1 +	( Zeichenvergleich vom	     )
+	F ! ENDIF -1 +LOOP ;			( Stack mit DMA		     )
+
+: TEST  128 0 DO KEYO 				( Daten einlesen und VERG    )
+	      LOOP VERG ;
+
+: TRAN 0 F ! BEGIN READSEQ 0= WHILE		( Datei lesen		     )
+       BLOCK TEST REPEAT ;			
+
+: MFCB 0 0 0 0 77 79 67 32 32 32 32 83 80 79	( FCB fuer MOPS.COM          )
+       77 1 FCB 16 + FCB DO I C! LOOP
+       0 0 0 0 FCB 36 + FCB 32 + DO I C! LOOP ;
+ 
+: TRANS 13 0 DOSCALL DROP			( Reset	)
+	MFCB 15 FCB DOSCALL DROP 	        ( Datei eroeffnen   )
+	TRAN 0 EMITA ;
+
+: CBLOCK OPEN-SIOA 6 EMITA KEYO 6 =  		(  -->			)
+	 IF TRANS ELSE 1 F !
+	 ENDIF ;
+( CBLOCK transferiert das Maschinenprogramm MOPS.COM zum Z80-Laser-	)
+(	 interface.Anschliessend wird der Datensatz ueberprueft.In	)
+(	 Variable ist der Fehlerkode enthalten.				)
+   
+END-OF-FILE
+

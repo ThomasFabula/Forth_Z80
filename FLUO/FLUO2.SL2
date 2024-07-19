@@ -1,0 +1,143 @@
+(			DATEI FLUO2.SL2					)
+
+DECIMAL
+
+0 VARIABLE EICHZAEHL		( Speicherplatz der aktuelen Eichmarke  )
+0 VARIABLE EICHTEILER		( Eichmarkenteiler			)
+0 VARIABLE EXZAE		( Kursorposition fuer Eichmarken	)
+0 VARIABLE EICHTESTV		( Summe der Vollschritte aktuell	)
+0 VARIABLE EICHTESTL		( Summe der Leerschritte aktuell	)
+0 VARIABLE VOLLZAE		( Adr. der aktuellen Vollschritte	)
+0 VARIABLE LEERZAE		( Adr. der aktuellen Leerschritte	)
+0 VARIABLE LOV			( Hilfsvariable 0= -> leer ; 1= -> voll	)
+
+: VORBE	0 DUP EICHTESTV ! EICHTESTL !
+	-16384 LEERZAE ! -12288 VOLLZAE ! ;
+: TESTSUB1 0 VOLLZAE @ C@ EICHTESTV +! 		( n1 --> n2 f		)
+	   EICHTESTV @ EICHTESTL @ + 0
+	   DMINUS D+ -1 = ;
+( Test auf gewuenschten Startwert ; n1 = Startwert [MHz] * 2		)
+( n2 = voezeichenbehafteter Voll-bzw.Leerschritteuebertrag,		)
+( f = 1 -> Uebertrag , Operation wird doppelt genau durchgefuehrt	)
+
+: TESTSUB0 0 LEERZAE @ C@ EICHTESTL +! 		( n1 --> n2 f		)
+	   EICHTESTL @ EICHTESTV @ + 0
+	   DMINUS D+ -1 = ;
+( siehe TESTSUB1							)
+
+: EICHAUS1 ABS EICHTESTV @ OVER - 1+ 		( n1 --> n2		)
+	   EICHTESTV ! 1 LOV ! 1 VOLLZAE +! ;
+( EICHAUS! setzt die Parameter EICHTESTV , VOLLZAE und n2		)
+( n1 = vorzeichenbehafteter Vollschritteuebertrag , n2 = Uebertrag	)
+
+: EICHAUS0 ABS 0 LOV ! 1 LEERZAE +! ;		( n1 --> n2		)
+( EICHAUS0 setzt die Parameter n2 = Leerschritteuebertrag und		)
+( LEERZAE , n1 = vorzeichenbehafteter Leerschritteuebertrag		)
+
+: EICHSUCH1 VORBE				( n1 --> n2 n3		)
+	BEGIN DUP TESTSUB1 
+	  IF EICHAUS1 1
+	  ELSE DROP 1 VOLLZAE +! DUP
+	       TESTSUB0 
+	       IF EICHAUS0 1
+	       ELSE DROP 1 LEERZAE +! 0
+	       ENDIF
+	  ENDIF
+	UNTIL SWAP DROP LOV @ ;	  
+( n1 = virtueller Eichmarkenpunkt = [ HFE * 2 ]				)
+( n2 = Anzahl der ersten Leer-bzw.Vollschritte				)
+( n3 = 0 --> n2 = Leerschritte o. n3 = 1 --> n2 = Vollschritte		)
+
+: EICHSUCH0 VORBE				( n1 --> n2 n3		)
+	BEGIN DUP TESTSUB0 
+	  IF EICHAUS0 1
+	  ELSE DROP 1 LEERZAE +! DUP
+	       TESTSUB1 
+	       IF EICHAUS1 1
+	       ELSE DROP 1 VOLLZAE +! 0
+	       ENDIF
+	  ENDIF
+	UNTIL SWAP DROP LOV @ ;
+( n1 = virtueller Eichmarkenpunkt = [ HFE * 2 ]				)
+( n2 = Anzahl der ersten Leer-bzw.Vollschritte				)
+( n3 = 0 --> n2 = Leerschritt o. n3 = 1 --> n2 = Vollschritt		)
+
+: EICHSUCH  HFE @ 2 * ANFE C@			(  --> n1 n2		)
+	    IF EICHSUCH1 
+	    ELSE EICHSUCH0 
+	    ENDIF ;
+( EICHSUCH ermittelelt die Anzahl der ersten anzuzeigenden Leer-bzw.	)
+(	   Vollschritte n1 = Anzahl der Leer-bzw.Vollschritte		)
+(    	   n2 = 0 --> n1 = Leerschritte o. n2 = 1 --> n1 = Vollschritte )
+(	   die darauffolgenden Leer-bzw.Vollschritte werden durch die	)
+(	   Adresse in VOLLZAE bzw. LEERZAE bestimmt. EICHTESTV * 2 +	)
+(	   32768 enthaelt die Adresse der naechsten Eichmarkenrate.	)  
+
+: EBANK 68 238 P! 32768 				(  -->		)
+	EICHZAEHL ! ;			( Bankumschaltung fuer Eich	)
+
+: EICHZAE@2  EICHZAEHL @ @  2 EICHZAEHL +!		( --> n		)
+	     EICHZAEHL @ 49152 = 
+	     IF EBANK ENDIF ;
+( EICHZAE@2 holt die aktuelle Eichmarkenzaehlrate n auf den Stack	)
+
+: EICHZAE@1 EICHTESTV @  DUP 8192 >			( -->		)
+	    IF 68 238 P! 1 - 2 * 
+	      16384 + EICHZAEHL !
+	    ELSE 64 238 P! 1 - 2 *
+	        32768 + EICHZAEHL !
+	    ENDIF ;
+( EICHZAE@1 ermittelt den Speicherplatz der aktuellen Eichmarkenanzeige )    
+
+: EICHDIV EICHTEILER @ / ;				(  -->		)
+
+: EDISV	EICHZAE@1 0					(  -->		)
+	DO EICHZAE@2 EICHDIV EXZAE @
+	   GDPLIN 1 EXZAE +! 0 
+	   EXZAE @ SETCUR  
+	LOOP ;
+( EDISV bringt den ersten Eichmarkenteil zur Anzeige			)
+
+: EDISPV VOLLZAE @ C@ 0					( -->		)
+	 DO EICHZAE@2 EICHDIV EXZAE @
+	    GDPLIN 1 EXZAE +! 0 EXZAE @
+	    SETCUR
+	 LOOP 1 VOLLZAE +! ;
+( EDISPV bringt die volstaendigen Eichmarken zur Anzeige		)
+ 
+: EDISPL 0 LEERZAE @ C@ EXZAE @ 			( -->		)
+	 + DUP EXZAE ! GDPLIN 1
+	 EXZAE +! 0 EXZAE @ SETCUR
+	 1 LEERZAE +! ;
+( EDISPL zeigt einen vollstaendigen Leerbereich zwischen 2 Eichmarken an )
+
+: EICH0	BEGIN EDISPL EXZAE @ 701 < DUP			( -->		)
+	   IF DROP EDISPV EXZAE @ 700 <
+	   ENDIF 0=	
+	UNTIL ;
+( EICH0 baut den Rest des Eichmarkenspektrums beginnend mit 		)
+(  	Leerschritten auf.						)
+
+: EICH1	BEGIN EDISPV EXZAE @ 701 < DUP			( -->		)
+	   IF DROP EDISPL EXZAE @ 701 <
+	   ENDIF 0=		   
+	UNTIL ;
+( EICH1 baut den Rest des Eichmarkenspektrums beginnend mit		)
+(	Vollschritten auf.						)
+
+: EICHDIS 50 DUP EXZAE ! 0 SWAP SETCUR			( -->		)
+	  EICHSUCH
+	  IF DUP 0=
+	     IF DROP
+	     ELSE EDISV EICH0 
+	     ENDIF
+	  ELSE DUP 0=
+	     IF DROP
+	     ELSE  1 EICHTESTV +! EICHZAE@1 EXZAE +! 0 EXZAE @
+	          GDPLIN  1 EXZAE +! 0 EXZAE @ SETCUR EICH1 
+	     ENDIF
+	  ENDIF ;
+( EICHDIS steuert das gesamte Eichmarkendisplay.			)
+
+END-OF-FILE
+ 
