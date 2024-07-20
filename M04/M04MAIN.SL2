@@ -1,0 +1,172 @@
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+( +++++++++++++++++++++++++++    M04   -   MAIN     +++++++++++++++++++++ )
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+( Datei No-4 :  M04MAIN.SL2 )
+
+DECIMAL
+
+( DASH und DASHCR schreiben 80 Striche "-" auf den Bildschirm ) 
+ : DASH 80 0 DO ." -" LOOP ;
+ : DASHCR CR CR DASH CR ;
+
+( TEXT Anfangs-Text Ausgabe )
+ : TEXT CLS 30 1 CURS ." M 0 4 - PROTOTYP " CR ; 
+
+( MENU Haupt - Menu ) 
+ : MENU TEXT 32 3 CURS ." HAUPT-MENUE " 0 5 CURS DASH 
+        25  8 CURS ." (I)NPUT  ---  PARAMETER-AENDERN    "
+        25 10 CURS ." (C)OUNT  ---  MESSWERT-ERFASSUNG   "
+        25 12 CURS ." (S)AVE   ---  DATEN & PAR.-SICHERN "
+        25 14 CURS ." (H)ELP   ---  ON-LINE-HILFE        "
+        25 16 CURS ." (D)OCU   ---  DOCUMENTATION        "
+        25 18 CURS ." (Q)UIT   ---  ENDE - M04           "
+         0 21 CURS DASH 53 23 CURS ." BITTE AUSWAHL EINGEBEN : "  ;
+
+ ( RECT Rechteckausgabe )
+  : RECT 0 0 SETCUR 0 700 GDPLIN 250 700 GDPLIN
+        250 0 GDPLIN 0 0 GDPLIN ;
+
+ ( INTRO Charakterausgabe )
+  : INTRO 200 200 SETCUR 77 2 10 GDPCHR   ( " M " )
+         200 300 SETCUR 48 2 10 GDPCHR   ( " 0 " )
+         200 400 SETCUR 52 2 10 GDPCHR   ( " 4 " ) ;
+
+( HELP steuert das Help - Modul )
+ : HELP  CLS CR INVERSE 30 1 CURS  ." M04   -   HELP  " CR NORMAL
+         CR ."  IN FORTH:  ZUSAETZLICHE INFORMATION DURCH <GET A:HELP.SL2 >  "
+         KEY 77 ;
+
+( DOCU steuert das Docu - Modul )
+ : DOCU  CLS CR INVERSE 30 1 CURS  ." M04   -   DOCUMENT " CR NORMAL
+         CR ."  In der PROTOTYP-Version des M04-Programms ist "
+            ." dieses Modul nicht implementiert" KEY 77 ;
+
+ : MSEC  32  EMIT ( SPACE )                          ( Ausgabe der Parameter )
+         109 EMIT 115 EMIT 101 EMIT 99 EMIT ;        ( Einheiten in ASCII-   )
+ : HZ    32  EMIT ( SPACE )                          ( Zeichen               )
+         72  EMIT 122 EMIT ;
+ : HZ/G  32 EMIT ( SPACE )
+         72  EMIT 122 EMIT 47 EMIT 71 EMIT  ;
+
+HEX
+( MARK schreibt ab Adresse ADR die ASCII-Zeichen " . CR LF " )
+( zur Datensicherung auf Disk im FORTRAN-REAL-Format: max 80 Ziffern . CR LF )
+( ADR --->   ) 
+ : MARK DUP 2E SWAP C! 1+ DUP 0D SWAP C! 1+ 0A SWAP C! ;
+
+( PADRS legt Adressen der Marken fuer Parameter auf den Stack  )
+(   -->  n1, n2, ... , n21 )
+ : PADRS 
+           85B5 85AF 85AA 859F 8596 858D 8582 8575 8568 8562 855C
+                8556 8551 8546 853D 8534 8529 851C 850F 8509 8503 ;
+
+( Die 21 Parameter liegen im Adr.-Bereich 8500-85B7H in der Reihenfolge: )
+( ASCII-Format )
+( NM[3],CM[3],TM[3],FM[10],WM[10],AM[1+7],DM[6],LM[6],SM[8],VM[2]       )
+( NE[3],CE[3],TE[3],FE[10],WE[10],AE[1+7],DE[6],LE[6],SE[8],VE[2],TU[3] )
+( Notation : Parametername[Ziffernanzahl]                                     )
+                                  
+DECIMAL
+( PMARK schreibt 21 Marken ins Parameterfeld )
+ : PMARK  PADRS 21 0 DO MARK LOOP ;
+
+( ANZ gibt die Variable VAR auf Adresse ADR bei x y aus )
+( ADR x y --->   )
+ : ANZ CURS @ MTEST . ;
+
+
+0  VARIABLE NM                     ( MESS - PARAMETER Variablen )
+0  VARIABLE CM
+0  VARIABLE TM
+00 VARIABLE WM 2 ALLOT
+00 VARIABLE FM 2 ALLOT
+00 VARIABLE AM 2 ALLOT
+00 VARIABLE DM 2 ALLOT
+00 VARIABLE LM 2 ALLOT
+00 VARIABLE SM 2 ALLOT
+0  VARIABLE VM
+
+0  VARIABLE NE                     ( EICH - PARAMETER Variablen )
+0  VARIABLE CE
+0  VARIABLE TE
+00 VARIABLE WE 2 ALLOT
+00 VARIABLE FE 2 ALLOT
+00 VARIABLE AE 2 ALLOT
+00 VARIABLE DE 2 ALLOT
+00 VARIABLE LE 2 ALLOT
+00 VARIABLE SE 2 ALLOT
+0  VARIABLE VE
+0  VARIABLE TU
+
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+ ( MASKM Eingabe-Maske der MESS-Parameter ) 
+  : MASKM 
+     5  6 CURS ." [A]  NM: "                  
+     5  7 CURS ." [B]  CM: "  25  7 CURS MSEC 
+     5  8 CURS ." [C]  TM: "  25  8 CURS MSEC 
+     5  9 CURS ." [D]  WM: "  25  9 CURS HZ   
+     5 10 CURS ." [E]  FM: "  25 10 CURS HZ   
+     5 11 CURS ." [F]  AM: "  25 11 CURS HZ/G 
+     5 12 CURS ." [G]  DM: "  25 12 CURS HZ   
+     5 13 CURS ." [H]  LM: "  25 13 CURS HZ   
+     5 14 CURS ." [I]  SM: "  25 14 CURS HZ   
+     5 15 CURS ." [J]  VM: "                  ;
+ 
+( MASKE Eingabe-Maske der EICH-Parameter )
+ : MASKE                                           
+    40  6 CURS ." [K]  NE: "  
+    40  7 CURS ." [L]  CE: "  60  7 CURS MSEC
+    40  8 CURS ." [M]  TE: "  60  8 CURS MSEC 
+    40  9 CURS ." [N]  WE: "  60  9 CURS HZ 
+    40 10 CURS ." [O]  FE: "  60 10 CURS HZ   
+    40 11 CURS ." [P]  AE: "  60 11 CURS HZ/G 
+    40 12 CURS ." [Q]  DE: "  60 12 CURS HZ   
+    40 13 CURS ." [R]  LE: "  60 13 CURS HZ   
+    40 14 CURS ." [S]  SE: "  60 14 CURS HZ   
+    40 15 CURS ." [T]  VE: "  60 15 CURS 
+     5 17 CURS ." [U]  TU: "  25 17 CURS MSEC ;
+
+( UGRENZ Untere Bildschirmbegrenzung bei Masken )
+ : UGRENZ  0 19 CURS 80 DASHCR CR ;
+
+( INPTEXT Textkopf der INPUT-Maske )
+ : INPTEXT 
+         CLS CR INVERSE 30 1 CURS  ." M04   -   INPUT " CR NORMAL CR
+         15 4 CURS INVERSE ." MESS"  NORMAL 
+         50 4 CURS INVERSE ." EICH"  NORMAL UGRENZ ;
+
+: AENDTEXT
+         4 19 CURS INVERSE
+         ." AENDERUNGEN: EINZEL = [A..U] , GESAMT M/E = [V,W] , MENU = [X]" 
+         NORMAL ;
+
+: CTEXT  5 4 CURS ." (S) -  S C A N starten"   
+         5 6 CURS ." (Q) -  Schnell-Abbruch"
+         5 7 CURS ." (X) -  Weicher Abbruch : "  ;
+
+( XCURS steuert den COUNTE-Cursor )
+ : XCURS  30 7 CURS ;
+
+( SCAN Text bei der Messwert-Aufnahme )
+ : SCAN 40 6 CURS ." SCAN - "  51 6 CURS ." LINE " ;
+
+( COUNTE Steuert den Mess-Ablauf des M04-Programms )
+ : COUNTE CLS CR INVERSE 30 1 CURS  ." M04   -   COUNT " CR NORMAL 
+          INIGDC ( MESSNULL Loesschen der Messdaten) CR CR 
+          CTEXT UGRENZ XCURS
+          BEGIN KEY 
+            DUP 83 = IF SCAN 46 6 CURS INVERSE ." ON " NORMAL XCURS ENDIF
+            DUP 81 = IF SCAN 46 6 CURS INVERSE ." OFF" NORMAL XCURS ENDIF
+          88 = UNTIL 77 ;
+ 
+(                Berechnung und Ausgabe von :                               )
+(                                                                           )
+(                    - No = Nummer der laufenden Messung                    )
+(                    - FM = Mittenfrequenz MESS                             )
+(                    - FE = Mittenfrequenz EICH                             )
+(                    - DF = feldunabhaengige Differenz                      )
+(                    -  Q = Symmetriefaktor                                 )
+(                    -  T = Zeit in sec                                     )
+( ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+(END-OF-FILE)
