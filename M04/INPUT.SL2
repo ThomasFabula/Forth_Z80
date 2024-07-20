@@ -345,5 +345,5 @@ DECIMAL
  : RUN DECIMAL INIT-TVI INIDISP INITRAM INIMASS MENU MENUABFR ;
 
 ( ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
-END-OF-FILE
+(END-OF-FILE)
 
