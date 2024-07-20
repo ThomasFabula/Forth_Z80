@@ -1,0 +1,73 @@
+
+( File: DISC.SL2 )
+
+
+
+	HEX
+
+A CONSTANT A
+B CONSTANT B
+C CONSTANT C
+: OPEN-FILE  OPEN ;
+: CLOSE-FILE 10 FCB DOSCALL FF = IF 6 ?ERROR ENDIF ;
+: MAKE-FILE  16 FCB DOSCALL ;
+: DELETE-FILE 13 FCB DOSCALL ;
+: WRITESEQ   15 FCB DOSCALL ;
+: READSEQ    14 FCB DOSCALL ;
+: RESET-DISC 0D 0 DOSCALL DROP ;
+: SELECT-DISC A - E SWAP DOSCALL DROP ;
+: CURRENT-DISC 19 0 DOSCALL 41 + CR ."  BETRIEBSLAUFWERK = " EMIT CR ;
+          
+           
+            
+
+DECIMAL
+: (GET-DATA) DO READSEQ IF CR ." DATEI ZU KURZ " CR               
+                LEAVE ENDIF DMA 32768 I 128 * + 128      
+                CMOVE LOOP ;        
+              
+: GET-DATA RESET-DISC BEGIN CR CR ." LW: "  
+           ?DATNAM        
+           84 65 68 FCB 12 + FCB 9 + DO I C! LOOP                
+           1 15 FCB DOSCALL 255 =         
+           IF DROP ." KEINE PASSENDE DATEI VORHANDEN " 0          
+           ENDIF             
+           UNTIL           
+           OPEN-FILE            
+	   32 0 (GET-DATA)             
+           16 238 P!             
+           128 0 (GET-DATA)             
+             20 238 P! 128 0 (GET-DATA) 24 238 P! 128 0 (GET-DATA)      
+           CLOSE-FILE ;             
+               
+               
+           
+
+: (SAVE-DATA) DO 32768 128 I           
+                     * + DMA 128 CMOVE         
+                     WRITESEQ         
+                    IF CR ." DISKETTE VOLL " CR LEAVE          
+                    ENDIF LOOP ;             
+                                  
+: SAVE-DATA RESET-DISC BEGIN CR CR ." LW:  "            
+               ?DATNAM           
+               84 65 68 FCB 12 + FCB 9 + DO I C! LOOP        
+               1 15 FCB DOSCALL 4 <                  
+               IF DROP ." DATEI UEBERSCHREIBEN (J/N) "           
+                0 KEY DUP EMIT CR 74 =         
+               IF DROP 1 ENDIF             
+               ENDIF         
+               UNTIL          
+               DELETE-FILE DROP           
+               MAKE-FILE        
+               255 = IF CR ." INHALTSVERZEICHNIS VOLL " CR         
+               ABORT ENDIF OPEN-FILE           
+               32 0 (SAVE-DATA)          
+               16 238 P!             
+               128 0 (SAVE-DATA)          
+               20 238 P!         
+       	      128 0 (SAVE-DATA)                                                
+              24 238 P!           
+              128 0 (SAVE-DATA)    
+              CLOSE-FILE ;   
+END-OF-FILE                     		
