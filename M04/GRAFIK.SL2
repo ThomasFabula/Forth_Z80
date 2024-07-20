@@ -1,0 +1,113 @@
+( ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+( +++++++++++++++++++++     Grafik - Routinen     ++++++++++++++++++++++++++ )
+( ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+( Datei No-1 :   GRAFIK.SL2  )
+
+DECIMAL
+
+0 VARIABLE X1
+0 VARIABLE Y1
+0 VARIABLE Z1
+
+( y koordinate , x koordinate --                            )
+( setzt den cursor an x,y                                   )
+
+:  SETCUR   Y1 ! X1 !   X1 Y1 (SETCUR) ;  
+
+( n[0,1,2]     --                                                )
+( setzt,loescht oder komplementiert den gesamten graphikspeicher )
+
+:  CLRDIS    X1 !  X1 (CLRDIS)  ;   
+
+( einzelne graphic character in den graphicspeicher schreiben )
+( ichr[0..127] , idir[-8..7] , isz[0..15] --                  ) 
+
+:  GDPCHR    X1 ! Y1 ! Z1 !  Z1 Y1 X1 (GDPCHR) ;
+
+( y koordinate , x koordinate --                             )
+( einzelne pixel koennen geschrieben werden                  )
+
+:  GDPDOT    Y1 ! X1 ! X1 Y1 (GDPDOT)  ; 
+
+( zeichnen von linien von aktuelle cursor pos bis y , x      )
+( y koordinate , x koordinate --                             )
+
+:  GDPLIN     Y1 ! X1 ! X1 Y1 (GDPLIN) ; ( X1 Y1   ---       )
+
+
+( Mit dieser Routine wird der Schriebmodus festgelegt, d.h.  )
+( ob eine Schreibaktivitaet setzend, komplementierend oder   )
+( austauschend durchgefuehrt wird .                          )
+( 1=komplementierend 2=loeschend 3=setzend                   )
+( n1 -- )
+
+:  GDPMOD      X1 ! X1 (GDPMOD) ;
+
+
+:  GDPBLK   X1 ! X1 (GDPBLK) ;  			( X1 -->	)
+
+:  GDPPAN    Y1 ! X1 ! X1 Y1 (GDPPAN)  ; 		( X1 Y1 -->     )
+
+:  GDPCI      Y1 ! X1 ! Y1 X1 (GDPCI)  ; 		( X1 Y1 -->     )
+
+
+( ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ ) 
+( +++ Televideo Attribute in FORTH                                     +++ )
+( ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+HEX 
+
+: BEEP           07 EMIT ;    ( warnton fuer falsche eingabe )
+
+: INVERSE        1B EMIT 
+                 47 EMIT 
+                 34 EMIT ;    ( Invertierungskommando fuer Televideo )
+
+: NORM           1B EMIT      ( televideo hell steuern )
+                 4E EMIT ;
+
+( cursor wird auf position x,y gebracht                               )
+(  x y    --       )
+: CURS     1B EMIT
+           3D EMIT
+           20 + EMIT
+           20 + EMIT ;
+
+: U-BL-CURSOR    1B EMIT      ( cursor schmall und blinkt )
+                 2E EMIT
+                 33 EMIT ;
+
+: BLINK-CURSOR   1B EMIT      ( cursor blinkt )
+                 2E EMIT
+                 31 EMIT ;
+
+: BLANK          1B EMIT      ( televideo anzeige dunkel steuern )
+                 4F EMIT ;
+
+( loescht Zeile wo gerade der Cursor steht )
+(    --     )
+: LDEL       1B EMIT 
+             52 EMIT ;
+
+( alle Attribut ausschalten                )
+(       --        )
+: NORMAL    1B EMIT
+            47 EMIT
+            30 EMIT ;
+
+( n1 n2   --   n1 n2 n1 n2  )
+: DDUP OVER OVER ;
+
+(  adr       --   n1 n2  )
+: D@   DUP @ SWAP 2+  @ ;
+   
+( n1 n2 adr  --          )
+: D! DUP ROT SWAP 2 + !  ! ;
+
+: DEL 0 DO 27 EMIT 82 EMIT LOOP ;		(  n1 --> 		)
+( DEL loescht n1 Zeilen							)
+
+( ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+END-OF-FILE
+
