@@ -13,10 +13,7 @@ C CONSTANT C
 : READSEQ    14 FCB DOSCALL ;
 : RESET-DISC 0D 0 DOSCALL DROP ;
 : SELECT-DISC A - E SWAP DOSCALL DROP ;
-: CURRENT-DISC 19 0 DOSCALL 41 + CR ."  BETRIEBSLAUFWERK = " EMIT CR ;
-          
-           
-            
+: CURRENT-DISC 19 0 DOSCALL 41 + CR ."  BETRIEBSLAUFWERK = " EMIT CR ;           
 
 DECIMAL
 : (GET-DATA) DO READSEQ IF CR ." DATEI ZU KURZ " CR               
@@ -67,4 +64,4 @@ DECIMAL
               24 238 P!           
               128 0 (SAVE-DATA)    
               CLOSE-FILE ;   
-END-OF-FILE                     		
+(END-OF-FILE)
