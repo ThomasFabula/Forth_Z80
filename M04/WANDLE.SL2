@@ -1,0 +1,38 @@
+( ++++++++++++++++++++++++  Variablen-Umwandlungen ++++++++++++++++++++++++ )
+(File: WANDLE.SL2) 
+
+HEX
+
+0 VARIABLE FREQUNZ 8 ALLOT  ( Array fuer Dekaden Frequenz in BCD )
+0 VARIABLE FREQUNZ1 8 ALLOT ( Array fuer Dekaden Frequenz in Ascii Menue1 )
+0 VARIABLE FREQUNZ2 8 ALLOT ( Array fuer Frequnzintervall in Ascii Menue1 )
+0 VARIABLE FREQUNZ4 8 ALLOT ( Array fuer Start Frequenz von Dekade Menue1 )
+
+
+( wandle Eingabestring in 32 bit Zahl um )
+( adr  --  nn nn  )
+: ASCII>BI 1 - 0 0 ROT DECIMAL (NUMBER) DROP ;
+
+( wandle Binaer-Zahl in Ascii String um und speicher die Zahl auf fre ab ) 
+( fre nn nn   --    )
+: BI>ASCII        ROT 0A 0 DO DUP I + 0 SWAP C! LOOP ROT ROT 
+                  <# #S #>  DUP DUP 09 < IF AN ! ELSE DROP 09 AN ! DROP 09 
+                                         THEN
+                0  DO DUP I + C@  ROT DUP ROT SWAP I + C!
+                      SWAP 
+                   LOOP  DROP DROP ;
+
+( transferiert Werte aus ASCII-Parameterfeld in die Par.-Variablen )
+: PAR>VAR 
+	PARADR      ASCII>BI DROP NM !
+	PARADR  6 + ASCII>BI DROP CM !
+        PARADR  C + ASCII>BI DROP TM !
+        PARADR 54 + ASCII>BI DROP VM !
+        PARADR 59 + ASCII>BI DROP NE !
+	PARADR 5F + ASCII>BI DROP CE !
+        PARADR 65 + ASCII>BI DROP TE !
+        PARADR AD + ASCII>BI DROP VE !
+        PARADR B2 + ASCII>BI DROP TU !     ;
+ 
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+(END-OF-FILE)
