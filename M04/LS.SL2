@@ -1,0 +1,22 @@
+(File: LS.SL2)
+
+( TEST-Datei : Anregungen aus dem Programm LS=Laser-Scan )
+
+DECIMAL
+( Verzoegerungs-Schleife )
+: DELAY  15000 0 DO LOOP ;
+
+( Fehleranzeige: Eingabe der Spalte, Zeile )
+( x y --->  )  
+: FEHLER  CURS INVERSE ." FEHLER: FALSCHE EINGABE" NORMAL 
+          DELAY 26 EMIT ;  (  Zeile loeschen )
+
+( ASCII>HEX Wandlung einer 5 stelligen Dezimal-Zahl )
+: ASCHEX 
+         48 - SWAP 48 - 10 * + SWAP 48 - 100 * +
+         ROT ROT 48 - SWAP 48 - 10 * +
+         1000 U* ROT 0 D+ 
+          0 IF 0 ELSE DUP ANZ U< 
+               -1 ANZ = IF DROP 1 ENDIF
+            ENDIF ;
+
