@@ -1,0 +1,341 @@
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+( +++++++++++++++++++++   geaenderte INPUT  - ROUTINE   +++++++++++++++++++ )
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+( Datei :   INPTEST.SL2  ,       Stand : 04.03.1986  )
+
+( Diese Datei dient zu Testzwecken: Optimierung der einzelnen FORTH-Woerter )
+
+HEX
+84B0 CONSTANT KOMADR         ( 78  Buchstaben Kommentar )
+8500 CONSTANT PARADR         ( 21  Parameter            )
+8600 CONSTANT DATADR         ( n   Datenzeilen <FM,FE,DF,Q,T>)
+
+0    VARIABLE DOFFSET        ( Mittelwerte von <FM,FE,DF,Q>  )
+                             ( DOFFSET = DATADR  +  5 * n    )
+6    VARIABLE SPANZ          ( Anzahl der abzuspeichernden Messdateibloecke )
+
+
+: DDROP DROP DROP ;
+
+( INIT-TVI Televideo initialisieren )
+ : INIT-TVI  CLS U-BL-CURSOR ;
+ 
+( INITRAM loeschen aller Felder: Kommentar-, Parameter- u. Datenfeld )
+ : INITRAM 8000 3000 0 FILL ;
+
+( PARANULL loescht Parameterfeld 8500-8587H )
+ : PARANULL PARADR B8 0 FILL ;          
+
+( PDEL loeschen der 1A-Text-Delimiter des Parameterfeldes )
+ : PDEL  85B8  48 0 FILL ;
+
+DECIMAL
+( MESSNULL loescht Kommentarfeld 84B0-84FDH und Datenfeld 8600-C600H )
+ : MESSNULL  KOMADR 78   0 FILL 
+             DATADR 4096 0 FILL ;
+
+( ICURS loeschen der INPUT-Menu Eingabe )
+: ICURS  67 19 CURS INVERSE SPACE NORMAL ;
+
+( DEL loescht n1 Zeilen auf dem Bildschirm )
+( n1 -->  )
+: DEL 0 DO 27 EMIT 82 EMIT LOOP ;
+
+( DELM, DELE loeschen des Eingabefeldes MESS, bzw. EICH : n=Zeilennummer )
+( n -->   )
+: DELM 13 SWAP CURS 13 SPACES ;
+: DELE 48 SWAP CURS 13 SPACES ;
+ 
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+( ++              Disketten I/O - Routinen                             ++ )
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+: READSEQ  20 FCB DOSCALL ;        ( READSEQ : read sequential )
+
+( Parameterliste einlesen :  )
+( MASSI Datei eroeffnen zum Einlesen, f=1 wenn nicht erfolgreich  )
+( -- f )
+: MASSI	5 6 CURS ." Datei benennen [max 8 Buchstaben] .M04 wird gesetzt ! " 
+   BEGIN	
+        2 FCB C!	( B: default )
+	5 7 CURS ." Name der Datei ? :  " ?DATNAM
+	46 EMIT 77 EMIT 48 EMIT 52 EMIT    ( .M04 )
+	52 48 77 FCB 12 + FCB 9 + DO I C! LOOP
+	15 FCB DOSCALL   	( Datei eroeffnen )
+	4 < 0=
+	 IF	5 8 CURS 1 DEL BEEP 5 8 CURS
+		." Datei existiert nicht ! Neuer Versuch (J/N) ? : "
+		KEY DUP EMIT 74 =
+		IF 0 ELSE 1 1 THEN
+	 ELSE	0 1
+	 THEN
+ UNTIL		;
+
+( MASSO Datei eroeffnen zum Abspeichern )
+: MASSO	5 6 CURS ." auf Disk abspeichern. " 
+	13 0 DOSCALL DROP    ( Reset )
+	5 7 CURS ." Datei benennen [max 8 Buchstaben] .M04 wird gesetzt ! "
+	." Laufwerk B:  "
+	BEGIN	2 FCB C! ( B: Default )
+		24 10 CURS ." Name der Datei ? :  "  ?DATNAM  
+		52 48 77 FCB 12 + FCB 9 + DO I C! LOOP
+		1 15 FCB DOSCALL 4 <  ( Datei eroeffnen )
+		IF 5 8 CURS 1 DEL DROP BEEP 24 11 CURS
+		." Datei existiert schon ! Ueberschreiben (J/N) ? : "
+		0 KEY DUP EMIT 74 = IF DROP 1 THEN THEN
+	UNTIL  ;
+
+HEX
+( DOS! speichert n mal 128 Byte ab ADR auf Diskette ab  )
+( n  ADR  --   )
+: DOS!  SWAP 0 DO 1A OVER DOSCALL
+	DROP 15 FCB DOSCALL DROP 80 + LOOP DROP  ;
+
+( SPEICHERPARA nur das Parameterfeld 8500-85FFH wird abgespeichert ) 
+: SPEICHERPARA 2 8500 DOS! ;
+
+( SPEICHERDAT Vorbereitung zur Speicherung aller        )
+( 3 Felder in eine SPANZ*128 Byte lange Messdatei       )
+( Kommentarfeld: 84B0-84FFH  \                          )
+( Parameterfeld: 8500-85FFH   >   SPANZ*128 Byte        )
+( Datenfeld    : 8600-  ?    /                          )
+( SPANZ --   ) 
+: SPEICHERDAT 8400 DOS! ;
+
+( MASS>PARA hole Parameterliste von Diskette ---> 2 * 128 Byte )
+( f -- f )
+: MASS>PARA	MASSI  DUP 0=
+	IF	OPEN
+		2 0 DO
+                	READSEQ DROP DMA 8500 I 80 * + 80 CMOVE 
+		    LOOP 
+		10 FCB DOSCALL DROP 
+	ELSE	THEN 
+        PDEL ;
+ 
+DECIMAL
+( PARA>MASS speichert PARAMETER /255 BYTE ab 8500H/ auf Diskette ab )
+:    PARA>MASS	5 5 CURS ." PARAMETER :" MASSO 
+		19 FCB DOSCALL DROP ( delete File )
+		22 FCB DOSCALL DROP ( make File )
+		OPEN
+		SPEICHERPARA      
+		16 FCB DOSCALL DROP ( close File )
+		26 128 DOSCALL DROP ; ( DMA reset )
+
+( DAT>MASS speichert Messdatei ab 8400H bis 8400H + SPANZ * 128 Byte  )
+( auf Diskette ab )
+:    DAT>MASS	5 5 CURS ." MESSDATEN :" MASSO 
+		19 FCB DOSCALL DROP ( delete File )
+		22 FCB DOSCALL DROP ( make File )
+		OPEN
+		SPANZ @ SPEICHERDAT      
+		16 FCB DOSCALL DROP ( close File )
+		26 128 DOSCALL DROP   ; ( DMA reset )
+
+( ++++++++++++++++++++++++  Variablen-Umwandlungen ++++++++++++++++++++++++ )
+HEX
+
+( ASCII>BI wandelt Eingabestring in 32 bit Zahl um )
+( adr  --  nn nn  )
+: ASCII>BI 1 - 0 0 ROT DECIMAL (NUMBER) DROP ;
+
+( BI>ASCII wandelt Binaer-Zahl in Ascii String um und speichert sie Zahl   )
+( auf fre ab  : fre nn nn   --    )
+: BI>ASCII        ROT 0A 0 DO DUP I + 0 SWAP C! LOOP ROT ROT 
+                  <# #S #>  DUP DUP 09 < IF AN ! ELSE DROP 09 AN ! DROP 09 
+                                         THEN
+                0  DO DUP I + C@  ROT DUP ROT SWAP I + C!
+                      SWAP 
+                   LOOP  DROP DROP ;
+
+( PAR>VARL transferiert Werte aus ASCII-Parameterfeld in die Par.-Variablen )
+: PAR>VARL 
+     TU B2  VE AD  TE 65  CE 5F  NE 59  VM 54  TM C  CM 6  NM 0 
+        9 0 DO PARADR + ASCII>BI DROP SWAP ! LOOP ;
+
+( PAR>VARH transferiert Parameter in doppelt-genaue 32 Bit-Variablen )
+
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+DECIMAL  
+( GETPARAL Anzeigen der Parametervariablen in der INPUT-Maske )
+ : GETPARAL 
+     NM  20   6     CM  20   7    TM  20   8   VM  20  15 
+     NE  55   6     CE  55   7    TE  55   8   VE  55  15   TU  20  17   
+     9 0 DO ANZ LOOP ;
+
+ : DANZ      ANZ ;
+( DANZ Anzeige der doppelt genauen Parameter )
+
+( GETPARAH Anzeigen der 32 Bit Parameter-Variablen )
+ : GETPARAH
+     WM 13  9   FM 13 10    AM 13 11   DM 13 12   LM 13 13   SM 13 14    
+     WE 48  9   FE 48 10    AE 48 11   DE 48 12   LE 48 13   SE 48 14
+     12 0 DO DANZ LOOP ;
+
+( PARL! erwartet 3-stellige Variableneingabe : VarName y x --->    )
+ : PARL! CURS 0 3 M@ 1= IF ! ELSE DDROP ENDIF ;
+
+( VPAR! erwartet 2-stellige V-Parametereingabe : w.o. )
+ : VPAR! CURS 0 2 M@ 1= IF ! ELSE DDROP ENDIF ;
+
+( NM! ... TU! Aendern der einzelnen Parameter & Abspeicherung )
+ : NM!   NM  6 22  PARL! ICURS ;
+ : CM!   CM  7 22  PARL! ICURS ;
+ : TM!   TM  8 22  PARL! ICURS ;
+ : WM!   9 DELM 15  9 CURS  0 10 M@ 1 = IF WM ! ENDIF ICURS ;
+ : FM!  10 DELM 15 10 CURS  0 10 M@ 1 = IF FM ! ENDIF ICURS ;
+ : AM!  11 DELM 18 11 CURS  0  7 M@ 1 = IF AM ! ENDIF ICURS ; 
+ : DM!  12 DELM 19 12 CURS  0  6 M@ 1 = IF DM ! ENDIF ICURS ;
+ : LM!  13 DELM 19 13 CURS  0  6 M@ 1 = IF LM ! ENDIF ICURS ;  
+ : SM!  14 DELM 17 14 CURS  0  8 M@ 1 = IF SM ! ENDIF ICURS ;
+ : VM!   VM 15 23 VPAR! ICURS ;
+
+ : NE!   NE  6 57  PARL! ICURS ;
+ : CE!   CE  7 57  PARL! ICURS ;
+ : TE!   TE  8 57  PARL! ICURS ;
+ : WE!   9 DELE 50  9 CURS  0 10 M@ 1 = IF WE ! ENDIF ICURS ;
+ : FE!  10 DELE 50 10 CURS  0 10 M@ 1 = IF FM ! ENDIF ICURS ;
+ : AE!  11 DELE 53 11 CURS  0  7 M@ 1 = IF AM ! ENDIF ICURS ; 
+ : DE!  12 DELE 54 12 CURS  0  6 M@ 1 = IF DM ! ENDIF ICURS ;
+ : LE!  13 DELE 54 13 CURS  0  6 M@ 1 = IF LM ! ENDIF ICURS ;  
+ : SE!  14 DELE 52 14 CURS  0  8 M@ 1 = IF SM ! ENDIF ICURS ;
+ : VE!   VE 15 58 VPAR! ICURS ;  
+ : TU!   TU 17 22 PARL! ICURS ;
+
+( INM, INE : Einlesen der Parameter fuer MESS und EICH )
+ : INM                                          
+      NM! CM! TM! WM! FM! AM! DM! LM! SM! VM! ICURS ;
+
+ : INE 
+      NE! CE! TE! WE! FE! AE! DE! LE! SE! VE! TU! ICURS ;
+
+( Alternativ:     )
+( NM 3 y x --->   )
+( : PAR!  CURS 0  1= IF ! ENDIF ICURS ; )
+
+( AENDER  Aufruf der Parameter-Aenderungs-Routine ) 
+ : AENDER BEGIN 
+           AENDTEXT KEY DUP EMIT
+           DUP 65 = IF  NM!  ENDIF       ( MESS-Parameter )
+           DUP 66 = IF  CM!  ENDIF     
+           DUP 67 = IF  TM!  ENDIF
+           DUP 68 = IF  WM!  ENDIF
+           DUP 69 = IF  FM!  ENDIF
+           DUP 70 = IF  AM!  ENDIF
+           DUP 71 = IF  DM!  ENDIF
+           DUP 72 = IF  LM!  ENDIF
+           DUP 73 = IF  SM!  ENDIF
+           DUP 74 = IF  VM!  ENDIF
+           DUP 75 = IF  NE!  ENDIF        ( EICH-Parameter )
+           DUP 76 = IF  CE!  ENDIF     
+           DUP 77 = IF  TE!  ENDIF
+           DUP 78 = IF  WE!  ENDIF
+           DUP 79 = IF  FE!  ENDIF
+           DUP 80 = IF  AE!  ENDIF
+           DUP 81 = IF  DE!  ENDIF
+           DUP 82 = IF  LE!  ENDIF
+           DUP 83 = IF  SE!  ENDIF
+           DUP 84 = IF  VE!  ENDIF
+           DUP 85 = IF  TU!  ENDIF
+           DUP 11 = IF  TU!  ENDIF      ( Steuerung durch "Pfeil hoch"    )
+           DUP 86 = IF  INM  ENDIF      ( Neueingabe aller MESS-Parameter )
+           DUP 87 = IF  INE  ENDIF      ( Neueingabe aller EICH-Parameter )
+          88 = UNTIL  ;                 ( Eingabeteil verlassen mit "X"   )
+
+( INPARA Eingabe-Steuerung fuer die Parameter )
+ : INPARA  INPTEXT MASKM MASKE GETPARAL GETPARAH AENDER 77 ;
+
+
+(    INPARA --> Eingabe der Parameter fuer MESS und EICH :                  )
+(                                                                           )
+(     N[d] = Anzahl der Doppeltripel          [ 1 <= N[d] <= 999 ]          )
+(     C    = Messzeit pro Frequenzpunkt       [ 1 ms <= C <= 999 msec ]     )
+(     T    = Pause zwischen den Punkten       [ 1 ms <= T <= 999 msec ]     )
+(     W    = Tabellenwert der Frequenz        [ X XXX XXX XXX Hz ]          )
+(     F    = momentaner, exp. Frequenzwert    [ X XXX XXX XXX Hz ]          )
+(     A    = dv/dH = Feldabhaengigkeit        [ 0.1 <= A <= 3  Mhz/Gauss ]  )
+(     D    = v[2] - 1/2 [ v[1] + v[3] ]       [ Kurvenparameter <= 1 Mhz ]  )
+(     L    = v[1] - v[2]                      [          "       "   "   ]  )
+(     S    = Hilfsfrequenz                    [ /S/ <= 30 Mhz ]             )
+(     V    = Oberwelle                        [ 1 <= V <= 99  ]             )
+(     obige Parameter jeweils fuer Mess  u n d  Eich einzugeben.            )
+(     TU   = Pause zwischen Umschaltung Mess/Eich.  [ 1 <= TU <= 999 msec ] )
+(                                                                           )
+( ------------------------------------------------------------------------- )
+
+( MASSTEXT Einlesen der Kommentarzeile anschliessend wird CR LF gesetzt )
+ : MASSTEXT   5  5 CURS ." MESSDATEN :"
+              5  6 CURS ." auf Disk abspeichern." 
+              1 15 CURS ." KOMMENTAR: [78 Buchstaben, ENDE mit (CR)] "
+              0 17 CURS 62 EMIT                (    Eingabemaske    )    
+              2 17 CURS 77 0 DO 95 EMIT LOOP   ( >________________< )
+             79 17 CURS 60 EMIT                (   wird aufgebaut   )
+              1 17 CURS KOMADR 78 EXPECT 
+             13 KOMADR 78 + C!    
+             10 KOMADR 79 + C! ;
+
+
+( SMENU Menu-Maske der SAVE-Routine )
+ : SMENU  1 3 CURS 
+          ." SPEICHERUNG: (P)ARAMETER, (M)ESSDATEN, (X)=MENU " ;
+
+( MDEL loescht Masken nach dem Abspeichern )
+ : MDEL  0 5 CURS 18 DEL ;
+
+( SCURS loescht Cursor nach der Abfrage )
+ : SCURS 51 3 CURS 32 EMIT 51 3 CURS ;
+
+( SAVDAT steuert die Abspeicherung der Mess-Daten auf Disk )
+ : SAVDAT CLS CR INVERSE 30 1 CURS 
+           ." M04  -  SAVE " CR NORMAL
+           SMENU
+           BEGIN KEY DUP 50 3 CURS INVERSE EMIT NORMAL
+            DUP 80 = IF PARA>MASS MDEL SCURS ENDIF
+            DUP 77 = IF MASSTEXT DAT>MASS MDEL SCURS ENDIF
+           88 = UNTIL 77 ;
+
+: QCURS  43 21 CURS ;
+( QTEXT Quit-Maske vor Verlassen des Programms )
+: QTEXT  CLS CR INVERSE 30 1 CURS ." M04  -  QUIT " CR NORMAL 
+         30 10 CURS INVERSE ." +-----------------+" NORMAL 
+         30 11 CURS INVERSE ." !    D A T E N    !" NORMAL 
+         30 12 CURS INVERSE ." ! S I C H E R N ? !" NORMAL 
+         30 13 CURS INVERSE ." !      (J/N)      !" NORMAL 
+         30 14 CURS INVERSE ." +-----------------+" NORMAL 
+          0 21 CURS 35 SPACES ." EINGABE: " QCURS ;
+
+( QUT steuert beim Verlassen von M04 die Abspeicherung der MESS-Daten )
+ : QUT QTEXT BEGIN KEY DUP QCURS EMIT
+               DUP  74 = IF MDEL MASSTEXT DAT>MASS QTEXT ENDIF 	
+             78 = UNTIL  
+       CLS INVERSE 30 0 CURS ." F   O   R   T   H" CR NORMAL ;
+
+( MENUABFR Menue-Abfrage -> Verzweigungen ) 
+ : MENUABFR  
+    BEGIN  KEY
+      DUP 73 = IF   INPARA                    ENDIF
+      DUP 67 = IF   COUNTE                    ENDIF
+      DUP 83 = IF   SAVDAT                    ENDIF
+      DUP 72 = IF   HELP                      ENDIF
+      DUP 68 = IF   DOCU                      ENDIF
+      DUP 77 = IF   MENU                      ENDIF
+    81 = UNTIL QUT  DROP ;                            
+
+( INIDISP Graphikdisplay vorbereiten zum Start)
+ : INIDISP INIGDC RECT INTRO ;
+
+( INIMASS letztgueltige Parameter von Disk holen -> in Variablen speichern )  
+ : INIMASS 
+       3 1 CURS INVERSE
+       ." M 0 4 :" NORMAL
+       4 3 CURS ." LETZTGUELTIGEN PARAMETER-SATZ  <PARA.M04> LADEN."
+       4 4 CURS 55 0 DO ." -" LOOP CR 
+       MASS>PARA PAR>VARL ( PAR>VARH )  ; 
+ 
+( RUN M04-Prototyp Start )
+ : RUN DECIMAL INIT-TVI INIDISP INITRAM INIMASS MENU MENUABFR ;
+
+( ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+END-OF-FILE
+
