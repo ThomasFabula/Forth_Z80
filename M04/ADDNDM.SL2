@@ -1,0 +1,188 @@
+File: ADDNDM.SL2
+
+HEX
+84B0 CONSTANT KOMADR         ( 78  Buchstaben Kommentar )
+8500 CONSTANT PARADR         ( 21  Parameter            )
+8600 CONSTANT DATADR         ( n   Datenzeilen <FM,FE,DF,Q,T>)
+
+0    VARIABLE DOFFSET        ( Mittelwerte von <FM,FE,DF,Q>  )
+                             ( DOFFSET = DATADR  +  5 * n    )
+6    VARIABLE SPANZ          ( Anzahl der abzuspeichernden Messdateibloecke )
+
+( loeschen aller Felder: Kommentar-, Parameter- u. Datenfeld )
+ : INITRAM 8000 3000 0 FILL ;
+
+( loescht Parameterfeld 8500-8587H )
+ : PARANULL PARADR B8 0 FILL ;          
+
+( loeschen der 1A-Text-Delimiter des Parameterfeldes )
+ : PDEL  85B8  48 0 FILL ;
+
+DECIMAL
+( loescht Kommentarfeld 84B0-84FDH und Datenfeld 8600-C600H )
+ : MESSNULL  KOMADR 78   0 FILL 
+             DATADR 4096 0 FILL ;
+
+( loeschen der INPUT-Menu Eingabe)
+: TT  67 19 CURS INVERSE SPACE NORMAL ;
+
+( loescht n1 Zeilen auf dem Bildschirm )
+( n1 -->  )
+: DEL 0 DO 27 EMIT 82 EMIT LOOP ;
+
+( loeschen des Eingabefeldes MESS, bzw. EICH : n=Zeilennummer )
+( n -->   )
+: DELM 13 SWAP CURS 13 SPACES ;
+: DELE 48 SWAP CURS 13 SPACES ;
+ 
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+( ++              Disketten I/O - Routinen                             ++ )
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+: READSEQ  20 FCB DOSCALL ;        ( read sequential )
+
+( Parameterliste einlesen :  )
+( Datei eroeffnen zum Einlesen, f=1 wenn nicht erfolgreich  )
+( -- f )
+: MASSI	5 6 CURS ." Datei benennen [max 8 Buchstaben] .M04 wird gesetzt ! " 
+   BEGIN	
+        2 FCB C!	( B: default )
+	5 7 CURS ." Name der Datei ? :  " ?DATNAM
+	46 EMIT 77 EMIT 48 EMIT 52 EMIT    ( .M04 )
+	52 48 77 FCB 12 + FCB 9 + DO I C! LOOP
+	15 FCB DOSCALL   	( Datei eroeffnen )
+	4 < 0=
+	 IF	5 8 CURS 1 DEL
+		." Datei existiert nicht ! Neuer Versuch (J/N) ? : "
+		KEY DUP EMIT 74 =
+		IF 0 ELSE 1 1 THEN
+	 ELSE	0 1
+	 THEN
+ UNTIL		;
+
+( Datei eroeffnen zum Abspeichern )
+(  -- )
+: MASSO	5 6 CURS ." auf Disk abspeichern. " 
+	13 0 DOSCALL DROP    ( Reset )
+	5 7 CURS ." Datei benennen [max 8 Buchstaben] .M04 wird gesetzt ! "
+	." Laufwerk B:  "
+	BEGIN	2 FCB C! ( B: Default )
+		24 10 CURS ." Name der Datei ? :  "  ?DATNAM  
+		52 48 77 FCB 12 + FCB 9 + DO I C! LOOP
+		1 15 FCB DOSCALL 4 <  ( Datei eroeffnen )
+		IF 5 8 CURS 1 DEL DROP BEEP 24 11 CURS
+		." Datei existiert schon ! Loeschen (J/N) ? : "
+		0 KEY DUP EMIT 74 = IF DROP 1 THEN THEN
+	UNTIL  ;
+
+HEX
+( speicher n mal 128 Byte ab ADR auf Diskette ab  )
+( n  ADR  --   )
+: DOS!  SWAP 0 DO 1A OVER DOSCALL
+	DROP 15 FCB DOSCALL DROP 80 + LOOP DROP  ;
+
+( nur das Parameterfeld 8500-85FFH wird abgespeichert ) 
+: SPEICHERPARA 2 8500 DOS! ;
+
+( Vorbereitung zur Speicherung aller                    )
+( 3 Felder in eine SPANZ*128 Byte lange Messdatei       )
+( Kommentarfeld: 84B0-84FFH  \                          )
+( Parameterfeld: 8500-85FFH   >   SPANZ*128 Byte        )
+( Datenfeld    : 8600-  ?    /                          )
+( SPANZ --   ) 
+: SPEICHERDAT 8400 DOS! ;
+
+( hole Parameterliste von Diskette ---> 2 * 128 Byte )
+( f -- f )
+: MASS>PARA	MASSI  DUP 0=
+	IF	OPEN
+		2 0 DO
+                	READSEQ DROP DMA 8500 I 80 * + 80 CMOVE 
+		    LOOP 
+		10 FCB DOSCALL DROP 
+	ELSE	THEN 
+        PDEL ;
+
+DECIMAL
+( speichert PARAMETER /255 BYTE ab 8500H/ auf Diskette ab )
+(  --  )
+:    PARA>MASS	5 5 CURS ." PARAMETER :" MASSO 
+		19 FCB DOSCALL DROP ( delete File )
+		22 FCB DOSCALL DROP ( make File )
+		OPEN
+		SPEICHERPARA      
+		16 FCB DOSCALL DROP ( close File )
+		26 128 DOSCALL DROP ; ( DMA reset )
+
+( speichert Messdatei ab 8400H bis 8400H + SPANZ * 128 Byte auf Diskette ab )
+(  --  )
+:    DAT>MASS	5 5 CURS ." MESSDATEN :" MASSO 
+		19 FCB DOSCALL DROP ( delete File )
+		22 FCB DOSCALL DROP ( make File )
+		OPEN
+		SPANZ @ SPEICHERDAT      
+		16 FCB DOSCALL DROP ( close File )
+		26 128 DOSCALL DROP   ; ( DMA reset )
+
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+( Einlesen der Kommentarzeile anschliessend wird CR LF gesetzt )
+ : MASSTEXT   5  5 CURS ." MESSDATEN :"
+              5  6 CURS ." auf Disk abspeichern." 
+              1 15 CURS ." KOMMENTAR: [78 Buchstaben, ENDE mit (CR)] "
+              0 17 CURS 62 EMIT                (    Eingabemaske    )    
+              2 17 CURS 77 0 DO 95 EMIT LOOP   ( >________________< )
+             79 17 CURS 60 EMIT                (   wird aufgebaut   )
+              1 17 CURS KOMADR 78 EXPECT 
+             13 KOMADR 78 + C!    
+             10 KOMADR 79 + C! ;
+
+
+( Menu-Maske der SAVE-Routine )
+ : SMENU  1 3 CURS 
+          ." SPEICHERUNG: (P)ARAMETER, (M)ESSDATEN, (X)=MENU " ;
+
+( loescht Masken nach dem Abspeichern )
+ : MDEL  0 5 CURS 18 DEL ;
+
+( loescht Cursor nach der Abfrage )
+ : SCURS 51 3 CURS 32 EMIT 51 3 CURS ;
+
+( steuert die Abspeicherung )
+ : SAVDAT CLS CR INVERSE 30 1 CURS 
+           ." M04  -  SAVE " CR NORMAL
+           SMENU
+           BEGIN KEY DUP 50 3 CURS INVERSE EMIT NORMAL
+            DUP 80 = IF PARA>MASS MDEL SCURS ENDIF
+            DUP 77 = IF MASSTEXT DAT>MASS MDEL SCURS ENDIF
+           88 = UNTIL 77 ;
+
+: QCURS  78 21 CURS ;
+: QTEXT  CLS CR INVERSE 30 1 CURS ." M04  -  QUIT " CR NORMAL 
+         30  9 CURS INVERSE ." +-----------------+" NORMAL 
+         30 10 CURS INVERSE ." !    SIND  DIE    !" NORMAL 
+         30 11 CURS INVERSE ." !M E S S D A T E N!" NORMAL 
+         30 12 CURS INVERSE ." !  ABGESPEICHERT  !" NORMAL 
+         30 13 CURS INVERSE ." !     (J/N) ?     !" NORMAL 
+         30 14 CURS INVERSE ." +-----------------+" NORMAL 
+          0 21 CURS 69 SPACES ." EINGABE: " QCURS ;
+
+( steuert beim Verlassen von M04 die Abspeicherung der MESS-Daten )
+ : QUT QTEXT BEGIN KEY DUP QCURS EMIT
+               DUP  78 = IF MDEL DAT>MASS QTEXT ENDIF 	
+               DUP 110 = IF MDEL DAT>MASS QTEXT ENDIF
+             74 = UNTIL  
+       CLS INVERSE 30 0 CURS ." F   O   R   T   H" CR NORMAL ;
+ 
+
+ : INIDISP INIGDC RECT INTRO ;
+ ( Graphikdisplay vorbereiten zum Start )
+ 
+ : INIMASS 
+       CLS 3 1 CURS INVERSE
+       ." M 0 4 :" NORMAL
+       4 3 CURS ." LETZTGUELTIGEN PARAMETER-SATZ  <PARA.M04> LADEN."
+       4 4 CURS 55 0 DO ." -" LOOP CR MASS>PARA ; 
+
+( ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+END-OF-FILE
