@@ -1,0 +1,47 @@
+
+( DEBUG-Utilities in FORTH              )
+( Datei :  UTILITY.SL2                  )
+( Progr.:  Thomas Fabula                )
+( Stand :  11.01.1986                   )
+
+HEX
+( Ausgabe einer Zeile in HEX )
+( Adr -> Adr )
+: ZEILE  DUP DUP 10 + SWAP DO I C@ 3 .R LOOP ;
+
+( Ausgabe der Ueberschrift und Beschriftung )
+: NR CLS INVERSE 15 0 CURS 
+     ." A S C I I / H E X - D U M P" CR NORMAL 
+     ." ADDR:   0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F " 
+     6 SPACES ." 0123456789ABCDEF" CR ;
+
+( Aussortieren der  n i c h t  darstellbaren Steuerzeichen: 00-1F, 7F-9F )
+( diese werden als Punkt [ ASC[.] = 2E ] dargestellt.                    )
+( falls  n <= 1F oder 7F <= n <= 9F dann [ n -> 2E ], sonst [ n -> n ]   )
+: DASCII 7F AND DUP 20 < OVER 7D > OR IF DROP 2E ENDIF ;
+
+( Ausgabe einer Zeile als ASCII-Zeichen )
+( Adr -> Adr )
+: ASCII DUP DUP 10 + SWAP DO I C@  DASCII EMIT  LOOP ;
+
+( Ausgabe der aktuellen ADR: und der zugeh. HEX- und ASCII-Dumps )
+: HDUMP CR DUP . ." : " ZEILE 7 SPACES ASCII 10 + ;
+
+( Das Wort DUMP gibt ein ASCII/Hex-Dump ab ADR , n Screens lang aus )
+( wobei ein Screen 19 Zeilen a 16 Byte enthaelt.                    )
+( Adr  n  --->      )
+: DUMP HEX SWAP FFF0 AND SWAP        ( Dump faengt immer bei Adr=XXX0 an ... )
+       NR 0 DO 13 0 DO
+                      HDUMP PAUSE ?TERMINAL IF LEAVE  ( Herausspringen durch )
+                                            ENDIF     ( zweimaliges Tasten   )
+                    LOOP CR INVERSE 
+                         ." WEITER = <1X TASTEN> , STOP = <Q>" 
+                         NORMAL KEY 51 = IF ABORT  
+                                            ( "gewaltaetiger" Abbruch ) 
+                                         ENDIF 
+                         DROP NR ?TERMINAL IF LEAVE
+                                      ENDIF
+            LOOP CLS ;
+
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+(END-OF-FILE)
