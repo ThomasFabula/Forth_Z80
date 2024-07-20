@@ -1,0 +1,148 @@
+        
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+( +++   Hardware Treiber fuer M04                                     +++ )
+( +++                                                                 +++ )
+( +++   Routinen aus FLUOn- und HFn-Files entnommen                   +++ )
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+( Datei No-2 :   TREIBER.SL2  )
+DECIMAL
+0 VARIABLE FREQUNZ
+0 VARIABLE COUNT
+00 VARIABLE AN            ( Variable Anzahl )
+
+HEX
+69 CONSTANT CRPORTD  ( control port A )
+6B CONSTANT CRPORTD+1 ( control port B )
+68 CONSTANT PORTDEKADE ( port A )
+6A CONSTANT PORTDEKADE+1 ( port B )
+
+6D CONSTANT CRPORTR   ( control port A, von Relais Port )
+6C CONSTANT PORTR     
+
+011E CONSTANT RMASK  ( Maske fuer Relaisport )
+
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+( +++  FLUO-/EICH-ZAEHLER   Treiber                                   +++ )
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+
+: INITFL		( FLUOZAEHLER PORT 1	   )
+	CF 61 P!	( MODE 3 )
+	FF 61 P!	( EINGAENGE )
+	CF 63 P!	( AUSGAENGE )
+	0  63 P!	
+	87 62 P!	( CLR COUNTER UND FLIPFLOP )
+	0F 62 P!
+	87 62 P! ;
+
+: INITEI		( EICHMARKENZAEHLER PORT 2 )
+	CF 65 P!
+	FF 65 P!
+	CF 67 P!
+	00 67 P!
+	98 66 P!	( CLR COUNTER UND FLIPFLOP )
+	1A 66 P!
+	98 66 P! ;	
+
+: CLR 8F 62 P! 87 62 P! ; 	( CLR counter )
+
+: LATCH	97 62 P! 87 62 P! ;	( Latch )		
+
+: SAVEH	83 62 P!		( enable high )
+	60 P@	 87 62 P! ;	( in )
+
+: SAVEL	86 62 P! 		( enable low )
+	60 P@	 87 62 P! ;	( in )
+
+: SAVEM	85 62 P!		( enable middel )
+	60 P@    87 62 P! ;	( in )
+
+( Auslesen der Zaehler - Speicherung in Var. COUNT )
+: SAVE     LATCH SAVEL COUNT C! 
+           SAVEM COUNT 1+    C!
+           COUNT @ SAVEH ; 
+
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+( +++  Hochfrequnz Dekaden Treiber                                    +++ )
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+
+: INITDEKADE    CF CRPORTD P!
+                00 CRPORTD P!
+                CF CRPORTD+1 P!
+                00 CRPORTD+1 P!  ;
+
+: UGABEPULS     04 PORTDEKADE+1 P!
+                05 PORTDEKADE+1 P!
+                00 PORTDEKADE+1 P! ;
+
+: IOPPULS       04 PORTDEKADE+1 P!
+                06 PORTDEKADE+1 P!
+                00 PORTDEKADE+1 P! ;
+
+
+( Diese Routine erwartet eine BCD codierte Zahl in der Var. FREQUNZ )
+( und gibt die Zahl an die Dekade.                                  )
+(      --      )
+        
+: DEKADE-SETZEN AN @  0 DO
+                      I FREQUNZ + C@ PORTDEKADE P!
+                      IOPPULS 
+                    LOOP
+                UGABEPULS ;
+
+
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+( +++  HF Relais Treiber                                              +++ )
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+: INIT-RELAIS    CF CRPORTR  P!
+		00 CRPORTR   P!
+		00 PORTR     P!
+		0 RMASK C!   ;
+
+: HF-AUS   RMASK C@ 01 OR  DUP RMASK C! PORTR P! ;
+
+: HF-EIN   RMASK C@ FE AND DUP RMASK C! PORTR P! ;
+
+
+
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+( +++  Messzeit Zaehler                                             +++ )
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+: RESET2	RMASK C@ 02 OR PORTR P!
+		RMASK C@ FD AND DUP RMASK C! PORTR P!  ;
+
+: G2ON	RMASK C@ 04 OR DUP RMASK C! PORTR P!   ;
+
+: G2OFF RMASK C@ FB AND DUP RMASK C! PORTR P!  ;
+
+
+( +++++++++++++++++++++++++  Drucker  -  Treiber   ++++++++++++++++++++++  )
+HEX
+( Initialisierung der PIO auf der CPUII-Karte als CENTRONICS-Schnittstelle )
+
+0E4  CONSTANT  ADATA  (  -->   Steuer-PORT  )
+0E5  CONSTANT  ACTRL  
+0E6  CONSTANT  BDATA  (  -->   Daten- PORT  )
+0E7  CONSTANT  BCTRL  
+
+ : CENT-INIT   0F BCTRL P!
+               CF ACTRL P!
+               0F ACTRL P!
+               00 ADATA P!  ;      (   Daten-PORT loeschen   )
+
+( gibt ein STROBE-Signal ueber Bit 4 an den Drucker )
+ : STROBE      ACTRL P@ DUP EE AND 
+               ACTRL P!  10 XOR ACTRL P! ;
+
+( gibt ein Charakter an den Drucker aus und wartet bis Drucker sich )
+( zurueckmeldet :        c  -->   )
+ : CENT-OUT    BDATA P! STROBE
+               BEGIN
+                     ADATA P@ 02 AND 0=
+               UNTIL ;
+
+( ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+(END-OF-FILE)
