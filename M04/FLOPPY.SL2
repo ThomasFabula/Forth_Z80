@@ -1,0 +1,123 @@
+( ++++++++++++++++++++++++  Datei :  FLOPPY.SL2  +++++++++++++++++++++++++++ ) 
+
+(  aus  DATADISC.SL2 )
+(  16.04.84  A. HINZ )
+(  20.04.84  D.ZEITZ )
+
+HEX
+A CONSTANT A
+B CONSTANT B
+C CONSTANT C
+
+( +++++++++++++++++++++++++++   DOSCALL-AUFRUFE    ++++++++++++++++++++++ )
+
+( aktviert bestehende Datei zur Benutzung )
+: OPEN-FILE  OPEN ;
+
+( schliesst Datei nach der Bearbeitung )
+: CLOSE-FILE	10 FCB DOSCALL FF = IF 6 ?ERROR ENDIF ;
+
+( erzeugt eine neue Datei mit dem im FCB-Register eingetragenem Namen )
+: MAKE-FILE	16 FCB DOSCALL ;
+
+( loescht die Datei, deren Namen im FCB-Register steht )
+: DELETE-FILE   13 FCB DOSCALL ;
+
+( schreibt 128 Byte aus dem DMA-Puffer auf Diskette )
+: WRITESEQ	15 FCB DOSCALL ;
+
+( liest 128 Byte von Diskette in den DMA-Puffer )
+: READSEQ	14 FCB DOSCALL ;
+
+( stellt Ursprungslaufwerk [=A] wieder her )
+: RESET-DISC	0D 0 DOSCALL DROP ;
+
+( waehlt Betriebslaufwerk aus )
+: SELECT-DISC 	A - E SWAP DOSCALL DROP ;
+
+( gibt das aktuelle Betriebslaufwerk an )
+: CURRENT-DISC	19 0 DOSCALL 41 + CR ." BETRIEBSLAUFWERK = " EMIT CR ;
+
+( {GET-DATA} : )
+( IST DIE EIGENTLICHE EINLESEROUTINE FUER SEQUENTIELLE DATEIEN       )
+( ES WERDEN JEWEILS BLOECKE VON 128 BYTE EINGELESEN UND AUF DIE      )
+( SPEICHERPLAETZE 32768 + FF GESPEICHERT                             )
+
+DECIMAL
+:	(GET-DATA)
+		      DO 
+			READSEQ IF CR ." DATEI ZU KURZ " CR
+			LEAVE ENDIF DMA 32768 I 128 * + 128 CMOVE 
+		      LOOP  ;
+
+( GET-DATA : )
+( LEGT ZUERST DEN DATEI-NAMEN IM FCB-REGISTER AN ANSCHLIESSEN WERDEN )
+( 4K UND DANN 3 * 16K EINGELESEN , D.H. ES WERDEN DIE INITBANK       )
+( UND DIE BANKS 1 - 3 EINGELESEN                                     )
+
+:	GET-DATA
+		RESET-DISC 
+		BEGIN CR CR
+			." LW:(Option) Name <DAT wird gesetzt>   "
+			?DATNAM 
+                        84 65 68 FCB 12 + FCB 9 + DO I C! LOOP
+			1 15 FCB DOSCALL 255 =  ( OPEN )
+			IF DROP ." keine passende Datei vorhanden "  0
+			ENDIF
+		UNTIL	
+
+	        OPEN-FILE
+
+                32 0 (GET-DATA)
+		16 238 P!
+		128 0 (GET-DATA)
+		20 238 P!
+		128 0 (GET-DATA)
+		24 238 P!
+		128 0 (GET-DATA)
+
+		CLOSE-FILE ;
+
+(  {SAVE-DATA} : )
+( IST DIE EIGENTLICHE ABSPEICHERROUTINE FUER SEQUENTIELLE DATEIEN    )
+( ES WERDEN JEWEILS BLOECKE VON 128 BYTE ABGESPEICHERT, DIE DATEN    )
+( MUESSEN DAZU AUF DEN SPEICHERPLAETZE 32768 + FF STEHEN             )
+
+: (SAVE-DATA)  	      DO  32768 128 I * + DMA 128 CMOVE
+		          WRITESEQ
+			  IF CR ." DISKETTE VOLL " CR LEAVE ENDIF
+		      LOOP ;
+
+( SAVE-DATA : )
+( LEGT ZUERST DEN DATEI-NAMEN IM FCB-REGISTER AN ANSCHLIESSEN WERDEN )
+( 4K UND DANN 3 * 16K ABGESPEICHERT , D.H. ES WERDEN DIE INITBANK    )
+( UND DIE BANKS 1 - 3 EABGESPEICHERT                                 )
+
+:	SAVE-DATA
+		RESET-DISC 
+		BEGIN CR CR
+			." LW:(Option) Name <DAT wird gesetzt>   "
+			?DATNAM 
+                        84 65 68 FCB 12 + FCB 9 + DO I C! LOOP
+			1 15 FCB DOSCALL 4 <  ( OPEN )
+			IF DROP ." Datei loeschen (J/N) " 
+				0 KEY DUP EMIT CR 74 = 
+				IF DROP 1 ENDIF
+			ENDIF
+		UNTIL	
+
+		DELETE-FILE DROP
+		MAKE-FILE 
+		255 = IF CR ." INHALTSVERZEICHNIS VOLL " CR ABORT ENDIF
+	        OPEN-FILE
+
+                32 0 (SAVE-DATA)
+		16 238 P!
+		128 0 (SAVE-DATA)
+		20 238 P!
+		128 0 (SAVE-DATA)
+		24 238 P!
+		128 0 (SAVE-DATA)  CLOSE-FILE ;
+
+END-OF-FILE
+
