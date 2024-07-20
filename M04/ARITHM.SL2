@@ -1,0 +1,176 @@
+File: ARITHM.SL2
+
+( ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+( +++  Arithmetik Prozessor Treiber                                    +++ )
+( ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+( Datei No-3 :   -ARI.SL2  )
+0 VARIABLE X11
+0 VARIABLE Y11
+
+( f=0 wenn Arithm. Prozessor noch rechnet )
+(    --    )
+: BUSY  89 P@ 80 AND 0= ;
+
+( f=0 wenn arithm. Prozessor Stack neg. )
+(   --  flg )
+: SIGN   BEGIN BUSY UNTIL 89 P@ 40 AND 0= ;
+
+( Kommando Eingabe an Arithm. Prozessor )
+( nn   --     )
+: ARICOM   BEGIN BUSY UNTIL 89 P! ;
+
+( nn   --     )
+: ARII16! X11 ! X11 C@ 88 P! X11 1 + C@ 88 P! ;
+
+( speicher eine 32 bit Zahl auf den Arithm. Prozessor Stack )
+( nn nn  --    )
+: ARI32! SWAP BEGIN BUSY UNTIL ARII16! ARII16! ;
+
+( speicher eine 16 bit Zahl auf den Arithm. Prozessor Stack )
+( nn     --    )
+: ARI16! BEGIN BUSY UNTIL ARII16! ;
+
+(    --   nn )
+: ARI16@ 88 P@ Y11 1 + C! 88 P@ Y11 C! Y11 @ ;
+
+( hole eine 16 bit Zahl von Arithm. Prozessor Stack )
+(    --   nn )
+: ARI@  BEGIN BUSY UNTIL ARI16@ ;
+
+( hole eine 32 bit Zahl von Arithm. Stack )
+(    --  nn nn )
+: ARI@@  BEGIN BUSY UNTIL ARI16@ ARI16@ ;
+
+( 32 bit addition )
+( nn nn nn nn   --  nn nn  )
+: DADD ARI32! ARI32!  2C ARICOM ARI@@ SWAP ;
+
+( 32 bit subtraction )
+( nn nn nn nn   --  nn nn )
+: DSUB  ARI32! ARI32! 2D ARICOM ARI@@ SWAP ;
+
+( 32 bit multiplikation, untere 32 bit liegen als ergegnis vor )
+( nn nn nn nn  --  nn nn  )
+: DMUL  ARI32! ARI32! 2E ARICOM ARI@@ SWAP ;
+
+
+( 32 bit division )
+( n1 n2 n3 n4  --  nn nn )
+: DDIV ARI32! ARI32! 2F ARICOM ARI@@ SWAP ;
+
+
+( 32 Bit Gleitkomma Multiplikation  )
+( n1 n2 n3 n4 -- n1 n2  )
+: FMUL ARI32! ARI32! 12 ARICOM ARI@@ SWAP ;
+
+( 32 Bit Gleitkomma Division )
+( n1 n2 n3 n4 -- n1 n2 )
+: FDIV ARI32! ARI32! 13 ARICOM ARI@@ SWAP ;
+
+( 32 Bit Gleitkomma Addition )
+( n1 n2 n3 n4 -- n1 n2 )
+: FADD ARI32! ARI32! 10 ARICOM ARI@@ SWAP ;
+
+( 32 Bit Gleitkomma Subtraktion )
+( n1 n2 n3 n4 -- n1 n2 )
+: FSUB ARI32! ARI32! 11 ARICOM ARI@@ SWAP ;
+
+( 32 Bit Festpunkt auf 32 Bit Gleitkomma )
+( n1 n2 -- n1 n2 )
+: FLTD ARI32! 1C ARICOM ARI@@ SWAP ;
+
+( 32 Bit Gleitkomma auf 32 Bit Festpunkt )
+( n1 n2 - n1 n2 )
+: FIXD ARI32! 1E ARICOM ARI@@ SWAP ;
+
+( Funktion > auf 32 Bit Festpunkt ausgedehnt )
+( n1 n2 n3 n4 -- f )
+: D> DSUB ARI32! SIGN ARI@@ DROP DROP 0= ;
+ 
+( 32 Bit Gleitkomma Wurzelfunktion )
+( n1 n2 -- n1 n2 )
+: SQRT ARI32! 01 ARICOM ARI@@ SWAP ;
+
+( +++++++++++++++++++++++  Masken - Routinen   ++++++++++++++++++++++++ )
+
+HEX
+0118  CONSTANT TIME
+0106  CONSTANT BUFM
+0104  CONSTANT BUFE
+
+DECIMAL 
+0 VARIABLE MA1	( Anzahl der Zeichen vor der Maske			)
+0 VARIABLE MA2	( Anzahl der Maskenzeichen				)
+0 VARIABLE MAZ	( Zaehler fuer Cursorstand				)
+0 VARIABLE COR	( Hilfsvariable fuer Rueckschritt im Menue		)
+0 VARIABLE ZRK	( Hilfsvariable fuer Cursor { --> }			) 
+
+: ZR 	MA1 @ MAZ @ > ZRK @ AND IF 48 BUFM 1 -	(     -->		)
+	MAZ @ + C! 32 EMIT 1 MAZ +! ENDIF ; 
+( ZR steuert die Cursortaste { --> }					)
+
+: Z!	0 ZRK ! DUP MAZ @ MA1 @ > IF BUFE C!   	(  n1 -->		)
+	EMIT 1 MAZ +! ELSE BUFM 1 - MAZ @ + 
+	C! EMIT 1 MAZ +! MAZ @ MA1 @ > IF MA2 
+	@ 0 DO 12 EMIT 1 MAZ +! LOOP ENDIF 
+	ENDIF ;
+( Z! speichert gueltige ASCII-Zeichen im entsprechenden Buffer ab	)
+( n1 = ASCII-Zeichen							)
+
+: ZL	MAZ @ DUP 1 = IF DROP 7 EMIT ELSE 	(    -->		)
+	MA1 @ > IF MA2 @ 1+ 0 DO 8 EMIT -1 
+	MAZ +! LOOP 95 EMIT 8 EMIT ELSE 8 
+	EMIT 95 EMIT 8 EMIT -1 MAZ +! ENDIF 
+	ENDIF MAZ @ 1 = IF 1 ZRK ! ENDIF ;
+( ZL steuert die Cusortaste { <-- }					)
+
+: NULL	MA1 @ 0 DO 0 BUFM I + C! LOOP 0 BUFE 	(    -->		)
+	C! MA1 @ MA2 @ + 2+ MAZ ! ;
+( NULL belegt den Eingabebuffer mit ASCII {48}				)
+
+: CORI  0 COR ! MA1 @ MA2 @ + 2+ MAZ ! ;	(    -->		)
+( CORI speichert 0 nach COR						)
+
+: Z@    MA1 ! MA2 ! MA1 @ 0 DO 95 EMIT		( n1 n2 --> f		)
+	LOOP MA2 @ 0 > IF MA2 @ 0 DO 12 
+	EMIT LOOP 95 EMIT MA1 @	MA2 @ + 
+	1+ 0 DO 8 EMIT LOOP ELSE MA1 @ 0 
+	DO 8 EMIT LOOP ENDIF 1 MAZ ! 1 COR 
+	! 1 ZRK ! BEGIN KEY DUP 58 < OVER 
+	47 > AND IF Z! ELSE DUP 8 = IF ZL 
+	ENDIF DUP 13 = IF NULL ENDIF DUP 
+	12 = OVER 32 = OR IF ZR ENDIF 11 
+	= IF CORI ENDIF	ENDIF MA1 @ MA2 @ 
+	+ 1+ MAZ @ < UNTIL 0 BUFE 1+ C! 0 
+	BUFM MA1 @ + C! COR @ ;
+( Z@ ist der Verteiler fuer die Cursormaske.Die Tastatur wird abge-	)
+( fragt und nach entsprechenden Steuerzeichen verzweigt.n1=Anzahl der 	)
+( Maskenzeichen ,n2 Anzahl der Zeichen vor der Maske			)
+( ASCII {48 -->57} --> Z! ; ASCII {8} --> ZL ; ASCII {13} --> NULL	)
+( ASCII {12} --> ZR ; ASCII {11} --> CORI				)
+( wenn f=1 ist,befinden sich die Eingabewerte im entsprechenden Buffer	)
+  
+: M@ 	Z@ IF 0 0 BUFM 1 - (NUMBER) DROP DROP  	( n1 n2 --> [n3] [n4] f	) 
+	MA2 @ 0 > IF 0 0 BUFE 1 - (NUMBER) 
+	DROP DROP ENDIF ENDIF COR @ ;
+( M@ ist ene Cursormaske fuer die Tastaturabfrage.n1=Anzahl der Zeichen,)
+( die uebersprungen werden muessen[Maske].n2=Anzahl der Zeichen vor der	)
+( Maske.1 Zeichen kann hinter der Maske gelesen werden.f=1 Zeichen ok,	)
+( kein Rueckschritt im Menue . f=0 Wert fuer Rueckschritt im Menue	)
+( n3 und n4 werden dann nicht auf den Stapel abgelegt.			)
+( n4 = Wert hinter Maske,wenn n1>0 sonst Wert vor Maske			)
+( n3 = Wert vor der Maske,wenn n1>0	Beispiel einer Maske:		)  
+( n1=5,n2=4 --> {Maske=5 Zeichen}            ____Maske_			)
+
+
+: MTEST	DUP 10000 < IF 32 EMIT ENDIF		(  n1 --> n1		)
+	DUP 1000 < IF 32 EMIT ENDIF 
+	DUP 100 < IF 32 EMIT ENDIF
+	DUP 10 < IF 32 EMIT ENDIF ; 
+( MTEST sorgt fuer rechtsbuendige Darstellung im Menue , n1 = Zahl	)
+
+
+( ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+END-OF-FILE
+
