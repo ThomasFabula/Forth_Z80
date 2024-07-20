@@ -1,0 +1,31 @@
+*****************************
+****                     ****
+****   Datei : M04.DOC   ****
+****                     ****
+*****************************
+
+Diese Datei enth„lt die Dokumentation zu den Programmen
+des Subdirectories   C:\M04\
+
+
+
+Programm       :  Meßprogramm für die Hochfrequenz-Spektroskopie
+                  ( früher M04-Programm auf DEC PDP-8 )
+
+Beschreibung   :  HF-Spektroskopie an der RABI-Apparatur,
+                  Messung der Zählraten (Präzissionsmessung),
+                  Ansteuerung der Rhode&Schwarz-Frequenzdekade
+                  bzw. SCHOMANDL-Dekade über Parallelport und
+                  Dekadeninterface.
+
+Autor          :  Thomas Fabula
+                  IAP-Uni Bonn, 1986, Wegelerstr. 8
+
+Rechnerumgebung:  Z80-ECB System (Janich & Klass)
+
+Betriebssystem :  CP/M 3.0 (Digital Research)
+
+Sprache        :  Z80-FORTH  (Ver. F2.COM)
+
+Bemerkung      :  Programm vollständig bis auf Assemblerteil.
+
