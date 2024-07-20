@@ -1,0 +1,73 @@
+( Datei : MESSDATEN.M04                                                     )
+
+( Die Messdaten einer M04-Messung werden wie folgt im ASCII-Format auf Disk )
+( abgespeichert :                                                           )
+(                                                                           )
+( Zeile:      Bezeichnung:        Speicher-Bereich:   Bemerkung:            )
+( ------------------------------------------------------------------------- )
+( 1.          KOMMENTARZEILE      8400-84FFH          [max. 80 Zeichen]     )
+(                                                                           )
+( 2.-22.      PARAMETERFELD       8500-85B7H          [ aktuelle Parameter] )
+(                                                                           )
+( 23.-23+n.   MESSDATENFELD       8600-8600+n         [ n Datenzeilen ]     )
+(                                                                           )
+( 23+n+1.-    MITTELWERTE             -               [ FM, FE, DF, Q ]     )
+( 23+n+5.                                                                   )
+( ------------------------------------------------------------------------- )
+
+( ========================================================================= )
+( KOMMENTARFELD :                                                           )
+Dieses ist die Kommentarzeile und darf maximal 80 Zeichen lang sein.          
+( ========================================================================= )
+( PARAMETERFELD :                                                           )
+( Parameterwert              Var   /  Einheit   /  Stellen                  )
+( ------------------------------------------------------------------------- )
+116.                       ( NM    /  dim.los   /    3     )
+364.                       ( CM    /  [msec]    /    3     )
+462.                       ( TM    /  [msec]    /    3     )
+3653664523.                ( WM    /  [Hz]      /   10     )
+1233871101.                ( FM    /  [Hz]      /   10     )
+45664653.                  ( AM    /  [Hz/G]    /    8     )
+861165.                    ( DM    /  [Hz]      /    6     )
+453643.                    ( LM    /  [Hz]      /    6     )
+62546365.                  ( SM    /  [Hz]      /    8     )
+45.                        ( VM    /  dim.los   /    2     )
+656.                       ( NE    /  dim.los   /    3     )
+546.                       ( CE    /  [msec]    /    3     )
+636.                       ( TE    /  [msec]    /    3     ) 
+1235346354.                ( WE    /  [Hz]      /   10     ) 
+1623453643.                ( FE    /  [Hz]      /   10     )
+62546365.                  ( AE    /  [Hz/G]    /    8     )
+452346.                    ( DE    /  [Hz]      /    6     )
+365462.                    ( LE    /  [Hz]      /    6     )
+76456646.                  ( SE    /  [Hz]      /    8     )
+63.                        ( VE    /  dim.los   /    2     )
+156.                       ( TU    /  [msec]    /    3     )
+( ========================================================================= )
+( MESSDATENFELD :                                                           )
+( No  =  Nummer der Messung , 3 Stellen                                     )
+( FM  =  Mittenfrequenz MESS > in [Hz]  , immer 8 Ziffern , allerdings ohne ) 
+( FE  =  Mittenfrequenz EICH > GHz und MHz Stellen , [siehe Parameter]      )
+( DF  =  feldunabh. Groesse , in [Hz]  , max. 4 Stellen mit Vorzeichen      )
+( Q   =  Symmetriefaktor    , [dim.los], max. 6 Stellen                     )
+( T   =  Messzeit           , in [sec] , max. 5 Stellen                     )
+( Die Daten werden durch 5 Spaces voneinander getrennt. [unformatiert]      )
+( ------------------------------------------------------------------------- )
+1     803328.51     484983.15     -1362     66321     12
+2     511662.21     123331.12     23     12     244
+3     645367.83     763524.88     435     654381     1376     
+.        .             .            .        .         .
+.        .             .            .        .         .
+.        .             .            .        .         .
+.        .             .            .        .         .
+10     156298.98     564532.90     -4543     316595     5668
+999     453986.13     321698.78     -8874     541876     13429       
+( ========================================================================= )
+( MITTELWERTE :                                                             )
+647134.98              ( Mittelwert von FM in [Hz], ohne GHz u. MHz Stellen )
+432645.35              (    "        "  FE    "      "    "      "     "    )
+524438.27              (    "        "  DF in [Hz]   )
+742563.                (    "        "  Q  [dim.los] *10E-6 )
+( ========================================================================= )
+( Ende der Messdatei.                                                       )
+		
