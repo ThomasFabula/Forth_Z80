@@ -1,0 +1,495 @@
+comp.lang.forth Frequently Asked Questions, Part 3 of 7
+                 Forth Vendors
+                 15 Nov 2000
+
+Send all Corrections, Additions, and/or Deletions to:
+             L. Greg Lisle L.G.Lisle@ieee.org
+
+
+These Organizations are primarily software, systems and support
+
+Bradley Forthware, Inc. ; Mitch Bradley ; 415 961-1302
+   PO Box 4444 ; Mountain View CA , 94040 ; USA
+   ForthMon, Forthmacs, C Forth ; 415 962-0927
+   wmb@forthware.com ;
+   Specialists in IEEE Std 1275 Open Boot Firmware
+
+Brian Mathewson ; Brian Mathewson ;
+   21576 Kenwood Ave. ; Rocky River OH , 44116 ; USA
+   Forth/2 ;
+   bbm@r2d2.eeap.cwru.edu ;
+   OS/2 platform
+
+Canadian Mind Products ; Roedy Green ; 604 684-6529
+   #162 - 1020 Mainland St. ; Vancouver BC , V6B 2T4 ; Canada
+   BBL ; 604 684-5541
+   roedy@BIX.com ;
+   Abundance
+
+DFW ; Albert van der Horst ; (+31) 30 2312482
+   Oranjestr 8 ; Utrecht , 3511 RA ; Netherlands
+   tForth for T4 & T8 transputers ;
+   dfw@spenarnc.xs4all.nl ; http://www.IAEhv.nl/users/mhx/t4faq.html
+   DFW is a non-profit organisation to promote Forth.
+
+FORTH, Inc ; Steve Agarwal ; 800 553-6784
+   0 ; Manhattan Beach CA , 90266 ; USA
+   chipFORTH, polyFORTH, MacForth ; 310 318-7130
+   forthsales@forth.com ; http://www.forth.com
+  
+Forthware ; Hanno Schwalm ;
+   Holunderstr. 10 ; Bremen , D-28207 ; Germany
+   Forthmacs 3.1 for RISC/OS Acorn ;
+   schwalm@bre.winnet.de ;
+  
+Frog Peak Music ; Larry Polansky ; 603 448-8837
+   PO Box A36 ; Hanover NH , 03755 ; USA
+   HMSL - Hierarchical Music Specification Language ;
+   phil@3do.edu ;
+  
+FS Forth-Systeme GmbH ; Klaus Flesch ; 7667-551
+   PO Box 1103 ; Breisach , 7920 ; Germany
+   SwissForth, agents for LMI ; (07667)555
+   Klaus.Flesch@Freiburg.netsurf.de ;
+  
+Harvard Softworks ; James Callahan ; 513 748-0390
+   PO Box 69 ; Springboro OH , 45066 ; USA
+   HS/FORTH ;
+   ;
+  
+Immersive Systems, Inc. ; ; (415) 641-8748
+   4487 23rd St. #2 ; San Francisco CA , 94114 ; USA
+   Meme (tm) ;
+   info@immersive.com ; http://www.immersive.com
+   Multitasking Extensible Messaging Environment
+
+Jack J. Woehr (Jax) ; Jack J. Woehr ;
+   PO Box 51 ; Golden CO , 80402 ; USA
+   Jax4th for WinNT/Amiga, FIJI ;
+   jax@well.com ; http://www.well.com/~jax/rcfb
+   Author of programming books, JAXOOPS & Jax4th
+
+Joerg Plewe ; Joerg Plewe ; (+49)-(0)208-497068
+   Haarzopfer Str. 32 ; Muelheim an der Ruhr , D-45472 ; Germany
+   F68K, F68ANS ;
+   joerg.plewe@mpi-dortmund.mpg.de ;
+   Forth for the M68000
+
+Laboratory Microsystems, Inc. (LMI) ; Ray Duncan ; 818 997-6874
+   PO Box 10430 ; Marina Del Rey CA , 90295 ; USA
+   UR/FORTH, WinForth ; 310 645-0059
+   Duncan@cerf.net ; http://www.cerfnet.com/~lmi
+   WinForth Shareware for Windows, LMI Forth-83 Metacompiler
+
+M. Anton Ertl ; Anton Ertl ;
+   Gforth for WIN32/Linux/DOS/OS2 ;
+   anton@mips.complang.tuwien.ac.at ;
+   http://www.complang.tuwien.ac.at/anton/home.html
+  
+Marcel Hendrix ; Marcel Hendrix ; +31-495-541529
+   Kerkstraat 61 ; Weert , 6006KL ; Netherlands
+   iForth, MANX ;
+   mhx@IAEhv.nl ;
+   iForth for protected-mode DOS/Windows NT 4.0/Linux
+
+Micromotion ; ; 213 821-4340
+   12077 Wilshire Blvd. #506 ; Los Angeles CA , 90025 ; USA
+   MasterForth ;
+   wilbaden@netcom.com ;
+   Forth for various machines
+
+MicroProcessor Engineering Ltd. ; Stephen Pelc ; +44 1703 631441
+   133 Hill Lane ; Southampton , SO15 5AF ; England
+   PowerForth, ProForth ; +44 1703 339691
+   sales@mpeltd.demon.co.uk ; http://www.mpeltd.demon.co.uk
+   Large range of cross compilers
+
+Miller Microcomputer Services ; A. Richard Miller ; 508 653-6136
+   61 Lake Shore Road ; Natick MA , 01760-2099 ; USA
+   MMSFORTH ;
+   MMS@TheMillers.com ; http://MMS.TheMillers.com/mmsforth.html
+   MMSFORTH and many application modules and hard-to-find Forth Books
+
+Mountain View Press ; Glen Haydon ; 415 747-0760
+   Star Rt 2 Box 429 ; La Honda CA , 94020-9726 ; USA
+   MVP Forth (which I wrote) ; 415 747 0760 x 3
+   ghaydon@theforthsource.com ; http://www.theforthsource.com
+   Literature & Software for many platforms
+
+MP7 ; Marc Petremann ; (33) 1 43 03 40 36
+   17, allee de la Noiseraie ; NOISY LE GRAND , F - 93160 ; France
+   Turbo-Forth ;
+   MP7@wanadoo.fr ; http://perso.wanadoo.fr/mp7
+   TURBO-Forth, FASTGRAF graphics & I/O pkg, French-language books
+
+Offete Enterprises, Inc. ; C.H. Ting ; 415 574-8250
+   1306 South B St. ; San Mateo CA , 94402 ; USA
+   eFORTH, F83 & ANS ; 415 571-5004
+   tingch@ccmail.apldbio.com ;
+   Books & Software for figForth, eForth, F83, FPC, ANS etc
+
+Silicon Vision ; ; 0181 422 3556
+   0 ; Harrow , ; UK
+   RiscForth for Acorn Archimedes ;
+   ;
+  
+Tom Almy ; Tom Almy ;
+   17830 SW Shasta Trail ; Tualatin OR , 97062 ; USA
+   ForthCMP ;
+   tom_almy@ieee.org ; http://www.aracnet.com/~tomalmy/forthcmp.html
+   Native Code Forth Compiler (ANS or 83 Std) for 80x86, MS-DOS
+
+
+These Organizations are primarily other
+
+Extensible Systems, Products & Technology (ESPT) ; Scott Woods ; 414
+728-9595
+   Extensible Systems ; Delavan WI , 53115-0881 ; USA
+   Books & Shareware ; 414 728-2881
+   sawoods@esptec.com ;
+  
+Forth Interest Group ; Trace Carter ; 408 373-6784
+   100 Dolores St. #183 ; Carmel CA , 93923 ; USA
+   Forth Dimensions ; 408 373-2845
+   office@forth.org ; http://www.forth.org
+   Literature & Software Source
+
+Institute for Applied Forth Research ; Laurence Forsley ; 716 235-0168
+   PO Box 1261 ; Annandale VA , 22003 ; USA
+   ; 716 235-0168
+   inst@jfar.org ; http://www.jfar.org
+   Journal of FAR
+
+
+These Organizations are primarily hardware vendors
+
+Ampro Computers Inc. ; ; 408 522-4825
+   990 Almanor Ave. ; Sunnyvale CA , 94086 ; USA
+   ; 408 720-1305
+   techsupport@ampro.com ;
+   SBC
+
+EMAC Inc. ; Eric Rossi ; 618 529-4525
+   PO Box 2042 ; Carbondale IL , 62902 ; USA
+   SBC ; 618 457-0110
+   Single Board Computers
+
+HiTech Equipment Corp. ; Tim O'Hara ; 619 566-1892
+   9400 Activity Rd. ; San Diego CA , 92126 ; USA
+   SBC ; 619 530-1458
+   info@hte.com ;
+  
+Inovative Integration ; James Henderson ; 818 865-6150
+   31352 Via Colinas #101 ; Westlake Village CA , 91362 ; USA
+   ; 818 879-1770
+   techsprt@innovative-dsp.com ;
+   TMS322031, C32, C25, C44
+
+Merrimack Valley Systems ; Richard Smith ; 508 792-9507
+   PO Box 850 ; Merrimack NH , 03054 ; USA
+   SBC ; 508 757-8769
+   ;
+  
+Minimum Instruction Set Computer, Inc. ; Charles Johnson ; 303 680-9749
+   19704 East Loyola Circle ; Aurora CO , 80013 ; USA
+   MISC processor
+
+Mosaic Industries, Inc ; Patrick Campbell ; 510 790-1255
+   5437 Central Ave Ste 1 ; Newark CA , 94560 ; USA
+   QED Single Board Computers ; 510 790-0925
+   info@mosaic-industries.com ; http://www.mosaic-industries.com
+  
+New Micros, Inc. (NMI) ; Randy M. Dumse ; 214 339-2204
+   1601 Chalk Hill Rd ; Dallas TX , 75212 ; USA
+   Max-FORTH, NMIX boards ; 214 339-1585
+   general@newmicros.com ; http://www.newmicros.com/general
+   Single Board Forth Machines, 68HC11 and more
+
+Opto 22 ; Bob Sheffres ; 909 659-9299
+   43044 Business Park Dr. ; Temecula CA , 92590 ; USA
+   ; 909 695-3095
+   ;    Cyrano
+
+Orion Instruments, Inc ; Wayne Lefkowitz ; 800 729-7700
+   1376 Borregas Ave. ; Sunnyvale CA , 94089-1004 ; USA
+   ; 408 747-0688
+   info@oritools.com ; http://www.oritools.com
+   Microprocessor Emulator/Analyzer
+
+Saelig Company ; Alan Lowne ; 716 425-3753
+   1193 Moseley Rd. ; Victor NY , 14564 ; USA
+   ; 716 425-3835
+   71042.17@compuserve.com ;
+   Rep for Triangle Data Svs
+
+Silicon Composers Inc. ; George Nicol ; 415 961-8778
+   655 W. Evelyn Ave. #7 ; Mountain View CA , 94041 ; USA
+   FOX SBC's ; 415 961-6778
+   bcole@silcomp.com ;
+   RTX 2000 & SC32 boards
+
+Testra Corporation ; John R. Hart ;
+   Motion Control System programmed in Forth ;
+   jhart@testra.com ;
+   The motion processor is a reconfigurable Forth engine
+
+Triangle Digital Services Ltd. ; Noelle Darwent ; 01279 639471
+   Latton Bush Centre Southern Way ; Harlow Essex , CM18 7BL ; England
+   TDS2020 & others ; 01279 639489
+   Business@TriangleDigital.com ; http://www.TriangleDigital.com
+   SBC w/ on board Forth
+
+Ultra Technology ; Jeff Fox ; 510 848-2149
+   2512 10th St. ; Berkekey CA , 94710 ; USA
+   F21 microprocessor, software, consulting ;
+   fox@ultratechnology.com ;
+  
+Vesta Technology, Inc ; Cyndi Reish ;
+   0 ; Wheat Ridge CO , ; USA
+   Forth-83+ ;
+   SBC w/ Forth in ROM
+
+VME Inc. ; ; 408 946-3833
+   538 A Valley Way ; Milpitas CA , 95035 ; USA
+   ; 408 946-0351
+   SBC
+
+
+These Organizations are primarily custom consulting
+
+4th Wave Computers Ltd. ; Peter Caven ; 905 335-6844
+   2314 Cavendish Drive ; Burlington ON , L7P 3P3 ; Canada
+   p.caven@ieee.org ;
+   Custom SW Development in Forth & C
+
+A Working Hypothesis, Inc ; Paul Frenger ; 281-293-9484
+   associate editor for Forth ; Houston TX , 77282 ; USA
+   ; 281-293-9446
+   pfrenger@ix.netcom.com ;
+   associate editor for Forth ACM Sigplan Notices
+
+AM Research ; Albert Mitchell ; 800 949-8051
+   4600 Hidden Oaks Lane ; Loomis CA , 95650-9479 ; USA
+   ; 916 652-6642
+   sofia@netcom.com ; http://www.amresearch.com
+   8051, 6811 & 820166 Forth Dev Systems
+
+Bergstrom Consulting ; Gary Bergstrom ; 440 247 2031
+   Forth software for embedded control ; Chagrin Falls OH , 44022 ; USA
+   Forth software for embedded control, analog and micro (particularly the HC11 &
+   C12) hardware. ;
+   g.bergstrom@ieee.org ;
+  
+Bernd Paysan ; Bernd Paysan ; ++49 89 798557
+   Stockmannstr. 14 ; Muenchen , 81477 ; Germany
+   BigFORTH 386, ST ; ++49 89 794378
+   paysan@informatik.tu-muenchen.de ;
+   Object Oriented
+
+Blue Star Systems ; Mike Warot ;
+   PO Box 4043 ; Hammond IN , 46324 ; USA
+   Forth/2 ;
+   ka9dgx@chinet.com ;
+   A direct threaded implementation of forth for OS/2 text mode, 32b
+
+Chris Heilman ; Chris Heilman ;
+   PO Box 8345 ; Phoenix AZ , 85066-8345 ; USA
+   PocketForth ;
+   Heilman@pc.maricopa.edu ;
+  
+Compucyber, Inc. ; Boris Bibershtein ; 416 733-1630
+   PO Box 3182 ; North York ON , M2M 3A6 ; Canada
+   both F-PC and LMI Forth
+
+Computer Continuum ; Eric Reiter ; 415 755-1978
+   75 Southgate Ave. #6 ; Daly City CA , 94015 ; USA
+   Specialists in Motion control and data acquisition
+
+Delta Research ; Phil Burk ; 415 453-4320
+   PO Box 151051 ; San Rafael CA , 94915 ; USA
+   JForth, HMSL ;
+   phil@3do.edu ;
+   JForth is a subroutine thread Forth for Amiga.
+
+Frank Sergeant ; Frank C. Sergeant ;
+   809 W. San Antonio St. ; San Marcos TX , 78666 ; USA
+   Pygmy ;
+   pygmy@pobox.com ;
+   Forth Programming; microprocessors to business systems
+
+Julian V. Noble ; Julian V. Noble ;
+   ; VA , ; USA
+   jvn@fermi.clas.virginia.edu ;
+   Book "Scientific Forth"
+
+L Squared Solutions ; L. G. Lisle ; 336 924-0629
+   2160 Foxhunter Ct. ; Winston-Salem NC , 27106 ; USA
+   Pygtools for Pygmy ;
+   L.G.Lisle@ieee.org ; http://L.Squared.home.att.net
+   Engineering consulting using Forth for industry 
+
+Michael Hore ; Michael Hore ; +61-2-557-5836
+   54 Frederick St ; Sydenham NSW , 02044 ; Australia
+   Mops ;
+   mikeh@zeta.org.au ;
+   Mops is a PD OOP system
+
+NSolntseff Information Engineering ; Nicholas Solntseff ; 416 627-0449
+   62 Sydenham St. ; Dundas OT , L9H 2T9 ; Canada
+   ns@maccs.dcss.mcmaster.ca ;
+  
+Paul E. Bennett ; Paul Bennett ; +44(0)7971-620145
+   0 ; Bristol , BS15 1HX ; UK
+   Forth based HIDECS Consultancy ;
+   peb@amleth.demon.co.uk ; http://www.amleth.demon.co.uk
+   Company Emphasizes Safety Critical Systems
+
+Redshift Limited ; Charlie Springer ; 206 564-3315
+   726 No. Locust Lane ; Tacoma WA , 98406 ; USA
+   RedForth@AOL.com ;
+   A simple 32 bit indirect threaded Forth for ARM
+
+Rob Chapman ; Rob Chapman ; 403 430-2605
+   11120-178 st. ; Edmonton AB , T5S 1P2 ; Canada
+   botKernel, Timbre ; 403 430-2772
+   rob@idacom.hp.com ;
+  
+Science Applications International Corp. ; Norman Smith ; 615 482-9031
+   301 Laboratory Road ; Oak Ridge TN , 37831 ; USA
+   Until, LMI, Uniforth ; 615 482-6828
+   smithn@orvb.saic.com ;
+   "Write Your Own Programming Lang. w/ C++"
+
+Taygeta Scientific, Inc ; Everett Carter ; 831 641-0647
+   Forth on Unix ; Monterey CA , 93940 ; USA
+   Forth on Unix, networking, real-time and motion control ; 831 641-0647
+   skip@taygeta.com ; http://www.taygeta.com
+  
+TOS Systems Inc. ; Roger Stern ; 617 431-2456
+   PO Box 81-128 ; Wellesley MA , 02181 ; USA
+   LMI ; 617 431-2456
+   rstern@world.std.com ;
+   Software & Hardware Consulting
+
+T-Recursive Technology ; Brad Rodriguez ; 705-727-3633
+   115 First St. ; Collingwood ON , L9Y 4W3 ; Canada
+   CamelForth ;
+   BJ@forth.org ; http://www.zetetics.com/recursiv
+   Contract programming & hardware design for small/embedded systems
+
+
+These Organizations are primarily unknown
+
+Bryte Computers ; Cliff McClellan ; 207 547-3218
+   PO Box 46 ; Augusta ME , 04330 ; USA
+   8051 code
+
+Computer Cowboys ; Charles Moore ; 415 851-4362
+   410 Star Hill Rd. ; Woodside CA , 94062 ; USA
+   73662.1545@compuserve.com ;
+   Forth engine kit w/ NC4000
+
+Concept 4 ; ;
+   PO Box 204 ; Lincoln CA , 95648 ; USA
+   Prolog Impl. of Forth, other prod.
+
+Digalog ; ; 805 644-9928
+   PO Box 3315 ; Ventura CA , 93006 ; USA
+   Industrial Appl. in Forth
+
+Granite Microsystems ; Beau Moore ; 414 242-8816
+   10202 N. Enterprise Dr. ; Mequon WI , 53092 ; USA
+   ; 414 242-8825
+   SBC
+
+Inner Access Corp. ; Coralin Feierbach ; 415 591-8295
+   PO Box 8888 ; Belmont CA , 94002 ; USA
+   Zilog Super-8 Dev. Sys.
+
+InSite Computing ; ; 313 994-3660
+   PO Box 2949 ; Ann Arbor MI , 48106 ; USA
+  
+Kelly Enterprises ; Guy Kelly ;
+   2507 Caminito La Paz ; La Jolla CA , 92037 ; USA
+   KForth ;
+   Said placed all products in public domain
+
+Micro Computer Applications Ltd ; ; 203 426-6164
+   8 Newfield Lane ; Newtown CT , 06470 ; USA
+  
+Microtronix Systems Ltd ; Brian Fox ; (519) 649-4900, Ext 134
+   955 Green Valley Rd ; London OT , N6N 1E4 ; Canada
+   ; (519) 649-0355
+   bfox@microtronix.ca ; http://www.microtronix.ca
+   We manufacture test equipment specialized for telecom
+
+Next Generation Systems ; ; 408 241-5909
+   PO Box 2987 ; Santa Clara CA , 95055 ; USA
+  
+Paladin Software, Inc. ; James Dewey ; 619 490-0368
+   3945 Kenosha Ave. ; San Diego CA , 92117 ; USA
+   619 490-0177
+  
+Palo Alto Shipping Co. ; Jef Raskin ; 800 443-6784
+   PO Box 7430 ; Menlo Park CA , 94026 ; USA
+   Mach1 ;
+   DTC for 68000
+
+Robert J. McDonald ; Robert J. McDonald ;
+   2326 Redfern Road ; Burlington OT , L7R 1X3 ; Canada
+   mcdonarj@mcmaster.ca ;
+
+SDS, Inc. ; ; 514 461-2332
+   2865 Kent Ave. #401 ; Montreal QC , H3S 1M8 ; Canada
+   SDS Forth ;
+   for 8051
+
+Shaw Laboratories, Ltd. ; George Shaw ; 510 276-5953
+   PO Box 3471 ; Hayward CA , 94540 ; USA
+   TaskFORTH ; 415 276-6050
+   G.SHAW1@GEnie.com ;
+  
+Single Board Solutions Inc. ; Tom Cramer ; 408 253-0250
+   20065 Stevens Creek Blvd. ; Cupertino CA , 95014 ; USA
+   ; 408 253-8298
+   SBC
+
+Software Construction Company ; Paul Snow ; 409 696-5432
+   PO Box 10646 ; College Station TX , 77842 ; USA
+   Fifth ; 409 696-0684
+  
+SOTA Computer Sys. Lmt ; ; 604 688-5009
+   213-1080 Broughton St. ; Vancouver BC , V6G 2A8 ; Canada
+   ;
+  
+UBZ Software ; Larry Daniel ; 404 948-4654
+   395 St. Albans Ct. ; Mableton GA , 30059 ; USA
+   ;
+  
+Upper Deck Systems ; Peter Graves ; 619 741-1075
+   PO Box 263342 ; Escondido CA , 92026 ; USA
+   U.D. FORTH ;
+  
+VI Computer ; Harry L. White ; 619 632-5823
+   531 Encinitas Blvd. Ste 114 ; Encinitas CA , 92024 ; USA
+   ; 619 632-5829
+   SBC
+
+Note:
+   My goal is a spare, consistent listing for each vendor.
+   Since the FAQ Part 4 lists details of the various systems,
+   my idea for this FAQ is more of a directory with easy to
+   find and read entries. If you are interested, I have
+   this data available in a data base format, either
+   .DBF .WDB comma or Tab delimited. (Maybe even .WKS)
+  
+   The Format (as much as possible) is:
+  
+   Company Name; Contact Person: Voice Phone
+     Mailing Address; w/ country
+     Products; Fax #
+     EMail Addr; Web Page
+     One Line description (approx 64 char)
+
+
+Source: https://www.forth.org/faq/faq3.txt
