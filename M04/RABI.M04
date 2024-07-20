@@ -1,0 +1,53 @@
+                              ____________
+                             |            |
+                             |  RABI.M04  |
+                             |____________|
+
+
+
+ Aufbau der RABI-Atomstrahlapparatur:
+ ------------------------------------
+
+
+                               Homogene  Felder
+   _                                                                    Multi-
+  e     Alkali |      |  |   |  |            |  |  |  |      |            plier
+Ofen     Ofen  |______|  |___|  |____________|  |__|  |______|
+ __                    K                                                   ___
+|__|  ..  A  ..   ..               O     O    S               .....LT         |
+  |             ______ K  ___    __!_____!___    __    ______      LT      ___|
+  |            |      |  |   |  |            |  |  |  |      |      |        |
+  |            |A-Feld|  |C  |  |  C - Feld  |  |C |  |B-Feld|      |        |
+  |                        a                      b                 |        |
+ _|__________                      !   __!__________________________|        |
+|            |          +----------+  |  !                                   |
+| Leistungs- |   _______!_____        |  !   _____________                   |
+| stabilis.  |  |             |       |  !  |             |                  |
+|____________|  | Frequenz -  |       |  +--| Frequenz -  |                  |
+          ______| Synthesizer |_______|_____| Synthesizer |                  |
+         |      |_____________|       |     |_____________|                  |
+         |              ^             |            ^                         |
+         |       _______|_____        |    ________|________             ____|
+ ________|__    |             |       |   |                 |      _____|___
+|           |   |  C - Feld   |_______|   |  Z80 - Online - |     |         |
+| Frequenz- |   |  Regelung   |           |     Computer    |<--->| Zaehler |
+| vergleich |   |_____________|           |_________________|     |_________|
+|___________|                           _____|____  |  ____|_____    ________
+         |                             |          | | |          |  |        |
+         +---> DCF 77                  | Televideo| | | Grafik - |  |   8"   |
+                                       | Terminal | | |Bildschirm|  | Doppel |
+                                       |__________| | |__________|  | Floppy |
+ Abkuerzungen:   A = Alkaliofen                     |_______________| Station|
+ -------------   K = Kollimator                                     |________|
+                 S = Schattendraht
+                 S = HF-Haarnadeln
+                 LT= Langmuir-Taylor-Detektor
+                 DCF 77 = Referenz-Funksignal aus Mainflingen
+
+
+ Bemerkungen:    Der  Atomstrahl verlaeuft  S-foermig  in den Magnetfeldern
+ ------------    und ist aus zeichnerichen Gruenden  n i c h t  eingezeich-
+                 net. Ausserdem  ist der  Nachweisteil, der vom  Experiment
+                 jeweils  abhaengig  ist ebenfalls  weggelassen. Angedeutet
+                 ist lediglich der Photomultiplier, der die Impulse zaehlt.
+
