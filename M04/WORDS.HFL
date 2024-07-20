@@ -1,0 +1,250 @@
+( ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+( +++++++++++++++++++++    M04 - FORTH - Woerter   +++++++++++++++++++++++++ )
+( ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+(File: WORDS.HFL)
+
+( Diese Datei enthaelt alle FORTH-Woerter des M04-PROGRAMMS sowie eine )
+( kurze Erklaerung der STACK-Manipulationen, falls welche auftreten )
+
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+( Datei No-1 :   -GRAFIK.SL2  )
+( VARIABLE : X1, Y1, Z1 )
+
+( SETCUR setzt den cursor an x,y )
+
+( CLRDIS setzt,loescht oder komplementiert den gesamten graphikspeicher )
+
+
+( GDPCHR einzelne graphic character in den graphicspeicher schreiben )
+( ichr[0..127] , idir[-8..7] , isz[0..15] --                  ) 
+
+( X Y ->  )
+( GDPDOT einzelne pixel koennen geschrieben werden                  )
+
+
+( GDPLIN zeichnen von linien von aktuelle cursor pos bis y , x      )
+( y x ->   )
+
+
+( GDPMOD Mit dieser Routine wird der Schriebmodus festgelegt, d.h.  )
+( ob eine Schreibaktivitaet setzend, komplementierend oder   )
+( austauschend durchgefuehrt wird .                          )
+( 1=komplementierend 2=loeschend 3=setzend                   )
+( n1 -- )
+
+
+(  GDPBLK   X1 -->	)
+
+(  GDPPAN   X1 Y1 -->     )
+
+(  GDPCI    X1 Y1 -->     )
+
+
+( ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ ) 
+( +++ Televideo Attribute in FORTH                                     +++ )
+( ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+( BEEP warnton fuer falsche eingabe )
+
+( INVERSE Invertierungskommando fuer Televideo )
+
+( NORM  televideo hell steuern )
+
+( CURS cursor wird auf position x,y gebracht                               )
+(  x y    --       )
+
+( U-BL-CURSOR  cursor schmall und blinkt )
+
+( BLINK-CURSOR cursor blinkt )
+
+( BLANK  televideo anzeige dunkel steuern )
+
+( LDEL loescht Zeile wo gerade der Cursor steht )
+
+( NORMAL alle Attribut ausschalten )
+
+( DDUP n1 n2   --   n1 n2 n1 n2  )
+
+( D@ holt doppelt-genau Variablen auf den Stack )
+(  adr       --   n1 n2  )
+
+( D! speichert doppelt-genaue 32 Bit Variablen ab )   
+( n1 n2 adr  --          )
+
+
+( DEL loescht n1 Zeilen )
+ 
+( ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+( +++  Arithmetik Prozessor Treiber                                    +++ )
+( ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+( Datei No-3 :   -ARI.SL2  )
+
+( VARIABLE : X11, Y11 )
+
+( BUSY , f=0 wenn Arithm. Prozessor noch rechnet )
+
+( SIGN , f=0 wenn arithm. Prozessor Stack neg. )
+(   --  flg )
+
+( ARICOM Kommando Eingabe an Arithm. Prozessor )
+( nn   --     )
+
+( ARI32! speichert eine 32 bit Zahl auf den Arithm. Prozessor Stack )
+( nn nn  --    )
+
+( ARI16! speichert eine 16 bit Zahl auf den Arithm. Prozessor Stack )
+( nn     --    )
+
+
+( ARI@ holt eine 16 bit Zahl von Arithm. Prozessor Stack )
+(    --   nn )
+
+( ARI@@ holt eine 32 bit Zahl von Arithm. Stack )
+(    --  nn nn )
+
+( DADD 32 bit Addition : nn nn nn nn   --  nn nn  )
+
+( DSUB 32 bit Subtraction : nn nn nn nn   --  nn nn )
+
+( DMUL 32 bit Multiplikation, untere 32 bit liegen als Ergegnis vor )
+( nn nn nn nn  --  nn nn  )
+
+( DDIV 32 bit Division : n1 n2 n3 n4  --  nn nn )
+
+
+( FMUL 32 Bit Gleitkomma Multiplikation : n1 n2 n3 n4 -- n1 n2  )
+
+( FDIV32 Bit Gleitkomma Division : n1 n2 n3 n4 -- n1 n2 )
+
+( FADD 32 Bit Gleitkomma Addition : n1 n2 n3 n4 -- n1 n2 )
+
+( FSUB 32 Bit Gleitkomma Subtraktion : n1 n2 n3 n4 -- n1 n2 )
+
+( FLTD 32 Bit Festpunkt auf 32 Bit Gleitkomma : n1 n2 -- n1 n2 )
+
+( FIXD 32 Bit Gleitkomma auf 32 Bit Festpunkt : n1 n2 - n1 n2 )
+
+( D> : Funktion > auf 32 Bit Festpunkt ausgedehnt : n1 n2 n3 n4 -- f )
+ 
+( SQRT 32 Bit Gleitkomma Wurzelfunktion : n1 n2 -- n1 n2 )
+
+( +++++++++++++++++++++++  Masken - Routinen   ++++++++++++++++++++++++ )
+
+( CONSTANT : TIME=0118, BUFM=0106, BUFE=104 )
+
+( VARIABLE MA1	( Anzahl der Zeichen vor der Maske			)
+( VARIABLE MA2	( Anzahl der Maskenzeichen				)
+( VARIABLE MAZ	( Zaehler fuer Cursorstand				)
+( VARIABLE COR	( Hilfsvariable fuer Rueckschritt im Menue		)
+( VARIABLE ZRK	( Hilfsvariable fuer Cursor { --> }			) 
+
+( ZR steuert die Cursortaste { --> }					)
+
+( Z! speichert gueltige ASCII-Zeichen im entsprechenden Buffer ab	)
+( n1 = ASCII-Zeichen							)
+
+( ZL steuert die Cusortaste { <-- }					)
+
+( NULL belegt den Eingabebuffer mit ASCII {48}				)
+
+( CORI speichert 0 nach COR						)
+
+( Z@ ist der Verteiler fuer die Cursormaske.Die Tastatur wird abge-	)
+( fragt und nach entsprechenden Steuerzeichen verzweigt.n1=Anzahl der 	)
+( Maskenzeichen ,n2 Anzahl der Zeichen vor der Maske			)
+( ASCII {48 -->57} --> Z! ; ASCII {8} --> ZL ; ASCII {13} --> NULL	)
+( ASCII {12} --> ZR ; ASCII {11} --> CORI				)
+( wenn f=1 ist,befinden sich die Eingabewerte im entsprechenden Buffer	)
+  
+( M@ ist ene Cursormaske fuer die Tastaturabfrage.n1=Anzahl der Zeichen,)
+( die uebersprungen werden muessen[Maske].n2=Anzahl der Zeichen vor der	)
+( Maske.1 Zeichen kann hinter der Maske gelesen werden.f=1 Zeichen ok,	)
+( kein Rueckschritt im Menue . f=0 Wert fuer Rueckschritt im Menue	)
+( n3 und n4 werden dann nicht auf den Stapel abgelegt.			)
+( n4 = Wert hinter Maske,wenn n1>0 sonst Wert vor Maske			)
+( n3 = Wert vor der Maske,wenn n1>0	Beispiel einer Maske:		)  
+( n1=5,n2=4 --> {Maske=5 Zeichen}            ____Maske_			)
+
+
+( MTEST sorgt fuer rechtsbuendige Darstellung im Menue , n1 = Zahl	)
+
+
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+( +++   Hardware Treiber fuer M04                                     +++ )
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+( Datei No-2 :   -TREIBER.SL2  )
+
+( VARIABLE : FREQUNZ, COUNT, AN =  Variable Anzahl )
+
+( 69 CONSTANT CRPORTD        control port A )
+( 6B CONSTANT CRPORTD+1      control port B )
+( 68 CONSTANT PORTDEKADE     port A )
+( 6A CONSTANT PORTDEKADE+1   port B )
+
+( 6D CONSTANT CRPORTR   control port A, von Relais Port )
+( 6C CONSTANT PORTR     
+
+( 011E CONSTANT RMASK  Maske fuer Relaisport )
+
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+( +++  FLUO-/EICH-ZAEHLER   Treiber                                   +++ )
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+
+( INITFL  Initialisierung des Fluoreszenz-Zaehlers : FLUOZAEHLER PORT 1	   )
+
+( INITEI  Initialisierung des Eichmarken-Zaehlers : EICHMARKENZAEHLER PORT 2 )
+
+( CLR  clear counter )
+
+( LATCH	Einlesen der Zaehlraten in das Latch )		
+
+( SAVEH	, SAVEL	, SAVEM  Einlesen der Zaehlraten )
+
+( SAVE Auslesen der Zaehler - Speicherung in Var. COUNT )
+
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+( +++  Hochfrequnz Dekaden Treiber                                    +++ )
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+( INITDEKADE    Initialisierung der Hochfrequenz-Dekade )
+
+( UGABEPULS     Generierung des Uebergabe-Pulses )
+
+( IOPPULS       Generierung des I/O-Pulses )
+
+( DEKADE-SETZEN diese Routine erwartet eine BCD codierte Zahl in der )
+( Var. FREQUNZ und gibt die Zahl an die Dekade.                      )
+
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+( +++  HF Relais Treiber                                              +++ )
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+( INIT-RELAIS    Initialisierung des RELAIS-Treibers )
+
+( HF-AUS , HF-EIN  : Hoch-Frequenz umschalten )
+
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+( +++  Messzeit Zaehler                                             +++ )
+( +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+
+( RESET2 , G2ON, G2OFF : Steuerung des Zeitzehlers )
+
+( +++++++++++++++++++++++++  Drucker  -  Treiber   ++++++++++++++++++++++  )
+
+( Initialisierung der PIO auf der CPUII-Karte als CENTRONICS-Schnittstelle )
+
+( 0E4  CONSTANT  ADATA  -->   Steuer-PORT  )
+( 0E5  CONSTANT  ACTRL                     )
+( 0E6  CONSTANT  BDATA  -->   Daten- PORT  )
+( 0E7  CONSTANT  BCTRL                     )
+
+( CENT-INIT   Initialisierung der CENTRONICS-Schnittstelle )
+
+( STROBE gibt ein STROBE-Signal ueber Bit 4 an den Drucker )
+
+( CENT-OUT gibt ein Charakter an den Drucker aus und wartet bis Drucker sich )
+( zurueckmeldet :        c  -->   )
+
+( ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ )
+(END-OF-FILE)
