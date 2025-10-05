@@ -30,7 +30,7 @@ LMI - Laboratory Microsystems, Inc.
 - Forth Version 3.1  
 - P.O. Box 10430, Marina Del Rey, CA 90295, USA
 
-## Credits to
+## Credits to / Danksagung
 CP/M-Version adapted for Z80 CPU:  
 - at Institute for Applied Physics, University of Bonn 
 - Author: Dipl.-Ing. (Elektro-Technik) Klaus-Dieter Krause
