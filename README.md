@@ -8,7 +8,7 @@
 ### PC-FLUO: 
 - Meßprogramme optische Laser-Spektroskopie PC/DOS (mit Z80-Subsystem)
 ### M04:
-- Programmkonzept für früheres M04-Programm auf der DEC PDP-8: HF-Spektroskopie für RABI-Messapparatur (nicht implementiert)
+- Programmkonzept für früheres M04-Programm auf der DEC PDP-8: HF-Spektroskopie für RABI-Messapparatur (POC nicht implementiert)
   
 ## Programs for high-frequency & LASER spectroscopy
 ### FLUO:
@@ -18,7 +18,7 @@
 ### PC-FLUO:
 - Measuring programs optical laser spectroscopy PC/DOS (with Z80 subsystem)
 ### M04:
-- Program concept for earlier M04 program on the DEC PDP-8: RF spectroscopy for the RABI measuring apparatus (not implemented) 
+- Program concept for earlier M04 program on the DEC PDP-8: RF spectroscopy for the RABI measuring apparatus (PoC not implemented) 
                   
 ## FORTH
 Forth code for: 
