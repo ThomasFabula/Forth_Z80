@@ -1,0 +1,189 @@
+F2 Forth Z80 – Sorted Symbol Table (by Address)
+===============================================
+
+;=====================================================================
+;  F2 Forth (Z80/CP/M) - Sorted Symbol Table
+;  Sorted by memory address (1984 Bonn Version)
+;=====================================================================
+
+0000    BOOT            ; CP/M warm boot / restart vector
+0005    BDOS            ; BDOS function entry point
+005C    DFCBE           ; Default File Control Block (FCB)
+0080    DDMAE           ; Default DMA address
+
+001B    ESC             ; Escape character
+000D    ACR             ; Carriage Return
+000A    LF              ; Line Feed
+0020    BL              ; Blank / Space
+
+0100    ORIG            ; Program start / Cold start entry
+0103    WRM             ; Warm start entry
+
+0118    NEXT            ; Inner interpreter (critical!)
+0121    COLON           ; : (colon definition)
+0130    SEMI            ; ; (semicolon)
+013D    SEMIS           ; ;S runtime
+0150    LIT             ; LIT (literal)
+0160    EXEC            ; EXECUTE
+0170    BRAN            ; BRANCH
+0180    ZBRAN           ; 0BRANCH
+0190    XLOOP           ; (LOOP)
+01B0    XPLOO           ; (+LOOP)
+01D0    XDO             ; (DO)
+01F0    IDO             ; I (loop index)
+0220    PFIND           ; (FIND)
+0280    ENCL            ; ENCLOSE
+
+0400    KEYA            ; Standard KEY routine
+0450    KEYSI           ; KEYSIMUL (text file input simulation)
+0500    DANA            ; ?DATNAM - get filename
+0520    OPEN            ; Open file
+0550    READS           ; Sequential read
+0580    DOSCALL         ; BDOS call wrapper
+05A0    LOAD            ; LOAD word
+05C0    EMIT            ; EMIT
+05E0    CRA             ; CR runtime
+0620    QTERM           ; ?TERMINAL
+
+7CFF    INITR0          ; Top of Return Stack
+7D00    TIBE            ; Terminal Input Buffer (TIB)
+
+7E00    US              ; Start of User Area
+7E00    S0              ; Initial Data Stack pointer
+7E06    R0              ; Initial Return Stack pointer
+7E0A    TIB             ; TIB base address
+7E0C    WIDTH           ; Maximum word length
+7E0E    WARNING         ; Error warning level
+7E10    FENCE           ; Dictionary protection pointer
+7E12    DP              ; Dictionary Pointer (HERE)
+7E14    VOCL            ; Vocabulary link
+7E16    BLK             ; Current block number
+7E18    IN              ; Input buffer offset (IN)
+7E1A    OUT             ; Output character counter
+7E1C    SCR             ; Current screen
+7E1E    OFFSET          ; Mass storage offset
+7E20    CONTEXT         ; Context vocabulary
+7E22    CURRENT         ; Current vocabulary
+7E24    STATE           ; Compiler state
+7E26    BASE            ; Numeric base
+7E28    DPL             ; Decimal places
+7E2A    FLD             ; Field width
+7E2C    CSP             ; Check stack pointer
+7E2E    RNUM            ; R# (file/text pointer)
+7E30    HLD             ; Hold pointer (numeric output)
+7E34    TNUM            ; T# (text counter)
+7E36    DR              ; Printer control flag
+7E38    ZEI             ; Current line number
+7E3A    MZEI            ; Max lines per page
+7E3C    EZEI            ; First allowed line
+7E3E    LZEI            ; Last allowed line
+7E40    LRA             ; Left margin
+7E42    RRA             ; Right margin
+7E46    MIST            ; Error message handler
+7E48    KEY$            ; KEY vector
+7E4A    LOAD$           ; LOAD vector
+7E4C    ERROR$          ; ERROR vector
+7E4E    ABORT$          ; ABORT vector
+7E50    EMIT$           ; EMIT vector
+7E52    CR$             ; CR vector
+7E54    QTERM$          ; ?TERMINAL vector
+7E56    COLD$           ; Cold start extension
+7E58    WARM$           ; Warm start extension
+
+7EFF    US_TOP          ; End of User Area (approx)
+
+7F00    BUFF            ; Disk / Line buffer (256 bytes)
+
+
+F2 Forth Z80 – Symbol Table (Sorted by Name)
+============================================
+;=====================================================================
+;  F2 Forth (Z80/CP/M) - Symbol Table
+;  Sorted alphabetically by Symbol Name
+;  Original System: Universität Bonn, 1984
+;=====================================================================
+
+0000    BOOT
+0005    BDOS
+0020    BL
+7E16    BLK
+01B0    BRAN
+7E42    BUFF
+7E2C    CSP
+7E56    COLD$
+0121    COLON
+7E20    CONTEXT
+05E0    CRA
+7E52    CR$
+7E22    CURRENT
+7E12    DP
+005C    DFCBE
+0080    DDMAE
+01D0    XDO
+7E28    DPL
+7E36    DR
+0280    ENCL
+001B    ESC
+0160    EXEC
+7E10    FENCE
+7E2A    FLD
+7E40    LRA
+7E3C    EZEI
+7E3E    LZEI
+7E1A    OUT
+7E14    VOCL
+7E58    WARM$
+7E54    QTERM$
+0450    KEYSI
+0400    KEYA
+7E48    KEY$
+0500    DANA
+0150    LIT
+7E18    IN
+0118    NEXT
+7E2E    RNUM
+7E06    R0
+7E00    S0
+7E0A    TIB
+7D00    TIBE
+7E34    TNUM
+7E38    ZEI
+7E3A    MZEI
+7E46    MIST
+0130    SEMI
+013D    SEMIS
+7E24    STATE
+7E1C    SCR
+7E1E    OFFSET
+7E4E    ABORT$
+7E4C    ERROR$
+7E50    EMIT$
+7E4A    LOAD$
+0520    OPEN
+0550    READS
+0580    DOSCALL
+05A0    LOAD
+0620    QTERM
+01F0    IDO
+0190    XLOOP
+01B0    XPLOO
+0180    ZBRAN
+0170    BRAN
+7CFF    INITR0
+7BFF    INITS0          ; Approximate Data Stack top
+8000    HOESPE
+7F00    BUFF
+7E00    US
+7EFF    US_TOP          ; End of User Area
+
+;=====================================================================
+;  Core Runtime Words
+;=====================================================================
+0220    PFIND           ; (FIND)
+0280    ENCL            ; ENCLOSE
+
+
+
+
+8000    HOESPE          ; Highest memory address + 1
+
