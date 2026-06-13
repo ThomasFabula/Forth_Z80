@@ -1,0 +1,153 @@
+F2 Forth Z80 Symbol Table (FORTH.SYM)
+
+;=====================================================================
+;  F2 Forth (Z80/CP/M) - Symbol Table for Debuggers
+;  Generated for: Universität Bonn Forth-2 System (1984)
+;  Memory Top: 8000H
+;=====================================================================
+
+;---------------------
+;  Memory Regions
+;---------------------
+8000    HOESPE          ; Highest memory address + 1
+7F00    BUFF            ; Disk / Line buffer (256 bytes)
+7E00    US              ; User Variable Area start (256 bytes)
+7D00    TIBE            ; Terminal Input Buffer (TIB)
+7DFF    INITR0          ; Top of Return Stack
+7CFF    INITS0          ; Top of Data Stack
+0100    ORIG            ; Program origin (CP/M TPA start)
+
+;---------------------
+;  User Area Variables (Base = 7E00H)
+;---------------------
+7E00    S0              ; Initial Data Stack pointer
+7E06    R0              ; Initial Return Stack pointer
+7E0A    TIB             ; TIB address
+7E0C    WIDTH           ; Max word name length
+7E0E    WARNING         ; Error handling mode
+7E10    FENCE           ; Dictionary protection
+7E12    DP              ; Dictionary Pointer (HERE)
+7E14    VOCL            ; Vocabulary link
+7E16    BLK             ; Current block/screen
+7E18    IN              ; Input buffer offset
+7E1A    OUT             ; Output counter
+7E1C    SCR             ; Current screen
+7E1E    OFFSET          ; Mass storage offset
+7E20    CONTEXT         ; Current search vocabulary
+7E22    CURRENT         ; Vocabulary being extended
+7E24    STATE           ; 00=Interpret, C0=Compile
+7E26    BASE            ; Numeric base
+7E28    DPL             ; Decimal point location
+7E2A    FLD             ; Field width
+7E2C    CSP             ; Stack check pointer
+7E2E    RNUM            ; R# - File/text pointer
+7E30    HLD             ; Numeric output hold pointer
+7E34    TNUM            ; T# - Text length counter
+7E36    DR              ; Printer flag
+7E38    ZEI             ; Current printer line
+7E3A    MZEI            ; Max lines per page
+7E3C    EZEI            ; First allowed line
+7E3E    LZEI            ; Last allowed line
+7E40    LRA             ; Left margin
+7E42    RRA             ; Right margin
+7E46    MIST            ; Error message handler
+7E48    KEY$            ; KEY vector
+7E4A    LOAD$           ; LOAD vector
+7E4C    ERROR$          ; ERROR vector
+7E4E    ABORT$          ; ABORT vector
+7E50    EMIT$           ; EMIT vector
+7E52    CR$             ; CR vector
+7E54    QTERM$          ; ?TERMINAL vector
+7E56    COLD$           ; Cold start extension
+7E58    WARM$           ; Warm start extension
+
+;---------------------
+;  Core System Routines
+;---------------------
+0100    ORIG            ; Cold start entry
+0103    WRM             ; Warm start entry
+0118    NEXT            ; Inner interpreter (very important!)
+0121    COLON           ; : (colon)
+0130    SEMI            ; ; (semicolon)
+013D    SEMIS           ; ;S
+0150    LIT             ; LIT
+0160    EXEC            ; EXECUTE
+0170    BRAN            ; BRANCH
+0180    ZBRAN           ; 0BRANCH
+0190    XLOOP           ; (LOOP)
+01B0    XPLOO           ; (+LOOP)
+01D0    XDO             ; (DO)
+01F0    IDO             ; I
+0220    PFIND           ; (FIND)
+0280    ENCL            ; ENCLOSE
+
+;---------------------
+;  I/O and File Handling
+;---------------------
+0400    KEYA            ; Normal KEY routine (approx)
+0450    KEYSI           ; KEYSIMUL (text file simulation)
+0500    DANA            ; ?DATNAM - get filename
+0520    OPEN            ; Open file
+0550    READS           ; Read sequential
+0580    DOSCALL         ; BDOS call wrapper
+05A0    LOAD            ; LOAD
+05C0    EMIT            ; EMIT
+05E0    CRA             ; CR
+0620    QTERM           ; ?TERMINAL
+
+;---------------------
+;  CP/M System Addresses
+;---------------------
+0000    BOOT
+0005    BDOS
+005C    DFCBE           ; Default FCB
+0080    DDMAE           ; Default DMA
+
+;---------------------
+;  Useful Constants
+;---------------------
+001B    ESC
+003D    POSIT
+000D    ACR
+000A    LF
+0020    BL
+0001    TRUE
+0000    FALSE
+
+;---------------------
+;  Dictionary & Vocab
+;---------------------
+        FORTH           ; Forth vocabulary
+        TASK            ; Last word in kernel (see DW TASK-7)
+        LATEST          ; Latest defined word
+
+;---------------------
+;  High-level words (approximate)
+;---------------------
+        ABORT
+        QUIT
+        INTERPRET
+        CREATE
+        VARIABLE
+        CONSTANT
+        DOES>
+        VLIST
+        CLS
+        BYE
+
+
+How to Use This Symbol Table
+-----------------------------
+1. z80pack / z80sim:
+- Save as forth.sym
+- Load with sym forth.sym or similar command
+
+2. SIMH:
+- Use LOADS or convert to .sym format supported by the Z80 simulator.
+
+3. Modern Debuggers (e.g. z80dasm, Retro Debugger):
+- Many accept this simple address  symbol format.
+
+
+
+
