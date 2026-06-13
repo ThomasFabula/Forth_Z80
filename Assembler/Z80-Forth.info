@@ -1,0 +1,40 @@
+Z80-Forth 
+=========
+This is a complete Z80 Forth-2 System for CP/M (1983–1984)Name: F2 (Forth-2)
+Authors: Primarily Klaus-Dieter Krause, Institut für Angewandte Physik, Universität Bonn
+Target: Z80 + CP/M
+Date of last change: 15.10.1984
+
+
+Purpose and Historical Context
+==============================
+This is a full Forth development environment tailored for laboratory use. In the 1980s, Forth was extremely popular in physics
+and instrumentation labs because it is compact, interactive, extremely fast on small machines, and allows direct hardware access.
+
+Main Features of this System
+-------------------------------------------------------------------------------------------
+Feature                Description
+-------------------------------------------------------------------------------------------
+Forth Kernel           Standard threaded interpretive language with NEXT in Z80 assembly
+CP/M Integration       Full BDOS file handling, console I/O, printer support
+Block/Screen System    Classic Forth screen-based source (.SL2 files)
+Memory Layout          Carefully tuned for Z80 (user area, stacks, buffers)
+Terminal Control       ESC sequences for cursor positioning and screen clear
+Extensibility          CREATE / DOES> , vocabularies, assembler support
+I/O Redirection        KEY$ , EMIT$ , LOAD$ vectors for easy customization
+-------------------------------------------------------------------------------------------
+
+Code Structure Overview
+=======================
+ORIG:   Cold start and warm start vectors
+NEXT:   The inner interpreter (very optimized Z80 code)
+Colon / Semicolon / LIT / BRANCH etc.:   Core control structures
+Low-level primitives: U*, U/, CMOVE, port I/O (P@ P!)
+CP/M layer:         File operations (OPEN, READS, @FILE), DANA (get filename)
+High-level Forth:   Interpreter, compiler, error handling, numeric conversion
+User variables:     From S0 to WARM$ in the user area
+
+The system uses indirect threaded code (common for Z80 Forth).
+
+
+
