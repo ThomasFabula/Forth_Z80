@@ -1,0 +1,43 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+def read_fluo_data(filename='MESS.TMP', start_screen=0, num_screens=1):
+    data = []
+    y_max = 0
+    
+    with open(filename, 'rb') as f:
+        # Skip initial data
+        skip_bytes = start_screen * 1024 + 10240
+        f.read(skip_bytes)
+        
+        for screen in range(num_screens):
+            for i in range(100):
+                block = f.read(10)  # 9 bytes + 1 stuff byte
+                if len(block) < 9:
+                    break
+                    
+                # Convert ASCII digits
+                value_str = ''.join(chr(b) for b in block[:8] if 48 <= b <= 57)
+                if value_str:
+                    value = int(value_str)
+                    data.append(value)
+                    if value > y_max:
+                        y_max = value
+                        
+            # Skip 24 bytes at end of screen
+            f.read(24)
+    
+    return np.array(data), y_max
+
+
+# Usage
+data, ymax = read_fluo_data(start_screen=0, num_screens=5)
+
+plt.figure(figsize=(12, 6))
+plt.plot(data, 'b-', linewidth=1.5)
+plt.title('FLUO Spectrum')
+plt.xlabel('Point Index')
+plt.ylabel('Intensity (counts)')
+plt.ylim(0, ymax * 1.25)
+plt.grid(True, alpha=0.3)
+plt.show()
