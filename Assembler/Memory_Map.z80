@@ -1,0 +1,110 @@
+Memory Map / Variable Layout for F2 Forth (Z80 CP/M Version)
+
+1. Overall Memory Layout (from high to low)
+--------------------------------------------
+Address    Size        Purpose                          Symbol
+8000H      -            Top of memory (HOESPE)            HOESPE
+7F00H      256 bytes    Disk / Line buffer                BUFF
+7E00H      256 bytes    User Area (system variables)      US
+7D00H      256 bytes    Terminal Input Buffer (TIB)       TIBE
+7CFFH      256 bytes    Return Stack                      INITR0
+7BFFH      ~2–3 KB      Forth Data Stack                  INITS0
+...        growing      Dictionary (Forth words)          DP / HERE
+...                     User-defined code & data
+0100H                   CP/M TPA start / program origin   ORIG
+0000H                   CP/M zero page / BDOS
+
+
+2. Detailed User Area Layout (US = 7E00H)
+--------------------------------------------
+This is the most important part — all system variables are here.
+
+Offset      Address      Name        Description
+00H          7E00H        S0          Initial Data Stack pointer
+02H          7E02H        (unused)    -
+04H          7E04H        (unused)    -
+06H          7E06H        R0          Initial Return Stack pointer
+08H          7E08H        (unused)    -
+0AH          7E0AH        TIB         Terminal Input Buffer address
+0CH          7E0CH        WIDTH       Max word name length (default 31)
+0EH          7E0EH        WARNING     Error handling mode
+10H          7E10H        FENCE       Protects dictionary from FORGET
+12H          7E12H        DP          Dictionary Pointer (HERE)
+14H          7E14H        VOC-LINK    Vocabulary chain
+16H          7E16H        BLK         Current block (screen) number
+18H          7E18H        IN          Offset into current input buffer
+1AH          7E1AH        OUT         Output character counter
+1CH          7E1CH        SCR         Current screen
+1EH          7E1EH        OFFSET      Mass storage offset
+20H          7E20H        CONTEXT     Current search vocabulary
+22H          7E22H        CURRENT     Vocabulary being extended
+24H          7E24H        STATE       Compiler state (0 = interpret, C0H = compile)
+26H          7E26H        BASE        Numeric base (default 10 or 16)
+28H          7E28H        DPL         Decimal point location for numbers
+2AH          7E2AH        FLD         Field width for output
+2CH          7E2CH        CSP         Stack pointer for error checking
+2EH          7E2EH        R#          File / text pointer (used in KEYSIMUL)
+30H          7E30H        HLD         Hold pointer for numeric output
+32H          7E32H        S#          -
+34H          7E34H        T#          Text length counter (used in simulation)
+36H          7E36H        DR          Printer on/off flag
+38H          7E38H        ZEI         Current line number (printer)
+3AH          7E3AH        MZEI        Max lines per page
+3CH          7E3CH        EZEI        First allowed line
+3EH          7E3EH        LZEI        Last allowed line
+40H          7E40H        LRA         Left margin
+42H          7E42H        RRA         Right margin
+44H          7E44H        VAZ         Next free user variable slot
+46H          7E46H        MIST        Error message handler address
+48H          7E48H        KEY$        Vector for KEY
+4AH          7E4AH        LOAD$       Vector for LOAD
+4CH          7E4CH        ERROR$      Vector for ERROR
+4EH          7E4EH        ABORT$      Vector for ABORT
+50H          7E50H        EMIT$       Vector for EMIT
+52H          7E52H        CR$         Vector for CR
+54H          7E54H        ?TERMINAL$  Vector for ?TERMINAL
+56H          7E56H        COLD$       Cold start extension
+58H          7E58H        WARM$        Warm start extension
+
+User Area Total: 100H (256 bytes) → from 7E00H to 7EFFH
+
+
+3. Stack Layout
+---------------
+- Return Stack: Grows downward from INITR0 = 7CFFH
+- Data Stack: Grows downward from INITS0 = 7BFFH
+
+Both have 256 bytes reserved.
+
+4. Dictionary (Forth Words)
+---------------------------
+- Starts after the kernel code (somewhere after ORIG)
+- Grows upwards via ALLOT / DP
+- Protected by FENCE
+
+
+Summary Diagram (High → Low)
+----------------------------
+
+000H  ┌─────────────────────┐
+       │   Disk Buffer       │  BUFF (256B)
+7F00H  ├─────────────────────┤
+       │   User Variables    │  US (256B)
+7E00H  ├─────────────────────┤
+       │   TIB               │  Terminal Input Buffer
+7D00H  ├─────────────────────┤
+       │   Return Stack      │
+7C00H  ├─────────────────────┤
+       │   Data Stack        │
+       │   (grows down)      │
+       ├─────────────────────┤
+       │   Dictionary        │  ← grows up
+       │   (Forth words)     │
+       └─────────────────────┘
+       ... free memory ...
+0100H  Program start (ORIG)
+
+
+
+
+
